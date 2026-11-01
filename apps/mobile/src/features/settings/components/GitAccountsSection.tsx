@@ -163,10 +163,11 @@ function AddGitAccountForm(props: {
       <ListActionRow
         label="Save account"
         disabled={!ready}
-        onPress={() =>
+        onPress={() => {
+          const id = gitAccountIdFromLabel(label, props.accounts);
           props.onSave({
             gitAccounts: {
-              [gitAccountIdFromLabel(label, props.accounts)]: {
+              [id]: {
                 label: label.trim(),
                 authorName: authorName.trim(),
                 authorEmail: authorEmail.trim(),
@@ -178,8 +179,8 @@ function AddGitAccountForm(props: {
                 sshKeyPath: "",
               },
             },
-          })
-        }
+          });
+        }}
       />
       <ListActionRow label="Cancel" onPress={props.onCancel} />
     </View>
