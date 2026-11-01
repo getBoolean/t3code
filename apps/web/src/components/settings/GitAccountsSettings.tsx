@@ -20,7 +20,7 @@ import {
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { GitAccountDialog } from "./GitAccountDialog";
-import { projectsUsingGitAccount } from "./GitAccountDialog.logic";
+import { projectsUsingGitAccount } from "@t3tools/client-runtime/git-accounts";
 import { searchableSetting } from "./settingsSearch";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
 

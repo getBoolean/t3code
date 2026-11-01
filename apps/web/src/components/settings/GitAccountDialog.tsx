@@ -22,7 +22,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
-import { gitAccountIdFromLabel, GIT_ACCOUNT_FORGES } from "./GitAccountDialog.logic";
+import { gitAccountIdFromLabel, GIT_ACCOUNT_FORGES } from "@t3tools/client-runtime/git-accounts";
 import { SecretInput } from "./SecretInput";
 
 /** The token goes once to the server's secret store; settings keep only a redaction marker. */

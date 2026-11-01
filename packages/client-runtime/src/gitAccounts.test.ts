@@ -1,7 +1,7 @@
 import { GitAccountId, ProjectId, type UnifiedSettings } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { gitAccountIdFromLabel, projectsUsingGitAccount } from "./GitAccountDialog.logic";
+import { gitAccountIdFromLabel, projectsUsingGitAccount } from "./gitAccounts.ts";
 
 const accounts = { work: {}, "work-2": {} } as unknown as UnifiedSettings["gitAccounts"];
 
