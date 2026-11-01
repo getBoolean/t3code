@@ -36,6 +36,7 @@ const makeService = Effect.fnUntraced(function* (
   run: ProcessRunner.ProcessRunner["Service"]["run"],
   publicRegistry: HttpClient.HttpClient = noPublicRegistry,
   npmInstalled = true,
+  source: "npm" | "github" = "npm",
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -43,7 +44,7 @@ const makeService = Effect.fnUntraced(function* (
   for (const name of ["npm", "npm.cmd"]) {
     yield* fs.writeFileString(path.join(npmBin, name), "", { mode: 0o755 });
   }
-  return yield* NpmRelease.make().pipe(
+  return yield* NpmRelease.make({ source }).pipe(
     Effect.provideService(ProcessRunner.ProcessRunner, { run }),
     Effect.provideService(HttpClient.HttpClient, publicRegistry),
     Effect.provideService(HostProcess.Environment, {
@@ -194,5 +195,49 @@ it.effect.each(["--registry=https://example.com", "../other", "other-package@lat
     Effect.gen(function* () {
       const service = yield* makeService(() => Effect.die("invalid specs must not spawn npm"));
       expect(Result.isFailure(yield* service.get({ spec }).pipe(Effect.result))).toBe(true);
+    }),
+);
+
+it.effect(
+  "reads a fork's GitHub releases and their manifest when it publishes no npm package",
+  () =>
+    Effect.gen(function* () {
+      const stable = "0.1.4";
+      const release = (tag: string, assets: ReadonlyArray<string>) => ({
+        tag_name: tag,
+        assets: assets.map((name) => ({
+          name,
+          browser_download_url: `https://github.com/acme/t3code/releases/download/${tag}/${name}`,
+        })),
+      });
+      const urls: string[] = [];
+      const service = yield* makeService(
+        () => Effect.die("a GitHub release lookup must not run npm"),
+        HttpClient.make((request) => {
+          urls.push(request.url);
+          const body = request.url.includes("/releases?")
+            ? request.url.endsWith("page=1")
+              ? [
+                  release(`v${version}`, ["t3-release.json"]),
+                  release(`v${stable}`, []),
+                  release("v0.1.3-preview.7", ["t3-release.json"]),
+                ]
+              : []
+            : { version, t3code: { databaseMigration: 42 } };
+          return Effect.succeed(
+            HttpClientResponse.fromWeb(request, new Response(JSON.stringify(body))),
+          );
+        }),
+        false,
+        "github",
+      );
+      expect(yield* service.get({ spec: "nightly" })).toEqual({ version, databaseMigration: 42 });
+      // A release from before the manifest existed still reports its version.
+      expect(yield* service.get({ spec: "latest" })).toEqual({ version: stable });
+      expect(yield* service.get({ spec: "9.9.9" })).toBeNull();
+      expect(urls).toContain(
+        `https://github.com/acme/t3code/releases/download/v${version}/t3-release.json`,
+      );
+      expect(urls.some((url) => url.startsWith("https://registry.npmjs.org"))).toBe(false);
     }),
 );

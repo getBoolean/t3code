@@ -1,8 +1,16 @@
 import type { DesktopBridge, DesktopUpdateState } from "@t3tools/contracts";
+import {
+  CLI_RELEASE_REPOSITORY,
+  CLI_RELEASES_ON_NPM,
+  CLI_RELEASES_PAGE_URL,
+  UPSTREAM_RELEASE_REPOSITORY,
+} from "@t3tools/shared/cliRelease";
 
-const FALLBACK_TRIAGE_COMMAND = "npx t3 triage";
-const DOWNLOAD_URL = "https://t3.codes/download";
-const ISSUE_URL = "https://github.com/pingdotgg/t3code/issues/new";
+const UPSTREAM_BUILD = CLI_RELEASE_REPOSITORY === UPSTREAM_RELEASE_REPOSITORY;
+// A fork without the npm package would run upstream's CLI through npx.
+const FALLBACK_TRIAGE_COMMAND = CLI_RELEASES_ON_NPM ? "npx t3 triage" : "t3 triage";
+const DOWNLOAD_URL = UPSTREAM_BUILD ? "https://t3.codes/download" : CLI_RELEASES_PAGE_URL;
+const ISSUE_URL = `https://github.com/${CLI_RELEASE_REPOSITORY}/issues/new`;
 const LAST_FAILURE_KEY = "t3code:boot-failed-at";
 const REPEAT_FAILURE_MS = 5 * 60_000;
 const MAX_CAUSES = 3;
