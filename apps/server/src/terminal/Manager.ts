@@ -34,6 +34,8 @@ import {
   ClaudeSettings,
   CodexSettings,
   ProviderInstanceId,
+  type ProjectId,
+  ThreadId,
 } from "@t3tools/contracts";
 import { makeKeyedCoalescingWorker } from "@t3tools/shared/KeyedCoalescingWorker";
 import * as KeyedLock from "@t3tools/shared/KeyedLock";
@@ -68,6 +70,8 @@ import { resolveCodexHomeLayout } from "../provider/Drivers/CodexHomeLayout.ts";
 import { makeClaudeEnvironment } from "../provider/Drivers/ClaudeHome.ts";
 import { deriveProviderInstanceConfigMap } from "../provider/ProviderInstanceRegistryHydration.ts";
 import * as ServerSettings from "../serverSettings.ts";
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
+import { applyEnvironmentOverlay } from "../gitAccounts/launchIdentity.ts";
 import { increment, terminalSessionsTotal } from "../observability/Metrics.ts";
 import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
 import * as ProcessRunner from "../processRunner.ts";
@@ -169,7 +173,7 @@ export class TerminalManager extends Context.Service<
   TerminalManager,
   {
     readonly open: (
-      input: TerminalOpenInput,
+      input: TerminalManagerOpenInput,
     ) => Effect.Effect<TerminalSessionSnapshot, TerminalError>;
 
     readonly getShell: (input: TerminalObserveInput) => Effect.Effect<string, TerminalError>;
@@ -234,6 +238,11 @@ export class TerminalManager extends Context.Service<
     ) => Effect.Effect<() => void>;
   }
 >()("t3/terminal/Manager/TerminalManager") {}
+
+/** Server callers name the project when its thread may not be projected yet. */
+export type TerminalManagerOpenInput = TerminalOpenInput & {
+  readonly gitAccountProjectId?: ProjectId;
+};
 
 interface TerminalSubprocessInspectResult {
   readonly hasRunningSubprocess: boolean;
@@ -304,6 +313,7 @@ interface TerminalSessionState {
   hasRunningSubprocess: boolean;
   childCommandLabel: string | null;
   runtimeEnv: Record<string, string> | null;
+  gitAccountProjectId: ProjectId | null;
 }
 
 interface TerminalGrid {
@@ -1461,6 +1471,10 @@ interface TerminalManagerOptions {
     Record<string, string>,
     TerminalProviderInstanceNotFoundError | TerminalProviderEnvironmentError
   >;
+  resolveGitAccount?: (input: {
+    readonly threadId: string;
+    readonly projectId: ProjectId | null;
+  }) => Effect.Effect<GitAccounts.LaunchIdentity | null>;
 }
 
 export const resolveProviderInstanceTerminalEnvironment = Effect.fn(
@@ -1512,6 +1526,7 @@ export const make = Effect.fn("TerminalManager.make")(function* () {
   const nativeTelemetry = yield* NativeTelemetryClient.NativeTelemetryClient;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
   const path = yield* Path.Path;
+  const gitAccounts = yield* GitAccounts.GitAccounts;
   const resolveProviderInstanceEnvironment = Effect.fn(
     "terminal.resolveProviderInstanceEnvironment",
   )((rawProviderInstanceId: string, env: Record<string, string> | undefined) =>
@@ -1535,6 +1550,10 @@ export const make = Effect.fn("TerminalManager.make")(function* () {
     registerTerminalProcesses: portDiscovery.registerTerminalProcesses,
     unregisterTerminal: portDiscovery.unregisterTerminal,
     resolveProviderInstanceEnvironment,
+    resolveGitAccount: ({ threadId, projectId }) =>
+      projectId === null
+        ? gitAccounts.forThread(ThreadId.make(threadId))
+        : gitAccounts.forProject(projectId),
   });
 });
 
@@ -2509,7 +2528,18 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
                 }
               }
             }
-            const spawnResult = yield* trySpawn(shellCandidates, terminalEnv, session);
+            const account =
+              options.resolveGitAccount === undefined
+                ? null
+                : yield* options.resolveGitAccount({
+                    threadId: session.threadId,
+                    projectId: session.gitAccountProjectId,
+                  });
+            const spawnEnv =
+              account === null
+                ? terminalEnv
+                : applyEnvironmentOverlay(terminalEnv, account.overlay);
+            const spawnResult = yield* trySpawn(shellCandidates, spawnEnv, session);
             ptyProcess = spawnResult.process;
             startedShell = spawnResult.shellLabel;
 
@@ -2525,6 +2555,12 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
               session.shell = spawnResult.shell;
               session.pid = processPid;
               session.status = "running";
+              if (account?.unavailable) {
+                enqueueProcessEvent(session, processPid, {
+                  type: "output",
+                  data: `\x1b[33mT3 Code: ${account.unavailable.message}. Git commits, pushes and forge commands in this terminal will fail.\x1b[0m\r\n`,
+                });
+              }
               // onExit may replay an exit immediately; accept it before subscribing.
               session.unsubscribeData = spawnResult.process.onData((data) => {
                 if (!enqueueProcessEvent(session, processPid, { type: "output", data })) {
@@ -2857,7 +2893,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
   );
 
   const openWithWorkspaceLease = Effect.fn("terminal.openLocked")(function* (
-    requestedInput: TerminalOpenInput,
+    requestedInput: TerminalManagerOpenInput,
   ) {
     const terminalId = requestedInput.terminalId;
     yield* assertValidCwd(requestedInput.cwd);
@@ -2905,6 +2941,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
         hasRunningSubprocess: false,
         childCommandLabel: null,
         runtimeEnv: normalizedRuntimeEnv(input.env),
+        gitAccountProjectId: input.gitAccountProjectId ?? null,
       };
 
       const createdSession = session;
@@ -2930,6 +2967,9 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     }
 
     const liveSession = existing.value;
+    if (input.gitAccountProjectId !== undefined) {
+      liveSession.gitAccountProjectId = input.gitAccountProjectId;
+    }
     const nextRuntimeEnv = normalizedRuntimeEnv(input.env);
     const currentRuntimeEnv = liveSession.runtimeEnv;
     const targetCols = input.cols ?? liveSession.cols;
@@ -2985,7 +3025,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     return snapshot(liveSession);
   });
 
-  const openLocked = (input: TerminalOpenInput) =>
+  const openLocked = (input: TerminalManagerOpenInput) =>
     withWorkspaceLease(
       path.resolve(input.worktreePath ?? input.cwd),
       openWithWorkspaceLease(input),
