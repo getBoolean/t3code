@@ -298,6 +298,8 @@ describe("AzureDevOpsCli.layer", () => {
           host: "dev.azure.com",
           token: Redacted.make("work-pat"),
           label: "Work",
+          authorName: "Work",
+          authorEmail: "work@example.test",
         }),
       );
       assert.deepStrictEqual(

@@ -157,6 +157,8 @@ describe("GitHubCredentials", () => {
           host,
           token: Redacted.make(token),
           label,
+          authorName: "Work",
+          authorEmail: "work@example.test",
         }),
       );
     return Effect.gen(function* () {

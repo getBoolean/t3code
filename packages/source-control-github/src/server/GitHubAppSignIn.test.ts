@@ -577,6 +577,8 @@ describe("GitHubAppAccess", () => {
         host: "github.com",
         token: Redacted.make("work-token"),
         label: "Work",
+        authorName: "Work",
+        authorEmail: "work@example.test",
       }),
       Effect.provide(layer),
     );

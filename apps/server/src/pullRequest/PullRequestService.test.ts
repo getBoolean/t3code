@@ -156,6 +156,8 @@ function gitAccount(label: string, token: string | null): GitAccounts.LaunchIden
   return {
     accountId: label.toLowerCase() as GitAccountId,
     label,
+    authorName: label,
+    authorEmail: "work@example.test",
     forge: "github",
     host: "github.com",
     fingerprint: label,

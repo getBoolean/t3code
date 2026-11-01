@@ -34,6 +34,8 @@ export const withGitAccount =
                 host: identity.host,
                 token: Redacted.make(identity.token ?? ""),
                 label: identity.label,
+                authorName: identity.authorName,
+                authorEmail: identity.authorEmail,
               }),
             ),
           ),

@@ -19,6 +19,8 @@ export interface SourceControlAccountCredential {
   readonly host: string;
   readonly token: Redacted.Redacted<string>;
   readonly label: string;
+  readonly authorName: string;
+  readonly authorEmail: string;
 }
 
 /** Set around forge calls for a project with a git account; `null` keeps each host's lookup. */

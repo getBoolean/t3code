@@ -1331,6 +1331,8 @@ it.effect("calls Forgejo as a project's git account instead of the tea or fj log
       host,
       token: Redacted.make("account-token"),
       label: "Work",
+      authorName: "Work",
+      authorEmail: "work@example.test",
     });
   return Effect.gen(function* () {
     const cli = yield* ForgejoCli.make;

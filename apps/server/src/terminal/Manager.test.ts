@@ -1947,6 +1947,8 @@ it.layer(
       const identity = (unavailable: boolean): GitAccounts.LaunchIdentity => ({
         accountId: GitAccountId.make("work"),
         label: account.label,
+        authorName: "Work",
+        authorEmail: "work@example.test",
         forge: account.forge,
         host: account.host,
         fingerprint: "fp",

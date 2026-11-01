@@ -34,6 +34,8 @@ export class GitAccountUnavailable extends Schema.TaggedError<GitAccountUnavaila
 export interface LaunchIdentity {
   readonly accountId: GitAccountId;
   readonly label: string;
+  readonly authorName: string;
+  readonly authorEmail: string;
   readonly forge: string;
   readonly host: string;
   readonly fingerprint: string;
@@ -143,6 +145,8 @@ const make = Effect.gen(function* () {
         return {
           accountId: id,
           label: id,
+          authorName: "",
+          authorEmail: "",
           forge: "github",
           host: "",
           fingerprint: `missing:${id}`,
@@ -166,6 +170,8 @@ const make = Effect.gen(function* () {
       return {
         accountId: id,
         label: account.label,
+        authorName: account.authorName,
+        authorEmail: account.authorEmail,
         forge: account.forge,
         host: account.host.toLowerCase(),
         fingerprint: fingerprint({ id, account, token }),
@@ -179,6 +185,8 @@ const make = Effect.gen(function* () {
         Effect.succeed({
           accountId: id,
           label: account!.label,
+          authorName: account!.authorName,
+          authorEmail: account!.authorEmail,
           forge: account!.forge,
           host: account!.host.toLowerCase(),
           fingerprint: `unavailable:${fingerprint({ id, account: account!, token: "" })}`,

@@ -993,6 +993,8 @@ it.effect("ProviderSessionManagerV2 closes every live session for a provider ins
 
 const accountIdentity = (label: string): GitAccounts.LaunchIdentity => ({
   accountId: GitAccountId.make(label.toLowerCase()),
+  authorName: "Work",
+  authorEmail: "work@example.test",
   label,
   forge: "github",
   host: "github.com",

@@ -232,6 +232,8 @@ layer("GitLabCli.layer", (it) => {
           host: "gitlab.example.test",
           token: Redacted.make("work-token"),
           label: "Work",
+          authorName: "Work",
+          authorEmail: "work@example.test",
         }),
       );
       assert.deepStrictEqual(

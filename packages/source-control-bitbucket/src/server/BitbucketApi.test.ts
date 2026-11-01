@@ -670,6 +670,8 @@ it.effect("prefers credentials saved in settings over the environment, without a
         host: "bitbucket.org",
         token: Redacted.make("account-token"),
         label: "Work",
+        authorName: "Work",
+        authorEmail: "work@example.test",
       }),
     );
     assert.strictEqual(lastAuthorization(), "Bearer account-token");

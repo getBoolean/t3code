@@ -96,6 +96,8 @@ describe("GitCafeCredentials", () => {
         host: "git.cafe",
         token: Redacted.make("account-token"),
         label: "Work",
+        authorName: "Work",
+        authorEmail: "work@example.test",
       });
       const account = yield* asAccount(credentials.get("git.cafe"));
       assert.strictEqual(Redacted.value(account.token), "account-token");
