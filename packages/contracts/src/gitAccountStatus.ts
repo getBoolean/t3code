@@ -33,8 +33,3 @@ export const GitAccountSetThreadBypassInput = Schema.Struct({
   bypass: Schema.Boolean,
 });
 export type GitAccountSetThreadBypassInput = typeof GitAccountSetThreadBypassInput.Type;
-
-export class GitAccountStatusError extends Schema.TaggedError<GitAccountStatusError>()(
-  "GitAccountStatusError",
-  { message: Schema.String, cause: Schema.optional(Schema.Defect()) },
-) {}

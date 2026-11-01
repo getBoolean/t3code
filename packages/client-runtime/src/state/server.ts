@@ -1290,6 +1290,10 @@ export function createServerEnvironmentAtoms<R, E>(
       label: "environment-data:server:scheduled-task:webhook-deliveries",
       tag: WS_METHODS.scheduledTasksListWebhookDeliveries,
     }),
+    gitAccountThreadStatus: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:git-account:thread-status",
+      tag: WS_METHODS.gitAccountsThreadStatus,
+    }),
     scheduledTaskWebhookDelivery: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:scheduled-task:webhook-delivery",
       tag: WS_METHODS.scheduledTasksGetWebhookDelivery,
@@ -1536,6 +1540,10 @@ export function createServerEnvironmentAtoms<R, E>(
     runScheduledTaskNow: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:scheduled-task:run-now",
       tag: WS_METHODS.scheduledTasksRunNow,
+    }),
+    setGitAccountThreadBypass: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:git-account:set-thread-bypass",
+      tag: WS_METHODS.gitAccountsSetThreadBypass,
     }),
     rotateScheduledTaskWebhookToken: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:scheduled-task:rotate-webhook-token",

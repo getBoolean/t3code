@@ -114,7 +114,6 @@ import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
 import * as VcsDriverRegistry from "./vcs/VcsDriverRegistry.ts";
 import * as VcsProjectConfig from "./vcs/VcsProjectConfig.ts";
 import * as VcsProcess from "./vcs/VcsProcess.ts";
-import * as GitAccounts from "./gitAccounts/GitAccounts.ts";
 import * as RepoConfigSync from "./gitAccounts/RepoConfigSync.ts";
 import * as VcsProvisioningService from "./vcs/VcsProvisioningService.ts";
 import * as VcsStatusBroadcaster from "./vcs/VcsStatusBroadcaster.ts";
@@ -369,10 +368,7 @@ const layerRepositoryIdentityResolver = Layer.effect(
   }),
 ).pipe(Layer.provide(layerSourceControlProviderRegistry), Layer.provide(ProcessRunner.layer));
 
-const layerGitAccounts = GitAccounts.layer.pipe(
-  Layer.provide(Layer.merge(ProjectionStoreV2.layer, ProjectStore.layer)),
-  Layer.provide(layerServerSettings),
-);
+const layerGitAccounts = RuntimeLayer.layerGitAccounts.pipe(Layer.provide(layerServerSettings));
 
 const layerPullRequestService = PullRequestService.layer.pipe(
   Layer.provide(layerGitAccounts),
@@ -394,6 +390,7 @@ const layerGitManager = GitManager.layer.pipe(
 );
 
 const layerGit = Layer.empty.pipe(
+  Layer.provideMerge(layerGitAccounts),
   Layer.provideMerge(layerGitManager),
   Layer.provideMerge(GitVcsDriver.layer),
 );

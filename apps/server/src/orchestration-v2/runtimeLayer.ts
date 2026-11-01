@@ -132,12 +132,15 @@ const layerCommandOutputHubProvided = CommandOutputHub.layer.pipe(
   Layer.provide(Layer.merge(layerEventSink, ProjectionStore.layer)),
 );
 
+// One instance for the whole server: per-thread bypasses live in memory and must reach every consumer.
+export const layerGitAccounts = GitAccounts.layer.pipe(
+  Layer.provide(Layer.mergeAll(ProjectionStore.layer, ProjectStore.layer, VcsProcess.layer)),
+);
+
 const layerProviderSessionManagerProvided = ProviderSessionManager.layer.pipe(
   Layer.provide(
     Layer.mergeAll(
-      GitAccounts.layer.pipe(
-        Layer.provide(Layer.mergeAll(ProjectionStore.layer, ProjectStore.layer, VcsProcess.layer)),
-      ),
+      layerGitAccounts,
       layerCommandOutputHubProvided,
       ProviderAdapterRegistry.layerFromProviderInstanceRegistry,
       layerEventSink,
