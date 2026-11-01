@@ -26,6 +26,7 @@ import { runtimeModeConfig, runtimeModeOptions } from "../chat/runtimeModeConfig
 import { PULL_REQUEST_MERGE_METHOD_LABELS } from "../pullRequest/pullRequestDetail.logic";
 import { TraitsPicker } from "../chat/TraitsPicker";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
+import { GitAccountId } from "@t3tools/contracts";
 import { toastManager } from "../ui/toast";
 import { Switch } from "../ui/switch";
 import type { ProjectSettingsCategory } from "./ProjectSettingsPanel";
@@ -106,6 +107,9 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
   const mixedAutoPull = useScopedSettingsMixed(["defaultAutoPull"]);
   const mixedAgentCredits = useScopedSettingsMixed(["removeAgentCreditsOnMerge"]);
   const mixedMergeMethod = useScopedSettingsMixed(["pullRequestMergeMethod"]);
+  const mixedGitAccount = useScopedSettingsMixed(["gitAccountId"]);
+  const mixedRepoConfig = useScopedSettingsMixed(["gitAccountWritesRepoConfig"]);
+  const gitAccountEntries = Object.entries(settings.gitAccounts);
   const modelSource = useScopedSettingSource(["defaultModelSelection"]);
   const isProjectScope = scope.kind === "project" || scope.kind === "checkout";
   const unavailable = connectedEnvironments.length === 0;
@@ -503,6 +507,86 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                   <SelectItem value="rebase">{PULL_REQUEST_MERGE_METHOD_LABELS.rebase}</SelectItem>
                 </SelectPopup>
               </Select>
+            }
+          />
+          <SettingsRow
+            serverScoped
+            settingKeys={["gitAccountId"]}
+            mixed={mixedGitAccount}
+            {...searchableSetting("git-account")}
+            description={
+              isProjectScope
+                ? "Agents and T3 Code commit, push and open pull requests in this project as this account."
+                : "The account projects use unless they pick their own. None keeps this machine's git login."
+            }
+            resetAction={
+              settings.gitAccountId !== null ? (
+                <SettingResetButton
+                  label="git account"
+                  tooltip={
+                    isProjectScope ? "Use the default account" : "Use this machine's git login"
+                  }
+                  onClick={() => updateSettings({ gitAccountId: null })}
+                />
+              ) : null
+            }
+            control={
+              <Select
+                value={mixedGitAccount ? null : (settings.gitAccountId ?? "none")}
+                onValueChange={(value) => {
+                  if (value === "none") updateSettings({ gitAccountId: null });
+                  else if (typeof value === "string" && value in settings.gitAccounts)
+                    updateSettings({ gitAccountId: GitAccountId.make(value) });
+                }}
+              >
+                <SelectTrigger size="sm" aria-label="Git account">
+                  <SelectValue>
+                    {(value: string | null) =>
+                      value === null
+                        ? "Mixed"
+                        : value === "none"
+                          ? "None"
+                          : (settings.gitAccounts[GitAccountId.make(value)]?.label ??
+                            "Missing account")
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectPopup align="end" alignItemWithTrigger={false}>
+                  {isProjectScope ? null : <SelectItem value="none">None</SelectItem>}
+                  {gitAccountEntries.map(([id, account]) => (
+                    <SelectItem key={id} value={id}>
+                      {account.label} ({account.host})
+                    </SelectItem>
+                  ))}
+                </SelectPopup>
+              </Select>
+            }
+          />
+          <SettingsRow
+            serverScoped
+            settingKeys={["gitAccountWritesRepoConfig"]}
+            mixed={mixedRepoConfig}
+            {...searchableSetting("git-account-repo-config")}
+            description="Also sets user.name and user.email in the repo, so your terminal and GitHub Desktop match. Turning it off restores the previous values."
+            resetAction={
+              settings.gitAccountWritesRepoConfig ? (
+                <SettingResetButton
+                  label="repo git config"
+                  tooltip="Stop writing to repo git config"
+                  onClick={() => updateSettings({ gitAccountWritesRepoConfig: false })}
+                />
+              ) : null
+            }
+            control={
+              <Switch
+                aria-label="Write to repo git config"
+                mixed={mixedRepoConfig}
+                disabled={settings.gitAccountId === null}
+                checked={mixedRepoConfig ? false : settings.gitAccountWritesRepoConfig}
+                onCheckedChange={(enabled) =>
+                  updateSettings({ gitAccountWritesRepoConfig: enabled })
+                }
+              />
             }
           />
         </>
