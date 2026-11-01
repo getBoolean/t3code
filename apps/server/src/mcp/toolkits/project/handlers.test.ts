@@ -638,7 +638,7 @@ it.effect("deleting a project through MCP also discards its clone record", () =>
   }),
 );
 
-it.effect("t3_project_git_account lists accounts without credentials and routes a bypass", () =>
+it.effect("project git account tools list accounts without credentials and route a bypass", () =>
   Effect.gen(function* () {
     const threadId = ThreadId.make("thread-git-account");
     const harness = clientLaunchHarness({ runtimeModeCeiling: "full-access", launched: [] });
@@ -693,6 +693,24 @@ it.effect("t3_project_git_account lists accounts without credentials and routes 
           gitAccountId: GitAccountId.make("work"),
         }),
         Layer.mock(GitAccounts.GitAccounts)({ threadStatus: () => Effect.succeed(status) }),
+        Layer.mock(Project.ProjectService)({
+          getById: () =>
+            Effect.succeedSome({
+              id: harness.projectId,
+              title: "client-target",
+              workspaceRoot: "/projects/client-target",
+              repositoryIdentity: null,
+              faviconPath: null,
+              defaultModelSelection: null,
+              defaultThreadEnvMode: null,
+              autoPull: false,
+              projectIcon: null,
+              scripts: [],
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+              deletedAt: null,
+            }),
+        }),
         Layer.mock(GitAccountSwitch.GitAccountSwitch)({
           bypassThread: (input) =>
             Effect.sync(() => void bypassRequests.push(input)).pipe(
@@ -726,5 +744,13 @@ it.effect("t3_project_git_account lists accounts without credentials and routes 
 
     yield* call({ action: "end_bypass" });
     expect(bypassRequests).toEqual([{ threadId, bypass: false }]);
+
+    // The project read names the account it commits as, and that it comes from the default.
+    const [read] = yield* toolkit
+      .handle("t3_project_read", { projectId: harness.projectId })
+      .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
+    expect(read).toMatchObject({
+      result: { gitAccount: { id: "work", label: "Work", source: "default" } },
+    });
   }),
 );

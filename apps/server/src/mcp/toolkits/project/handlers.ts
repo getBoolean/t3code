@@ -358,7 +358,25 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
           code: "invalid_request",
           message: "The project was not found.",
         });
-      return result.value;
+      const settings = yield* (yield* ServerSettings.ServerSettingsService).getSettings.pipe(
+        Effect.mapError(unavailable),
+      );
+      const accountId = resolveProjectSettings(settings, input.projectId).settings.gitAccountId;
+      return {
+        ...result.value,
+        gitAccount:
+          accountId === null
+            ? null
+            : {
+                id: accountId,
+                // A deleted account keeps its id so the agent can say which one is missing.
+                label: settings.gitAccounts[accountId]?.label ?? accountId,
+                source:
+                  settings.projectSettingsOverrides[input.projectId]?.gitAccountId === undefined
+                    ? ("default" as const)
+                    : ("project" as const),
+              },
+      };
     }),
   ),
   t3_project_create: McpToolAccess.writesEnvironment(

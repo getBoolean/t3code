@@ -69,11 +69,23 @@ const ProjectListTool = Tool.make("t3_project_list", {
   .annotate(Tool.Destructive, false);
 const ProjectReadTool = Tool.make("t3_project_read", {
   ...shared,
-  description: "Read one project: workspace and saved scripts.",
+  description:
+    "Read one project: workspace, saved scripts, and the git account its commits, pushes and pull requests use.",
   parameters: Schema.Struct({
     environmentId: OrchestratorMcpEnvironmentTarget,
     projectId: ProjectId,
   }),
+  success: Schema.Struct({
+    ...Project.fields,
+    gitAccount: Schema.NullOr(
+      Schema.Struct({
+        id: GitAccountId,
+        label: Schema.String,
+        source: Schema.Literals(["project", "default"]),
+      }),
+    ),
+  }),
+  dependencies: [...shared.dependencies, ServerSettings.ServerSettingsService],
 })
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false);
