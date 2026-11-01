@@ -12,6 +12,7 @@ import {
   ServerSettingsPatch,
   UsageLimitSourceId,
   GitAccountId,
+  SourceControlProviderKind,
 } from "@t3tools/contracts";
 import { createModelSelection } from "@t3tools/shared/model";
 import { assert, it } from "@effect/vitest";
@@ -1306,6 +1307,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
               label: "Work",
               authorName: "Work Name",
               authorEmail: "work@example.test",
+              forge: SourceControlProviderKind.make("github"),
               host: "github.com",
               credentialKind: "token",
               token: "git-account-secret",

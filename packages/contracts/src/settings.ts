@@ -21,6 +21,7 @@ import {
 } from "./baseSchemas.ts";
 import { UsageLimitSourceId } from "./usageLimitSourceId.ts";
 import { GitAccountId } from "./gitAccountId.ts";
+import { SourceControlProviderKind } from "./sourceControl.ts";
 import { SecretProviderId, SecretProviderSlug } from "./secretReference.ts";
 import { EnvironmentMachineKind, ThreadEnvMode, WorktreeSubmodules } from "./environment.ts";
 import { KeybindingShortcut } from "./keybindings.ts";
@@ -868,6 +869,7 @@ export const GitAccountConfig = Schema.Struct({
   label: TrimmedNonEmptyString,
   authorName: TrimmedNonEmptyString,
   authorEmail: TrimmedNonEmptyString,
+  forge: SourceControlProviderKind,
   host: TrimmedNonEmptyString,
   credentialKind: Schema.Literals(["token", "cliLogin"]),
   token: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed("")), secretSetting),
