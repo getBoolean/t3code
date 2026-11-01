@@ -5,12 +5,8 @@ import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  applyEnvironmentOverlay,
-  blockedOverlay,
-  buildOverlay,
-  fingerprint,
-} from "./launchIdentity.ts";
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
+import { blockedOverlay, buildOverlay, fingerprint } from "./launchIdentity.ts";
 
 const account = {
   label: "Work",

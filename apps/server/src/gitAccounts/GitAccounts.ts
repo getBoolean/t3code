@@ -17,12 +17,8 @@ import * as ProjectionStore from "../orchestration-v2/ProjectionStore.ts";
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as VcsProcess from "../vcs/VcsProcess.ts";
-import {
-  blockedOverlay,
-  buildOverlay,
-  type EnvironmentOverlay,
-  fingerprint,
-} from "./launchIdentity.ts";
+import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
+import { blockedOverlay, buildOverlay, fingerprint } from "./launchIdentity.ts";
 
 export class GitAccountUnavailable extends Schema.TaggedError<GitAccountUnavailable>()(
   "GitAccountUnavailable",

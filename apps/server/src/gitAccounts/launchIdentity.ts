@@ -1,15 +1,9 @@
 import type { GitAccountConfig } from "@t3tools/contracts";
+import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- a synchronous hash keeps overlay building pure.
 import * as NodeCrypto from "node:crypto";
 
-type Env = Readonly<Record<string, string | undefined>>;
 type OverlayAccount = Omit<GitAccountConfig, "forge"> & { readonly forge: string };
-
-export interface EnvironmentOverlay {
-  readonly set: Readonly<Record<string, string>>;
-  readonly unset: ReadonlyArray<string>;
-  readonly gitConfig: ReadonlyArray<readonly [string, string]>;
-}
 
 interface ForgeEnvironment {
   readonly tokenVariables: (host: string) => Readonly<Record<string, string>>;
@@ -150,24 +144,6 @@ export function blockedOverlay(input: {
       ["core.sshCommand", fail],
     ],
   };
-}
-
-export function applyEnvironmentOverlay(
-  base: Env,
-  overlay: EnvironmentOverlay,
-): Record<string, string | undefined> {
-  const next: Record<string, string | undefined> = { ...base };
-  for (const name of overlay.unset) delete next[name];
-  Object.assign(next, overlay.set);
-  let count = Number.parseInt(next.GIT_CONFIG_COUNT ?? "0", 10);
-  if (!Number.isFinite(count) || count < 0) count = 0;
-  for (const [key, value] of overlay.gitConfig) {
-    next[`GIT_CONFIG_KEY_${count}`] = key;
-    next[`GIT_CONFIG_VALUE_${count}`] = value;
-    count += 1;
-  }
-  next.GIT_CONFIG_COUNT = String(count);
-  return next;
 }
 
 /** Changes whenever anything that shapes the launch changes; never contains the secret. */

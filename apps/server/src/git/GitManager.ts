@@ -85,7 +85,7 @@ import { detachStackFrame } from "./detachStackFrame.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
 import { withGitAccount } from "../sourceControl/ServerSourceControlHost.ts";
-import { applyEnvironmentOverlay } from "../gitAccounts/launchIdentity.ts";
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import type { GitManagerServiceError } from "@t3tools/contracts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";

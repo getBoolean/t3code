@@ -71,7 +71,7 @@ import { makeClaudeEnvironment } from "../provider/Drivers/ClaudeHome.ts";
 import { deriveProviderInstanceConfigMap } from "../provider/ProviderInstanceRegistryHydration.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
-import { applyEnvironmentOverlay } from "../gitAccounts/launchIdentity.ts";
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import { increment, terminalSessionsTotal } from "../observability/Metrics.ts";
 import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
 import * as ProcessRunner from "../processRunner.ts";
