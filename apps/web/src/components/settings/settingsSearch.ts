@@ -957,33 +957,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
   },
   {
-    id: "git-account",
-    title: "Git account",
-    to: "/settings/source-control",
-    scope: "project-defaults",
-    searchTerms: [
-      "git account identity author email commit push pull request github login token per project",
-    ],
-  },
-  {
-    id: "git-account-repo-config",
-    title: "Write to repo git config",
-    to: "/settings/source-control",
-    scope: "project-defaults",
-    searchTerms: [
-      "git config user.name user.email repository local identity terminal github desktop",
-    ],
-  },
-  {
-    id: "git-accounts",
-    title: "Git accounts",
-    to: "/settings/source-control",
-    scope: "environment-defaults",
-    searchTerms: [
-      "git accounts identity author email token ssh key gh login multiple github accounts",
-    ],
-  },
-  {
     id: "pull-request-merge-method",
     title: "Default merge method",
     to: "/settings/source-control",
@@ -1009,6 +982,33 @@ export const SETTINGS_SEARCH_ITEMS = [
     ],
     environmentOnly: true,
     scope: "environment-defaults",
+  },
+  {
+    id: "git-account",
+    title: "Git account",
+    to: "/settings/source-control",
+    scope: "project-defaults",
+    searchTerms: [
+      "git account identity author email commit push pull request github login token per project",
+    ],
+  },
+  {
+    id: "git-account-repo-config",
+    title: "Write to repo git config",
+    to: "/settings/source-control",
+    scope: "project-defaults",
+    searchTerms: [
+      "git config user.name user.email repository local identity terminal github desktop",
+    ],
+  },
+  {
+    id: "git-accounts",
+    title: "Git accounts",
+    to: "/settings/source-control",
+    scope: "environment-defaults",
+    searchTerms: [
+      "git accounts identity author email token ssh key gh login multiple github accounts",
+    ],
   },
   {
     id: "worktree-branch-naming",
