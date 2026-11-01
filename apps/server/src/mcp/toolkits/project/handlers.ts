@@ -1,3 +1,4 @@
+import * as GitAccounts from "../../../gitAccounts/GitAccounts.ts";
 import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
 import { GitAccountId } from "@t3tools/contracts";
 import {
@@ -301,19 +302,42 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
             host: account.host,
           })),
           current: resolveProjectSettings(settings, projectId).settings.gitAccountId,
+          thread:
+            context.caller === undefined
+              ? null
+              : yield* Effect.serviceOption(GitAccounts.GitAccounts).pipe(
+                  Effect.flatMap((service) =>
+                    service._tag === "Some"
+                      ? service.value.threadStatus(context.caller!.id)
+                      : Effect.succeed(null),
+                  ),
+                ),
         };
       }),
     ),
     McpToolAccess.actsAsCaller((input) =>
       Effect.gen(function* () {
         const context = yield* readCaller();
-        if (context.caller === undefined || input.accountId === undefined) {
+        const switcher = yield* GitAccountSwitch.GitAccountSwitch;
+        const toFailure = (error: GitAccountSwitch.GitAccountSwitchError) =>
+          new OrchestratorMcpFailure({ code: "invalid_request", message: error.message });
+        if (context.caller === undefined) {
           return yield* new OrchestratorMcpFailure({
             code: "invalid_request",
-            message: "switch needs accountId and must come from a thread in the project.",
+            message: `${input.action} must come from a thread in the project.`,
           });
         }
-        const switcher = yield* GitAccountSwitch.GitAccountSwitch;
+        if (input.action === "bypass" || input.action === "end_bypass") {
+          return yield* switcher
+            .bypassThread({ threadId: context.caller.id, bypass: input.action === "bypass" })
+            .pipe(Effect.mapError(toFailure));
+        }
+        if (input.accountId === undefined) {
+          return yield* new OrchestratorMcpFailure({
+            code: "invalid_request",
+            message: "switch needs accountId.",
+          });
+        }
         return yield* switcher
           .switchProject({ threadId: context.caller.id, accountId: input.accountId })
           .pipe(

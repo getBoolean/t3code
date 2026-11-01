@@ -15,6 +15,7 @@ import * as TestClock from "effect/testing/TestClock";
 
 import * as ThreadManagement from "../orchestration-v2/ThreadManagementService.ts";
 import * as ServerSettings from "../serverSettings.ts";
+import * as GitAccounts from "./GitAccounts.ts";
 import * as GitAccountSwitch from "./GitAccountSwitch.ts";
 
 const threadId = ThreadId.make("thread-a");
@@ -117,5 +118,62 @@ it.effect("rejects an unknown account", () =>
         .pipe(Effect.flip);
     }).pipe(Effect.provide(layer));
     assert.include(error.message, "nope");
+  }),
+);
+
+it.effect("bypasses an unusable account only after the user types the phrase", () =>
+  Effect.gen(function* () {
+    const { messages, layer } = yield* setup;
+    const bypassed = yield* Ref.make(false);
+    const machine = {
+      authorName: "Machine Name",
+      authorEmail: "machine@example.test",
+      host: "github.com",
+      forgeLogin: "machine-login",
+    };
+    const status = Effect.map(Ref.get(bypassed), (on) => ({
+      state: on ? ("bypassed" as const) : ("unavailable" as const),
+      accountId: work,
+      accountLabel: "Work",
+      reason: "it has no saved token",
+      machine,
+    }));
+    const accounts = Layer.mock(GitAccounts.GitAccounts)({
+      threadStatus: () => status,
+      setThreadBypass: (_thread, on) => Ref.set(bypassed, on).pipe(Effect.andThen(status)),
+    });
+    yield* Effect.gen(function* () {
+      const switcher = yield* GitAccountSwitch.GitAccountSwitch;
+      const first = yield* switcher.bypassThread({ threadId, bypass: true });
+      assert.equal(first.status, "confirmation_required");
+      // The agent can tell the user exactly who the thread would run as.
+      assert.deepEqual(first.status === "confirmation_required" ? first.machine : null, machine);
+      const phrase = first.status === "confirmation_required" ? first.phrase : "";
+
+      yield* TestClock.adjust("1 second");
+      yield* Ref.set(messages, [
+        message(phrase, yield* DateTime.now, { createdBy: "agent", creationSource: "mcp" }),
+      ]);
+      assert.equal(
+        (yield* switcher.bypassThread({ threadId, bypass: true })).status,
+        "confirmation_required",
+      );
+      assert.isFalse(yield* Ref.get(bypassed));
+
+      const phraseNow = yield* switcher.bypassThread({ threadId, bypass: true });
+      const typed = phraseNow.status === "confirmation_required" ? phraseNow.phrase : "";
+      yield* TestClock.adjust("1 second");
+      yield* Ref.set(messages, [
+        message(typed, yield* DateTime.now, { createdBy: "user", creationSource: "mobile" }),
+      ]);
+      assert.equal((yield* switcher.bypassThread({ threadId, bypass: true })).status, "bypassed");
+      assert.isTrue(yield* Ref.get(bypassed));
+
+      assert.equal(
+        (yield* switcher.bypassThread({ threadId, bypass: false })).status,
+        "bypass_ended",
+      );
+      assert.isFalse(yield* Ref.get(bypassed));
+    }).pipe(Effect.provide(Layer.merge(layer, accounts)));
   }),
 );

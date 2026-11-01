@@ -20,6 +20,8 @@ import {
   SourceControlCloneRepositoryInput,
   SourceControlCloneRepositoryResult,
   GitAccountId,
+  GitAccountMachineIdentity,
+  GitAccountThreadStatus,
 } from "@t3tools/contracts";
 import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
 import * as FileSystem from "effect/FileSystem";
@@ -180,9 +182,9 @@ const ThreadLaunchTool = Tool.make("t3_thread_launch", {
 
 const ProjectGitAccountTool = Tool.make("t3_project_git_account", {
   description:
-    "Git accounts this project's commits, pushes and pull requests use. list: accounts and the current one. switch: move this thread's project to accountId; it first returns a phrase the user must type in this thread, then call switch again. You cannot confirm it yourself.",
+    "Git accounts this project's commits, pushes and pull requests use. list: accounts, the current one, and whether this thread's account works. switch: move this thread's project to accountId. bypass: when this thread's account can't be used, run this thread as the machine's git login instead. switch and bypass first return a phrase the user must type in this thread, then call again; you cannot confirm it yourself. end_bypass: go back to the account at once.",
   parameters: Schema.Struct({
-    action: Schema.Literals(["list", "switch"]),
+    action: Schema.Literals(["list", "switch", "bypass", "end_bypass"]),
     environmentId: OrchestratorMcpEnvironmentTarget,
     accountId: Schema.optional(GitAccountId),
   }),
@@ -192,13 +194,20 @@ const ProjectGitAccountTool = Tool.make("t3_project_git_account", {
         Schema.Struct({ id: GitAccountId, label: Schema.String, host: Schema.String }),
       ),
       current: Schema.NullOr(GitAccountId),
+      thread: Schema.NullOr(GitAccountThreadStatus),
     }),
     Schema.Struct({
       status: Schema.Literal("confirmation_required"),
       phrase: Schema.String,
       instructions: Schema.String,
+      reason: Schema.optional(Schema.String),
+      machine: Schema.optional(Schema.NullOr(GitAccountMachineIdentity)),
     }),
     Schema.Struct({ status: Schema.Literal("switched"), accountLabel: Schema.String }),
+    Schema.Struct({
+      status: Schema.Literals(["bypassed", "bypass_ended"]),
+      machine: Schema.NullOr(GitAccountMachineIdentity),
+    }),
   ]),
   failure: OrchestratorMcpFailure,
   failureMode: "return",
