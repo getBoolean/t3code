@@ -1,3 +1,4 @@
+import { useGitAccountGuard } from "../features/threads/useGitAccountGuard";
 import { useAtomMount } from "@effect/atom-react";
 
 import { EnvironmentProject, EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
@@ -72,6 +73,15 @@ export function useSelectedThreadGitActions() {
     AuthOrchestrationOperateScope,
   );
   const canChangeThreadBranch = canWriteSourceControl && canOperateThread;
+  const gitAccountGuard = useGitAccountGuard(
+    selectedThread
+      ? {
+          environmentId: selectedThread.environmentId,
+          threadId: selectedThread.id,
+          projectId: selectedThread.projectId,
+        }
+      : null,
+  );
   const { selectedThreadCwd, selectedThreadWorktreePath } = useSelectedThreadWorktree();
   const runStackedAction = useAtomCommand(
     vcsActionManager.runStackedAction({
@@ -359,6 +369,7 @@ export function useSelectedThreadGitActions() {
   const onRunSelectedThreadGitAction = async (
     input: GitActionRequestInput,
   ): Promise<GitRunStackedActionResult | null> => {
+    if (!(await gitAccountGuard.ensureGitAccount())) return null;
     const actionId = uuidv4();
     return await runSelectedThreadGitMutation(
       "run_change_request",

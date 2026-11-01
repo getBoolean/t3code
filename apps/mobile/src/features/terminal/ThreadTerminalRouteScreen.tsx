@@ -1,3 +1,4 @@
+import { useGitAccountGuard } from "../threads/useGitAccountGuard";
 import * as Dialog from "../../components/ui/Dialog";
 import {
   AuthTerminalReadScope,
@@ -13,7 +14,7 @@ import { AppBar } from "../../components/ui/AppBar";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { useAtomMount } from "@effect/atom-react";
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText as Text } from "../../components/ui/AppText";
@@ -456,6 +457,19 @@ function ThreadTerminal(props: {
         exitedTerminalId: terminalId,
       }),
   });
+  const gitAccountGuard = useGitAccountGuard({
+    environmentId: selectedThread.environmentId,
+    threadId: selectedThread.id,
+    projectId: selectedThread.projectId,
+  });
+  const ensureGitAccount = gitAccountGuard.ensureGitAccount;
+  const warnedTerminalRef = useRef<string | null>(null);
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- warns once per opened terminal; its git shims pick up a bypass the user accepts
+  useEffect(() => {
+    if (warnedTerminalRef.current === terminalId) return;
+    warnedTerminalRef.current = terminalId;
+    void ensureGitAccount();
+  }, [terminalId, ensureGitAccount]);
   const [terminalSessionDriver] = useState(() =>
     terminalEnvironment.createSession({
       target: {
