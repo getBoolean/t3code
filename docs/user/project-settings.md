@@ -163,8 +163,9 @@ than** on the task.
 ## Defaults and inheritance
 
 Threads contains the model and workspace for new threads. Browser controls agent browser
-access. Source control contains automatic pull, the default pull request merge method and text
-generation. The same rows edit environment defaults or project overrides depending on the
+access. Source control contains automatic pull, the default pull request merge method, text
+generation, and the [git account](source-control.md#use-a-different-git-account-per-project)
+commits and pushes use. The same rows edit environment defaults or project overrides depending on the
 project crumb.
 
 The Projects category, under Code, holds the project's name, icon, actions,
