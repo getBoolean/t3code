@@ -24,6 +24,7 @@ import * as Option from "effect/Option";
 import * as PlatformError from "effect/PlatformError";
 import * as Path from "effect/Path";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
+import * as Queue from "effect/Queue";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
@@ -245,6 +246,8 @@ interface CreateManagerOptions {
     typeof TerminalManager.makeWithOptions
   >[0]["resolveProviderInstanceEnvironment"];
   resolveGitAccount?: Parameters<typeof TerminalManager.makeWithOptions>[0]["resolveGitAccount"];
+  gitAccountShims?: boolean;
+  gitAccountChanges?: Stream.Stream<unknown>;
   managedBinaryCacheDir?: string;
   managedBinaryToolsDir?: string;
 }
@@ -300,6 +303,12 @@ const createManager = (
           : {}),
         ...(options.resolveGitAccount !== undefined
           ? { resolveGitAccount: options.resolveGitAccount }
+          : {}),
+        ...(options.gitAccountShims === true
+          ? { gitAccountShimsDir: join(baseDir, "git-account-shims") }
+          : {}),
+        ...(options.gitAccountChanges !== undefined
+          ? { gitAccountChanges: options.gitAccountChanges }
           : {}),
         ...(options.managedBinaryCacheDir === undefined
           ? {}
@@ -2008,6 +2017,66 @@ it.layer(
         'The git account "Work" can\'t be used: it has no saved token',
       );
       unsubscribe();
+    }),
+  );
+
+  it.effect("moves an open terminal's git and gh shims to the current account", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const account = {
+        label: "Work",
+        authorName: "Work Name",
+        authorEmail: "work@example.test",
+        forge: "github",
+        host: "github.com",
+        credentialKind: "token",
+        token: "work-token",
+        cliLogin: "",
+        sshKeyPath: "",
+      } as const;
+      const current = yield* Ref.make<GitAccounts.LaunchIdentity | null>({
+        accountId: GitAccountId.make("work"),
+        label: account.label,
+        authorName: account.authorName,
+        authorEmail: account.authorEmail,
+        forge: account.forge,
+        host: account.host,
+        fingerprint: "fp",
+        overlay: buildOverlay({ id: "work", account, token: account.token }),
+        token: account.token,
+        unavailable: null,
+      });
+      // The stream pulls its next change only after the manager has handled the previous one.
+      const pulled = yield* Queue.unbounded<void>();
+      const changes = yield* Queue.unbounded<void>();
+      const { manager, ptyAdapter } = yield* createManager(5, {
+        env: { GH_TOKEN: "machine-token", PATH: "/usr/bin" },
+        gitAccountShims: true,
+        gitAccountChanges: Stream.fromEffectRepeat(
+          Queue.offer(pulled, undefined).pipe(Effect.andThen(Queue.take(changes))),
+        ),
+        resolveGitAccount: () => Ref.get(current),
+      });
+      yield* Queue.take(pulled);
+
+      yield* manager.open(openInput({ threadId: "thread-bound" }));
+      const env = ptyAdapter.spawnInputs[0]!.env;
+      const file = env.T3CODE_GIT_ACCOUNT_ENV!;
+      expect(env.PATH).toMatch(/git-account-shims[\\/]bin[;:]\/usr\/bin$/);
+
+      expect(yield* fs.readFileString(file)).toContain("work-token");
+
+      // A bypass resolves to the machine login, so the file restores the start environment.
+      yield* Ref.set(current, null);
+      yield* Queue.offer(changes, undefined);
+      yield* Queue.take(pulled);
+      const restored = yield* fs.readFileString(file);
+      expect(restored).not.toContain("work-token");
+      expect(restored).toContain("machine-token");
+      expect(restored).toMatch(/GIT_CONFIG_COUNT/);
+
+      yield* manager.close({ threadId: "thread-bound", terminalId: DEFAULT_TERMINAL_ID });
+      expect(yield* fs.exists(file)).toBe(false);
     }),
   );
 

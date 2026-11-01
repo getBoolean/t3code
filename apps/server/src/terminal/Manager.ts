@@ -78,6 +78,12 @@ import * as ProcessRunner from "../processRunner.ts";
 import * as PortScanner from "../preview/PortScanner.ts";
 import * as NativeTelemetryClient from "../resourceTelemetry/NativeTelemetryClient.ts";
 import { terminalOutputStream } from "./OutputProtocol.ts";
+import {
+  ENV_FILE_VARIABLE,
+  envChange,
+  envScript,
+  shimFiles,
+} from "../gitAccounts/terminalShims.ts";
 import * as PtyAdapter from "@t3tools/shared/PtyAdapter";
 
 export {
@@ -314,6 +320,12 @@ interface TerminalSessionState {
   childCommandLabel: string | null;
   runtimeEnv: Record<string, string> | null;
   gitAccountProjectId: ProjectId | null;
+  /** The env file the terminal's `git` and `gh` shims source; `null` without shims. */
+  gitAccountEnv: {
+    readonly file: string;
+    readonly start: Readonly<Record<string, string | undefined>>;
+    keys: ReadonlySet<string>;
+  } | null;
 }
 
 interface TerminalGrid {
@@ -1475,6 +1487,10 @@ interface TerminalManagerOptions {
     readonly threadId: string;
     readonly projectId: ProjectId | null;
   }) => Effect.Effect<GitAccounts.LaunchIdentity | null>;
+  /** Where `git` and `gh` shims live; without it terminals keep their start-up account. */
+  gitAccountShimsDir?: string;
+  /** Any event re-resolves the git account of every open terminal. */
+  gitAccountChanges?: Stream.Stream<unknown>;
 }
 
 export const resolveProviderInstanceTerminalEnvironment = Effect.fn(
@@ -1527,6 +1543,7 @@ export const make = Effect.fn("TerminalManager.make")(function* () {
   const serverSettings = yield* ServerSettings.ServerSettingsService;
   const path = yield* Path.Path;
   const gitAccounts = yield* GitAccounts.GitAccounts;
+  const settingsChanges = yield* serverSettings.subscribeChanges;
   const resolveProviderInstanceEnvironment = Effect.fn(
     "terminal.resolveProviderInstanceEnvironment",
   )((rawProviderInstanceId: string, env: Record<string, string> | undefined) =>
@@ -1550,6 +1567,8 @@ export const make = Effect.fn("TerminalManager.make")(function* () {
     registerTerminalProcesses: portDiscovery.registerTerminalProcesses,
     unregisterTerminal: portDiscovery.unregisterTerminal,
     resolveProviderInstanceEnvironment,
+    gitAccountShimsDir: path.join(baseDir, "git-account-shims"),
+    gitAccountChanges: Stream.merge(gitAccounts.bypassChanges, settingsChanges),
     resolveGitAccount: ({ threadId, projectId }) =>
       gitAccounts.forWorkspace({
         cwd: "",
@@ -1741,6 +1760,113 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
   const modifyManagerState = <A>(
     f: (state: TerminalManagerState) => readonly [A, TerminalManagerState],
   ) => SynchronizedRef.modify(managerStateRef, f);
+
+  const gitAccountShimsDir = options.gitAccountShimsDir;
+  const gitAccountEnvDir =
+    gitAccountShimsDir === undefined ? undefined : path.join(gitAccountShimsDir, "env");
+  let gitAccountShimsReady = false;
+
+  const ensureGitAccountShims = Effect.fn("terminal.ensureGitAccountShims")(function* (
+    shimsDir: string,
+    envDir: string,
+  ) {
+    if (gitAccountShimsReady) return;
+    const binDir = path.join(shimsDir, "bin");
+    yield* fileSystem.makeDirectory(binDir, { recursive: true });
+    // Env files hold tokens; drop any a crashed server left behind.
+    yield* fileSystem.remove(envDir, { recursive: true }).pipe(Effect.ignore);
+    yield* fileSystem.makeDirectory(envDir, { recursive: true, mode: 0o700 });
+    for (const shim of shimFiles(platform, binDir)) {
+      yield* fileSystem.writeFileString(path.join(binDir, shim.name), shim.content, {
+        mode: shim.executable ? 0o755 : 0o644,
+      });
+      if (shim.executable) yield* fileSystem.chmod(path.join(binDir, shim.name), 0o755);
+    }
+    gitAccountShimsReady = true;
+  });
+
+  const writeGitAccountEnv = (
+    file: string,
+    start: Readonly<Record<string, string | undefined>>,
+    target: Readonly<Record<string, string | undefined>>,
+    previous: ReadonlySet<string>,
+  ) => {
+    const change = envChange(start, target, previous);
+    return fileSystem
+      .writeFileString(file, envScript(platform, change), { mode: 0o600 })
+      .pipe(Effect.as(change.keys));
+  };
+
+  const pathKeyOf = (env: Readonly<Record<string, string | undefined>>) =>
+    platform === "win32"
+      ? (Object.keys(env).find((candidate) => candidate.toLowerCase() === "path") ?? "PATH")
+      : "PATH";
+
+  /** Puts the `git` and `gh` shims first on PATH and records the env file they read. */
+  const withGitAccountShims = Effect.fn("terminal.withGitAccountShims")(function* (
+    session: TerminalSessionState,
+    start: NodeJS.ProcessEnv,
+    target: NodeJS.ProcessEnv,
+  ) {
+    if (gitAccountShimsDir === undefined || gitAccountEnvDir === undefined) return target;
+    const file = path.join(
+      gitAccountEnvDir,
+      `${NodeCrypto.createHash("sha256")
+        .update(toSessionKey(session.threadId, session.terminalId))
+        .digest("hex")
+        .slice(0, 24)}${platform === "win32" ? ".cmd" : ".sh"}`,
+    );
+    return yield* Effect.gen(function* () {
+      yield* ensureGitAccountShims(gitAccountShimsDir, gitAccountEnvDir);
+      const keys = yield* writeGitAccountEnv(file, start, target, new Set());
+      session.gitAccountEnv = { file, start: { ...start }, keys };
+      const pathKey = pathKeyOf(target);
+      const delimiter = platform === "win32" ? ";" : ":";
+      const binDir = path.join(gitAccountShimsDir, "bin");
+      const current = target[pathKey];
+      return {
+        ...target,
+        [pathKey]:
+          current === undefined || current === "" ? binDir : `${binDir}${delimiter}${current}`,
+        [ENV_FILE_VARIABLE]: file,
+      };
+    }).pipe(
+      Effect.catch((cause) =>
+        Effect.logWarning("terminal git account shims are unavailable", { cause }).pipe(
+          Effect.as(target),
+        ),
+      ),
+    );
+  });
+
+  const removeGitAccountEnv = (session: TerminalSessionState) => {
+    const env = session.gitAccountEnv;
+    session.gitAccountEnv = null;
+    return env === null ? Effect.void : fileSystem.remove(env.file).pipe(Effect.ignore);
+  };
+
+  /** Re-resolves every open terminal's account so its shims pick up a switch or bypass. */
+  const refreshGitAccountEnvs = Effect.fn("terminal.refreshGitAccountEnvs")(function* () {
+    if (options.resolveGitAccount === undefined) return;
+    const state = yield* readManagerState;
+    for (const session of state.sessions.values()) {
+      const env = session.gitAccountEnv;
+      if (env === null || session.status !== "running") continue;
+      const account = yield* options.resolveGitAccount({
+        threadId: session.threadId,
+        projectId: session.gitAccountProjectId,
+      });
+      const target =
+        account === null ? env.start : applyEnvironmentOverlay({ ...env.start }, account.overlay);
+      env.keys = yield* writeGitAccountEnv(env.file, env.start, target, env.keys).pipe(
+        Effect.catch((cause) =>
+          Effect.logWarning("terminal git account env could not be refreshed", { cause }).pipe(
+            Effect.as(env.keys),
+          ),
+        ),
+      );
+    }
+  });
 
   const withThreadLock = <A, E, R>(
     threadId: string,
@@ -2537,10 +2663,11 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
                     threadId: session.threadId,
                     projectId: session.gitAccountProjectId,
                   });
-            const spawnEnv =
+            const accountEnv =
               account === null
                 ? terminalEnv
                 : applyEnvironmentOverlay(terminalEnv, account.overlay);
+            const spawnEnv = yield* withGitAccountShims(session, terminalEnv, accountEnv);
             const spawnResult = yield* trySpawn(shellCandidates, spawnEnv, session);
             ptyProcess = spawnResult.process;
             startedShell = spawnResult.shellLabel;
@@ -2560,7 +2687,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
               if (account?.unavailable) {
                 enqueueProcessEvent(session, processPid, {
                   type: "output",
-                  data: `\x1b[33mT3 Code: ${account.unavailable.message}. Git commits, pushes and forge commands in this terminal will fail.\x1b[0m\r\n`,
+                  data: `\x1b[33mT3 Code: ${account.unavailable.message}. Git commits, pushes and forge commands in this terminal will fail until you continue without the account from the thread.\x1b[0m\r\n`,
                 });
               }
               // onExit may replay an exit immediately; accept it before subscribing.
@@ -2655,6 +2782,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
       yield* stopProcess(session.value);
       yield* unregisterTerminal({ threadId, terminalId });
       yield* persistHistory(threadId, terminalId, session.value.history);
+      yield* removeGitAccountEnv(session.value);
     }
 
     yield* flushPersist(threadId, terminalId);
@@ -2865,6 +2993,13 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
     ),
   ).pipe(Effect.forkIn(workerScope));
 
+  if (options.gitAccountChanges !== undefined) {
+    yield* options.gitAccountChanges.pipe(
+      Stream.runForEach(() => refreshGitAccountEnvs()),
+      Effect.forkIn(workerScope),
+    );
+  }
+
   yield* Effect.addFinalizer(() =>
     Effect.gen(function* () {
       const sessions = yield* modifyManagerState(
@@ -2944,6 +3079,7 @@ export const makeWithOptions = Effect.fn("TerminalManager.makeWithOptions")(func
         childCommandLabel: null,
         runtimeEnv: normalizedRuntimeEnv(input.env),
         gitAccountProjectId: input.gitAccountProjectId ?? null,
+        gitAccountEnv: null,
       };
 
       const createdSession = session;
