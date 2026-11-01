@@ -1,5 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off
 
+import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import {
   type ChatAttachment,
   type ModelSelection,
@@ -149,6 +150,8 @@ export interface AcpAdapterV2RuntimeInput {
   readonly acpMcpServers?: ReadonlyArray<EffectAcpSchema.McpServer>;
   readonly httpMcpServers?: ReadonlyArray<EffectAcpSchema.McpServer>;
   readonly processEnvironment?: NodeJS.ProcessEnv;
+  /** The project's git account; flavors apply it to the env they spawn the agent with. */
+  readonly accountOverlay?: EnvironmentOverlay;
   readonly resumeSessionId?: string;
   readonly interruptPromptOnCancel?: boolean;
   readonly clientCapabilities: EffectAcpSchema.InitializeRequest["clientCapabilities"];
@@ -262,6 +265,8 @@ export function acpPerTurnPromptUsage(
 }
 
 export interface AcpAdapterV2Flavor {
+  /** Set only when `makeRuntime` applies `accountOverlay` to the agent process env. */
+  readonly appliesAccountEnvironment?: boolean;
   readonly buildPrompt?: (input: {
     readonly text: string;
     readonly attachments: ReadonlyArray<ChatAttachment>;
@@ -1456,6 +1461,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
   return ProviderAdapter.ProviderAdapterV2.of({
     instanceId: options.instanceId,
     driver,
+    appliesAccountEnvironment: flavor.appliesAccountEnvironment === true,
     getCapabilities: Effect.fn("AcpAdapter.getCapabilities")(function () {
       return Effect.succeed(flavor.capabilities);
     }),
@@ -1543,6 +1549,9 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
             : yield* makeAcpClientTerminals({
                 defaultCwd: input.runtimePolicy.cwd ?? process.cwd(),
                 environment: options.clientTerminals.environment,
+                ...(input.accountOverlay === undefined
+                  ? {}
+                  : { accountOverlay: input.accountOverlay }),
                 shellCommands: options.clientTerminals.shellCommands,
                 environmentForSession: (sessionId) => {
                   const remembered = terminalEnvironmentBySessionId.get(sessionId);
@@ -2076,6 +2085,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
             ...(mcpContext.processEnvironment === undefined
               ? {}
               : { processEnvironment: mcpContext.processEnvironment }),
+            ...(input.accountOverlay === undefined ? {} : { accountOverlay: input.accountOverlay }),
             ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
             interruptPromptOnCancel: flavor.interruptPromptOnCancel ?? false,
             clientCapabilities: {

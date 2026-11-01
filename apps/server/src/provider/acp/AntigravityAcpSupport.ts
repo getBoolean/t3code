@@ -1,3 +1,4 @@
+import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import {
   ANTIGRAVITY_DEFAULT_MODEL,
   type AntigravityAuthMethod,
@@ -41,6 +42,7 @@ export interface AntigravityAcpRuntimeInput extends Omit<
   readonly onAuthorizationUrl?: (url: string) => Effect.Effect<void, EffectAcpErrors.AcpError>;
   readonly clientFileReads?: boolean;
   readonly authMethod?: AntigravityAuthMethod;
+  readonly accountOverlay?: EnvironmentOverlay;
 }
 
 export const makeAntigravityAcpRuntime = Effect.fn("makeAntigravityAcpRuntime")(function* (

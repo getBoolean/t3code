@@ -1,3 +1,4 @@
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
 import {
   XAiPromptFailureText,
@@ -225,6 +226,7 @@ export function makeGrokAcpAdapterFlavor(
 ): AcpAdapterV2Flavor {
   return {
     driver: GROK_PROVIDER,
+    appliesAccountEnvironment: true,
     runtimeHarness: "Grok",
     capabilities: GrokProviderCapabilitiesV2,
     interruptPromptOnCancel: false,
@@ -289,12 +291,15 @@ export function makeGrokAcpAdapterFlavor(
     }),
     makeRuntime:
       options.makeRuntime ??
-      (({ runtimePolicy, ...input }) =>
+      (({ runtimePolicy, accountOverlay, ...input }) =>
         makeGrokAcpRuntime({
           ...input,
           interruptPromptOnCancel: input.interruptPromptOnCancel ?? false,
           grokSettings: options.settings,
-          environment: options.environment,
+          environment:
+            accountOverlay === undefined
+              ? options.environment
+              : applyEnvironmentOverlay(options.environment, accountOverlay),
           runtimeMode: grokLaunchRuntimeMode(runtimePolicy),
         })),
     // Auto prompts represent classifier refusals and must reach the user.

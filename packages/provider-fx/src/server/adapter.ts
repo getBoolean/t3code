@@ -1,3 +1,4 @@
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { resolveSelfInvocation, type SelfInvocation } from "@t3tools/shared/nodeRuntime";
 import { type OrchestrationV2ProviderCapabilities } from "@t3tools/contracts";
@@ -167,15 +168,27 @@ export interface FxAdapterV2Options {
 function makeFxAcpAdapterFlavor(options: FxAdapterV2Options): AcpAdapterV2Flavor {
   const makeRuntime =
     options.makeRuntime ??
-    (({ runtimePolicy: _runtimePolicy, processEnvironment, ...input }: AcpAdapterV2RuntimeInput) =>
+    (({
+      runtimePolicy: _runtimePolicy,
+      processEnvironment,
+      accountOverlay,
+      ...input
+    }: AcpAdapterV2RuntimeInput) =>
       makeFxAcpRuntime({
         ...input,
         fxSettings: options.settings,
-        environment: { ...options.environment, ...processEnvironment },
+        environment:
+          accountOverlay === undefined
+            ? { ...options.environment, ...processEnvironment }
+            : applyEnvironmentOverlay(
+                { ...options.environment, ...processEnvironment },
+                accountOverlay,
+              ),
       }));
   return {
     driver: FX_DRIVER_KIND,
     runtimeHarness: "fx",
+    appliesAccountEnvironment: true,
     capabilities: FxProviderCapabilitiesV2,
     makeRuntime: (input) => makeRuntime(input).pipe(Effect.map(withFxSessionMode)),
     applyModelSelection: ({ runtime, modelSelection }) =>

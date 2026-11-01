@@ -1,3 +1,4 @@
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import * as DocumentText from "../../provider/DocumentText.ts";
 import { makeProviderTextDeltaCoalescer } from "./ProviderTextDeltaCoalescer.ts";
 import { claudeTaskOutputRoot, tailClaudeTaskOutput } from "./ClaudeTaskOutputTail.ts";
@@ -4668,6 +4669,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
   return ProviderAdapter.ProviderAdapterV2.of({
     instanceId: adapterOptions.instanceId,
     driver: CLAUDE_PROVIDER,
+    appliesAccountEnvironment: true,
     getCapabilities: Effect.fn("ClaudeAdapterV2.getCapabilities")(function () {
       return Effect.succeed(ClaudeProviderCapabilitiesV2);
     }),
@@ -4677,6 +4679,10 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
     openSession: Effect.fn("ClaudeAdapterV2.openSession")(
       function* (input: ProviderAdapter.ProviderAdapterV2OpenSessionInput) {
         const sessionScope = yield* Effect.scope;
+        const sessionEnvironment =
+          input.accountOverlay === undefined
+            ? adapterOptions.environment
+            : applyEnvironmentOverlay(adapterOptions.environment, input.accountOverlay);
         const now = yield* DateTime.now;
         const session = providerSession({
           providerSessionId: input.providerSessionId,
@@ -10223,7 +10229,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
               ? {}
               : { sdkSettings: claudeSdkLaunchArgSettings(launchArgSettings) }),
             environment: claudeQueryEnvironment(
-              adapterOptions.environment,
+              sessionEnvironment,
               turnInput.appThread,
               turnInput.appThread.lineage.relationshipToParent === "subagent"
                 ? yield* resolveSubagentPromptCacheTtl(turnInput.runtimePolicy.cwd)
