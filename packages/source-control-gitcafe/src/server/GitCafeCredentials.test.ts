@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
 import * as HostProcess from "@t3tools/shared/HostProcess";
-import type * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
 
 import * as GitCafeCredentials from "./GitCafeCredentials.ts";
@@ -91,6 +91,18 @@ describe("GitCafeCredentials", () => {
         Redacted.value((yield* credentials.get("staging.git.cafe")).token),
         "gct_staging",
       );
+
+      const asAccount = Effect.provideService(SourceControlHost.AccountCredential, {
+        host: "git.cafe",
+        token: Redacted.make("account-token"),
+        label: "Work",
+      });
+      const account = yield* asAccount(credentials.get("git.cafe"));
+      assert.strictEqual(Redacted.value(account.token), "account-token");
+      assert.strictEqual(account.source, "account");
+      const elsewhere = yield* Effect.flip(asAccount(credentials.get("staging.git.cafe")));
+      assert.strictEqual(elsewhere._tag, "GitCafeNotSignedInError");
+      assert.strictEqual(calls.length, 1);
 
       yield* settings.update({ sourceControlHosts: { gitcafe: { token: "" } } });
       assert.strictEqual((yield* credentials.get("git.cafe")).source, "env");

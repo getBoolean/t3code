@@ -4,10 +4,11 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as PlatformError from "effect/PlatformError";
+import * as Redacted from "effect/Redacted";
 import { ChildProcessSpawner } from "effect/process";
 import { VcsProcessExitError, VcsProcessSpawnError } from "@t3tools/contracts";
 
-import type * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
 import * as AzureDevOpsCli from "./AzureDevOpsCli.ts";
 
@@ -283,6 +284,26 @@ describe("AzureDevOpsCli.layer", () => {
       assert.instanceOf(error, AzureDevOpsCli.AzureDevOpsCommandFailedError);
       assert.strictEqual(error.cwd, cwd);
       assert.strictEqual(error.cause, cause);
+    }).pipe(Effect.provide(layer)),
+  );
+
+  it.effect("runs az as a project's git account instead of its own login", () =>
+    Effect.gen(function* () {
+      mockRun.mockReturnValue(Effect.succeed(processOutput("{}")));
+      const az = yield* AzureDevOpsCli.AzureDevOpsCli;
+      const input = { cwd: "/repo", args: ["repos", "show"] };
+      yield* az.execute(input);
+      yield* az.execute(input).pipe(
+        Effect.provideService(SourceControlHost.AccountCredential, {
+          host: "dev.azure.com",
+          token: Redacted.make("work-pat"),
+          label: "Work",
+        }),
+      );
+      assert.deepStrictEqual(
+        mockRun.mock.calls.map(([call]) => call.env),
+        [undefined, { AZURE_DEVOPS_EXT_PAT: "work-pat" }],
+      );
     }).pipe(Effect.provide(layer)),
   );
 

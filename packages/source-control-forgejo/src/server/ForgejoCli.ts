@@ -6,6 +6,7 @@ import * as Result from "effect/Result";
 import * as Clock from "effect/Clock";
 import * as FileSystem from "effect/FileSystem";
 import * as Semaphore from "effect/Semaphore";
+import * as Redacted from "effect/Redacted";
 // @effect-diagnostics-next-line nodeBuiltinImport:off - fj storage paths use explicit Windows and POSIX layouts, independently of this process's platform.
 import * as NodePath from "node:path";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
@@ -246,6 +247,13 @@ export const make = Effect.gen(function* () {
       );
 
   const readKeys = Effect.fn("ForgejoCli.readKeys")(function* (cwd: string) {
+    const account = yield* SourceControlHost.AccountCredential;
+    if (account !== null) {
+      const keys: typeof ForgejoKeysSchema.Type = {
+        hosts: { [account.host]: { type: "Application", token: Redacted.value(account.token) } },
+      };
+      return keys;
+    }
     for (const path of forgejoKeysPaths({
       platform: yield* HostProcess.Platform,
       home: yield* HostProcess.HomeDirectory,
@@ -430,6 +438,7 @@ export const make = Effect.gen(function* () {
   ) {
     const keys = yield* readKeys(cwd);
     const token = keys.hosts[login.name]?.token;
+    if (token && (yield* SourceControlHost.AccountCredential) !== null) return token;
     const now = yield* Clock.currentTimeMillis;
     const cached = authenticated.get(login.url);
     if (token && cached?.token === token && now - cached.time < 30_000) return token;
@@ -596,6 +605,14 @@ export const make = Effect.gen(function* () {
         else return yield* auth.failure;
       }
     }
+    const account = yield* SourceControlHost.AccountCredential;
+    if (!login && account !== null)
+      return yield* new ForgejoCliError({
+        command: "fj",
+        cwd: input.cwd,
+        reason: "authentication",
+        detail: `The git account "${account.label}" is for ${account.host}, not this repository's server.`,
+      });
     if (!login) {
       command = "tea";
       login = selectLogin(yield* listLogins({ cwd: input.cwd, command: "tea" }));

@@ -22,7 +22,7 @@ const MISSING_TTL = Duration.seconds(10);
 export interface GitCafeCredential {
   readonly host: string;
   readonly token: Redacted.Redacted<string>;
-  readonly source: "settings" | "env" | "cafe";
+  readonly source: "account" | "settings" | "env" | "cafe";
 }
 
 export class GitCafeCliMissingError extends Schema.TaggedError<GitCafeCliMissingError>()(
@@ -163,8 +163,15 @@ export const make = Effect.gen(function* () {
   });
 
   return GitCafeCredentials.of({
-    get: Effect.fn("GitCafeCredentials.get")(function (host) {
-      return fromSettings(host).pipe(
+    get: Effect.fn("GitCafeCredentials.get")(function* (host) {
+      const account = yield* SourceControlHost.AccountCredential;
+      if (account !== null) {
+        if (normalizeHost(account.host) !== normalizeHost(host)) {
+          return yield* new GitCafeNotSignedInError({ host: normalizeHost(host) });
+        }
+        return { host: normalizeHost(host), token: account.token, source: "account" } as const;
+      }
+      return yield* fromSettings(host).pipe(
         Effect.flatMap(
           (saved): Effect.Effect<GitCafeCredential, GitCafeCredentialUnavailableError> =>
             saved === null
