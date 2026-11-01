@@ -1,3 +1,4 @@
+import { useGitAccountGuard } from "./chat/useGitAccountGuard";
 import { ThreadDetailsControl } from "./chat/ThreadDetailsControl";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import {
@@ -964,6 +965,15 @@ export default function GitActionsControl({
   const activeServerThread =
     activeServerThreadShell ?? activeServerThreadProjection?.projection.thread ?? null;
   const isLocalDraftThread = activeDraftThread !== null && activeServerThread === null;
+  const gitAccountGuard = useGitAccountGuard(
+    activeEnvironmentId === null || activeThreadRef === null
+      ? null
+      : {
+          environmentId: activeEnvironmentId,
+          threadId: activeThreadRef.threadId,
+          projectId: activeServerThread?.projectId ?? activeDraftThread?.projectId ?? null,
+        },
+  );
   const canChangeThreadBranch = canWriteSourceControl && (isLocalDraftThread || canOperateThread);
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
   const [isCommitDialogOpen, setIsCommitDialogOpen] = useState(false);
@@ -1192,6 +1202,7 @@ export default function GitActionsControl({
       });
       return;
     }
+    if (!(await gitAccountGuard.ensureGitAccount())) return;
     onConfirmed?.();
     setInlineSuccess(null);
 

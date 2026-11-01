@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema";
 
-import { ThreadId } from "./baseSchemas.ts";
+import { ProjectId, ThreadId } from "./baseSchemas.ts";
 import { GitAccountId } from "./gitAccountId.ts";
 
 /** What git and the forge fall back to on this machine when a thread bypasses its account. */
@@ -25,11 +25,16 @@ export const GitAccountThreadStatus = Schema.Struct({
 });
 export type GitAccountThreadStatus = typeof GitAccountThreadStatus.Type;
 
-export const GitAccountThreadStatusInput = Schema.Struct({ threadId: ThreadId });
+/** `projectId` covers a draft thread the server doesn't know yet. */
+export const GitAccountThreadStatusInput = Schema.Struct({
+  threadId: ThreadId,
+  projectId: Schema.optional(ProjectId),
+});
 export type GitAccountThreadStatusInput = typeof GitAccountThreadStatusInput.Type;
 
 export const GitAccountSetThreadBypassInput = Schema.Struct({
   threadId: ThreadId,
+  projectId: Schema.optional(ProjectId),
   bypass: Schema.Boolean,
 });
 export type GitAccountSetThreadBypassInput = typeof GitAccountSetThreadBypassInput.Type;

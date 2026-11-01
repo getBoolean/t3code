@@ -1,3 +1,4 @@
+import { useGitAccountGuard } from "../chat/useGitAccountGuard";
 import {
   AuthTerminalOperateScope,
   AuthTerminalReadScope,
@@ -39,6 +40,15 @@ export function useThreadTerminalActions(threadRef: ScopedThreadRef | null) {
       ? scopeProjectRef(draftThread.environmentId, draftThread.projectId)
       : null;
   const project = useProject(projectRef);
+  const gitAccountGuard = useGitAccountGuard(
+    threadRef
+      ? {
+          environmentId: threadRef.environmentId,
+          threadId: threadRef.threadId,
+          projectId: serverThread?.projectId ?? draftThread?.projectId ?? null,
+        }
+      : null,
+  );
   const threadWorktreePath = serverThread?.worktreePath ?? draftThread?.worktreePath ?? null;
   const knownSessions = useKnownTerminalSessions({
     environmentId: threadRef?.environmentId ?? null,
@@ -94,6 +104,8 @@ export function useThreadTerminalActions(threadRef: ScopedThreadRef | null) {
     if (!location) return null;
     const terminalId = input.terminalId ?? allocateTerminalId();
     input.place(terminalId);
+    // The terminal opens either way; its git shims pick up a bypass the user accepts here.
+    void gitAccountGuard.ensureGitAccount();
     const result = openTerminalCommand({
       environmentId: threadRef.environmentId,
       input: {

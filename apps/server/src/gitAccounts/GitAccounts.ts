@@ -71,11 +71,16 @@ export class GitAccounts extends Context.Service<
       readonly projectId?: ProjectId | undefined;
       readonly remoteUrl: string | null;
     }) => Effect.Effect<LaunchIdentity | null, GitAccountUnavailable>;
-    readonly threadStatus: (threadId: ThreadId) => Effect.Effect<GitAccountThreadStatus>;
+    /** `draftProjectId` stands in for a thread the server hasn't created yet. */
+    readonly threadStatus: (
+      threadId: ThreadId,
+      draftProjectId?: ProjectId,
+    ) => Effect.Effect<GitAccountThreadStatus>;
     /** A bypass lasts until the account works again or its settings change. */
     readonly setThreadBypass: (
       threadId: ThreadId,
       bypass: boolean,
+      draftProjectId?: ProjectId,
     ) => Effect.Effect<GitAccountThreadStatus>;
     /** Threads whose bypass started or ended, so open terminals can refresh. */
     readonly bypassChanges: Stream.Stream<ThreadId>;
@@ -376,7 +381,10 @@ const make = Effect.gen(function* () {
     } satisfies GitAccountMachineIdentity;
   });
 
-  const problemFor = Effect.fn("GitAccounts.problemFor")(function* (threadId: ThreadId) {
+  const problemFor = Effect.fn("GitAccounts.problemFor")(function* (
+    threadId: ThreadId,
+    draftProjectId: ProjectId | undefined,
+  ) {
     const thread = yield* threads.getThreadShell(threadId).pipe(Effect.option);
     if (Option.isNone(thread)) {
       const identity = storeUnavailableIdentity();
@@ -386,7 +394,7 @@ const make = Effect.gen(function* () {
         problem: { key: identity.fingerprint, reason: identity.unavailable!.reason, host: null },
       };
     }
-    const projectId = thread.value?.projectId ?? null;
+    const projectId = thread.value?.projectId ?? draftProjectId ?? null;
     const identity = yield* forProject(projectId);
     if (identity === null) return { identity, cwd: null, problem: null };
     const project =
@@ -422,8 +430,8 @@ const make = Effect.gen(function* () {
 
   const threadStatus: GitAccounts["Service"]["threadStatus"] = Effect.fn(
     "GitAccounts.threadStatus",
-  )(function* (threadId) {
-    const { identity, cwd, problem } = yield* problemFor(threadId);
+  )(function* (threadId, draftProjectId) {
+    const { identity, cwd, problem } = yield* problemFor(threadId, draftProjectId);
     const account = {
       accountId:
         identity === null || identity.fingerprint === STORE_UNAVAILABLE ? null : identity.accountId,
@@ -450,17 +458,17 @@ const make = Effect.gen(function* () {
 
   const setThreadBypass: GitAccounts["Service"]["setThreadBypass"] = Effect.fn(
     "GitAccounts.setThreadBypass",
-  )(function* (threadId, bypass) {
+  )(function* (threadId, bypass, draftProjectId) {
     if (!bypass) {
       yield* clearBypass(threadId);
-      return yield* threadStatus(threadId);
+      return yield* threadStatus(threadId, draftProjectId);
     }
-    const { problem } = yield* problemFor(threadId);
+    const { problem } = yield* problemFor(threadId, draftProjectId);
     if (problem !== null && bypasses.get(threadId) !== problem.key) {
       bypasses.set(threadId, problem.key);
       yield* PubSub.publish(bypassPubSub, threadId);
     }
-    return yield* threadStatus(threadId);
+    return yield* threadStatus(threadId, draftProjectId);
   });
 
   return GitAccounts.of({

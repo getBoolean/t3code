@@ -2201,11 +2201,13 @@ export const layerWsRpc = (
           ),
         [WS_METHODS.gitAccountsThreadStatus]: (input) =>
           Effect.annotateCurrentSpan({ "orchestration_v2.thread_id": input.threadId }).pipe(
-            Effect.andThen(gitAccounts.threadStatus(input.threadId)),
+            Effect.andThen(gitAccounts.threadStatus(input.threadId, input.projectId)),
           ),
         [WS_METHODS.gitAccountsSetThreadBypass]: (input) =>
           Effect.annotateCurrentSpan({ "orchestration_v2.thread_id": input.threadId }).pipe(
-            Effect.andThen(gitAccounts.setThreadBypass(input.threadId, input.bypass)),
+            Effect.andThen(
+              gitAccounts.setThreadBypass(input.threadId, input.bypass, input.projectId),
+            ),
           ),
         [WS_METHODS.scheduledTasksGetWebhookDelivery]: (input) =>
           Effect.annotateCurrentSpan({ "scheduled_task.id": input.id }).pipe(
