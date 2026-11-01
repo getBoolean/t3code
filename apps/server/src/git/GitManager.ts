@@ -3123,24 +3123,21 @@ export const make = Effect.gen(function* () {
 
         const account =
           wantsCommit || wantsPush || wantsPr
-            ? yield* gitAccounts.forWorkspace({
-                cwd: input.cwd,
-                threadId: input.threadId,
-                projectId: input.projectId,
-              })
+            ? yield* gitAccounts
+                .forRemote({
+                  cwd: input.cwd,
+                  threadId: input.threadId,
+                  projectId: input.projectId,
+                  remoteUrl:
+                    wantsPush || wantsPr
+                      ? yield* readPushRemoteUrl(
+                          input.cwd,
+                          input.featureBranch ? null : initialStatus.branch,
+                        )
+                      : null,
+                })
+                .pipe(Effect.mapError((cause) => accountUnavailableError(input.cwd, cause)))
             : null;
-        if (account !== null) {
-          const remoteUrl =
-            wantsPush || wantsPr
-              ? yield* readPushRemoteUrl(
-                  input.cwd,
-                  input.featureBranch ? null : initialStatus.branch,
-                )
-              : null;
-          yield* gitAccounts
-            .requireUsable(account, { remoteUrl })
-            .pipe(Effect.mapError((cause) => accountUnavailableError(input.cwd, cause)));
-        }
         const accountGitEnv = account === null ? undefined : accountEnv(account);
 
         let branchStep: { status: "created" | "skipped_not_requested"; name?: string };

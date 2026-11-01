@@ -1,6 +1,8 @@
 import {
   type GitAccountConfig,
-  type GitAccountId,
+  GitAccountId,
+  type GitAccountMachineIdentity,
+  type GitAccountThreadStatus,
   type ProjectId,
   type ServerSettings as ServerSettingsValue,
   type ThreadId,
@@ -12,7 +14,9 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as PubSub from "effect/PubSub";
 import * as Schema from "effect/Schema";
+import * as Stream from "effect/Stream";
 
 import * as ProjectionStore from "../orchestration-v2/ProjectionStore.ts";
 import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
@@ -60,6 +64,21 @@ export class GitAccounts extends Context.Service<
       identity: LaunchIdentity,
       options?: { readonly remoteUrl?: string | null | undefined },
     ) => Effect.Effect<void, GitAccountUnavailable>;
+    /** `forWorkspace` plus `requireUsable`; `null` also when the thread bypassed the problem. */
+    readonly forRemote: (input: {
+      readonly cwd: string;
+      readonly threadId?: ThreadId | undefined;
+      readonly projectId?: ProjectId | undefined;
+      readonly remoteUrl: string | null;
+    }) => Effect.Effect<LaunchIdentity | null, GitAccountUnavailable>;
+    readonly threadStatus: (threadId: ThreadId) => Effect.Effect<GitAccountThreadStatus>;
+    /** A bypass lasts until the account works again or its settings change. */
+    readonly setThreadBypass: (
+      threadId: ThreadId,
+      bypass: boolean,
+    ) => Effect.Effect<GitAccountThreadStatus>;
+    /** Threads whose bypass started or ended, so open terminals can refresh. */
+    readonly bypassChanges: Stream.Stream<ThreadId>;
   }
 >()("t3/gitAccounts/GitAccounts") {}
 
@@ -93,6 +112,7 @@ const missingAccountOverlay = (message: string): EnvironmentOverlay => {
 };
 
 const LOGIN_TOKEN_TTL_MS = 30_000;
+const STORE_UNAVAILABLE = "store-unavailable";
 
 const accountIdFor = (settings: ServerSettingsValue, projectId: ProjectId | null) =>
   resolveProjectSettings(settings, projectId).settings.gitAccountId;
@@ -206,39 +226,88 @@ const make = Effect.gen(function* () {
     },
   );
 
-  const projectIdForThread = (threadId: ThreadId) =>
+  const bypasses = new Map<ThreadId, string>();
+  const bypassPubSub = yield* PubSub.unbounded<ThreadId>();
+  const clearBypass = (threadId: ThreadId) =>
+    bypasses.delete(threadId) ? PubSub.publish(bypassPubSub, threadId) : Effect.void;
+
+  // A bypass key is the identity's fingerprint, plus `@<host>` when the problem is the remote's host.
+  const bypassedBy = (threadId: ThreadId, identity: LaunchIdentity) => {
+    const held = bypasses.get(threadId);
+    return held === identity.fingerprint || held?.startsWith(`${identity.fingerprint}@`) === true;
+  };
+
+  const withBypass = Effect.fn("GitAccounts.withBypass")(function* (
+    threadId: ThreadId,
+    identity: LaunchIdentity | null,
+  ) {
+    if (!bypasses.has(threadId)) return identity;
+    if (identity !== null && bypassedBy(threadId, identity)) return null;
+    yield* clearBypass(threadId);
+    return identity;
+  });
+
+  const storeUnavailableIdentity = (): LaunchIdentity => {
+    const unavailable = new GitAccountUnavailable({
+      accountLabel: "this project's account",
+      reason: "T3 Code couldn't read which project this thread belongs to",
+    });
+    return {
+      accountId: GitAccountId.make("unknown"),
+      label: unavailable.accountLabel,
+      authorName: "",
+      authorEmail: "",
+      forge: "github",
+      host: "",
+      fingerprint: STORE_UNAVAILABLE,
+      overlay: missingAccountOverlay(unavailable.message),
+      token: null,
+      unavailable,
+    };
+  };
+
+  // A store read failure resolves to a blocked identity, never to the machine login.
+  const identityForThread = (threadId: ThreadId) =>
     threads.getThreadShell(threadId).pipe(
-      Effect.map((thread) => thread?.projectId ?? null),
-      Effect.orElseSucceed(() => null),
+      Effect.matchEffect({
+        onFailure: () => Effect.succeed(storeUnavailableIdentity()),
+        onSuccess: (thread) => forProject(thread?.projectId ?? null),
+      }),
     );
 
   const forThread: GitAccounts["Service"]["forThread"] = Effect.fn("GitAccounts.forThread")(
     function* (threadId) {
-      return yield* forProject(yield* projectIdForThread(threadId));
+      return yield* withBypass(threadId, yield* identityForThread(threadId));
     },
   );
 
   const forWorkspace: GitAccounts["Service"]["forWorkspace"] = Effect.fn(
     "GitAccounts.forWorkspace",
   )(function* (input) {
-    const fromThread =
-      input.threadId === undefined ? null : yield* projectIdForThread(input.threadId);
-    const projectId =
-      fromThread ??
-      input.projectId ??
-      (yield* projects.findActiveByWorkspaceRoot(input.cwd).pipe(
-        Effect.map((project) => Option.getOrNull(project)?.projectId ?? null),
-        Effect.orElseSucceed(() => null),
-      ));
-    return yield* forProject(projectId);
+    if (input.projectId !== undefined) {
+      const identity = yield* forProject(input.projectId);
+      return input.threadId === undefined ? identity : yield* withBypass(input.threadId, identity);
+    }
+    if (input.threadId !== undefined) return yield* forThread(input.threadId);
+    return yield* projects.findActiveByWorkspaceRoot(input.cwd).pipe(
+      Effect.matchEffect({
+        onFailure: () => Effect.succeed(storeUnavailableIdentity()),
+        onSuccess: (project) => forProject(Option.getOrNull(project)?.projectId ?? null),
+      }),
+    );
   });
+
+  const hostMismatch = (identity: LaunchIdentity, remoteUrl: string | null | undefined) => {
+    const host = remoteUrl ? remoteHost(remoteUrl) : null;
+    return host !== null && host !== identity.host ? host : null;
+  };
 
   const requireUsable: GitAccounts["Service"]["requireUsable"] = Effect.fn(
     "GitAccounts.requireUsable",
   )(function* (identity, options) {
     if (identity.unavailable !== null) return yield* identity.unavailable;
-    const host = options?.remoteUrl ? remoteHost(options.remoteUrl) : null;
-    if (host !== null && host !== identity.host) {
+    const host = hostMismatch(identity, options?.remoteUrl);
+    if (host !== null) {
       return yield* new GitAccountUnavailable({
         accountLabel: identity.label,
         reason: `it belongs to ${identity.host}, but this remote is on ${host}`,
@@ -246,7 +315,164 @@ const make = Effect.gen(function* () {
     }
   });
 
-  return GitAccounts.of({ forProject, forThread, forWorkspace, requireUsable });
+  const forRemote: GitAccounts["Service"]["forRemote"] = Effect.fn("GitAccounts.forRemote")(
+    function* (input) {
+      const identity = yield* forWorkspace(input);
+      if (identity === null) return null;
+      yield* requireUsable(identity, { remoteUrl: input.remoteUrl });
+      return identity;
+    },
+  );
+
+  const gitOutput = (cwd: string, args: ReadonlyArray<string>) =>
+    process
+      .run({
+        operation: "GitAccounts.machineIdentity",
+        command: "git",
+        args,
+        cwd,
+        timeoutMs: 5_000,
+        allowNonZeroExit: true,
+      })
+      .pipe(
+        Effect.map((output) => (output.exitCode === 0 ? output.stdout.trim() || null : null)),
+        Effect.orElseSucceed(() => null),
+      );
+
+  const pushRemoteUrl = Effect.fn("GitAccounts.pushRemoteUrl")(function* (cwd: string) {
+    const upstream = yield* gitOutput(cwd, ["rev-parse", "--abbrev-ref", "@{push}"]);
+    const remote = upstream?.split("/")[0] ?? "origin";
+    return yield* gitOutput(cwd, ["remote", "get-url", "--push", remote]);
+  });
+
+  const forgeLogin = (cwd: string, host: string) =>
+    process
+      .run({
+        operation: "GitAccounts.machineIdentity",
+        command: "gh",
+        args: ["auth", "status", "--active", "--hostname", host],
+        cwd,
+        env: { GH_PROMPT_DISABLED: "1" },
+        timeoutMs: 5_000,
+        allowNonZeroExit: true,
+      })
+      .pipe(
+        Effect.map(
+          (output) => /account (\S+)/.exec(`${output.stdout}\n${output.stderr}`)?.[1] ?? null,
+        ),
+        Effect.orElseSucceed(() => null),
+      );
+
+  const machineIdentity = Effect.fn("GitAccounts.machineIdentity")(function* (
+    cwd: string | null,
+    host: string | null,
+  ) {
+    const at = cwd ?? ".";
+    return {
+      authorName: yield* gitOutput(at, ["config", "user.name"]),
+      authorEmail: yield* gitOutput(at, ["config", "user.email"]),
+      host,
+      forgeLogin: host === null ? null : yield* forgeLogin(at, host),
+    } satisfies GitAccountMachineIdentity;
+  });
+
+  const problemFor = Effect.fn("GitAccounts.problemFor")(function* (threadId: ThreadId) {
+    const thread = yield* threads.getThreadShell(threadId).pipe(Effect.option);
+    if (Option.isNone(thread)) {
+      const identity = storeUnavailableIdentity();
+      return {
+        identity,
+        cwd: null,
+        problem: { key: identity.fingerprint, reason: identity.unavailable!.reason, host: null },
+      };
+    }
+    const projectId = thread.value?.projectId ?? null;
+    const identity = yield* forProject(projectId);
+    if (identity === null) return { identity, cwd: null, problem: null };
+    const project =
+      projectId === null
+        ? Option.none()
+        : yield* projects.get(projectId).pipe(Effect.orElseSucceed(() => Option.none()));
+    const cwd = thread.value?.worktreePath ?? Option.getOrNull(project)?.workspaceRoot ?? null;
+    if (identity.unavailable !== null) {
+      return {
+        identity,
+        cwd,
+        problem: {
+          key: identity.fingerprint,
+          reason: identity.unavailable.reason,
+          host: identity.host === "" ? null : identity.host,
+        },
+      };
+    }
+    const host = cwd === null ? null : hostMismatch(identity, yield* pushRemoteUrl(cwd));
+    return {
+      identity,
+      cwd,
+      problem:
+        host === null
+          ? null
+          : {
+              key: `${identity.fingerprint}@${host}`,
+              reason: `it belongs to ${identity.host}, but this thread's remote is on ${host}`,
+              host,
+            },
+    };
+  });
+
+  const threadStatus: GitAccounts["Service"]["threadStatus"] = Effect.fn(
+    "GitAccounts.threadStatus",
+  )(function* (threadId) {
+    const { identity, cwd, problem } = yield* problemFor(threadId);
+    const account = {
+      accountId:
+        identity === null || identity.fingerprint === STORE_UNAVAILABLE ? null : identity.accountId,
+      accountLabel: identity?.label ?? null,
+    };
+    if (identity === null || problem === null) {
+      yield* clearBypass(threadId);
+      return {
+        state: identity === null ? "none" : "ready",
+        ...account,
+        reason: null,
+        machine: null,
+      } satisfies GitAccountThreadStatus;
+    }
+    const held = bypasses.get(threadId);
+    if (held !== undefined && held !== problem.key) yield* clearBypass(threadId);
+    return {
+      state: held === problem.key ? "bypassed" : "unavailable",
+      ...account,
+      reason: problem.reason,
+      machine: yield* machineIdentity(cwd, problem.host),
+    } satisfies GitAccountThreadStatus;
+  });
+
+  const setThreadBypass: GitAccounts["Service"]["setThreadBypass"] = Effect.fn(
+    "GitAccounts.setThreadBypass",
+  )(function* (threadId, bypass) {
+    if (!bypass) {
+      yield* clearBypass(threadId);
+      return yield* threadStatus(threadId);
+    }
+    const { problem } = yield* problemFor(threadId);
+    if (problem !== null && bypasses.get(threadId) !== problem.key) {
+      bypasses.set(threadId, problem.key);
+      yield* PubSub.publish(bypassPubSub, threadId);
+    }
+    return yield* threadStatus(threadId);
+  });
+
+  return GitAccounts.of({
+    forProject,
+    forThread,
+    forWorkspace,
+    requireUsable,
+    forRemote,
+    threadStatus,
+    setThreadBypass,
+    bypassChanges: Stream.fromPubSub(bypassPubSub),
+  });
 });
 
 export const layer = Layer.effect(GitAccounts, make);

@@ -21,6 +21,7 @@ export * from "./providerRuntime.ts";
 export * from "./providerUsageLimits.ts";
 export * from "./usageLimitSourceId.ts";
 export * from "./gitAccountId.ts";
+export * from "./gitAccountStatus.ts";
 export * from "./providerPolicy.ts";
 export * from "./modelSelection.ts";
 export * from "./chatAttachment.ts";

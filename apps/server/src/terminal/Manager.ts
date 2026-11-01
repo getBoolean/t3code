@@ -1551,9 +1551,11 @@ export const make = Effect.fn("TerminalManager.make")(function* () {
     unregisterTerminal: portDiscovery.unregisterTerminal,
     resolveProviderInstanceEnvironment,
     resolveGitAccount: ({ threadId, projectId }) =>
-      projectId === null
-        ? gitAccounts.forThread(ThreadId.make(threadId))
-        : gitAccounts.forProject(projectId),
+      gitAccounts.forWorkspace({
+        cwd: "",
+        threadId: ThreadId.make(threadId),
+        ...(projectId === null ? {} : { projectId }),
+      }),
   });
 });
 
