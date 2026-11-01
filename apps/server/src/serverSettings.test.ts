@@ -11,6 +11,7 @@ import {
   ServerSettings,
   ServerSettingsPatch,
   UsageLimitSourceId,
+  GitAccountId,
 } from "@t3tools/contracts";
 import { createModelSelection } from "@t3tools/shared/model";
 import { assert, it } from "@effect/vitest";
@@ -1268,7 +1269,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
   );
 
   it.effect(
-    "uses the same secret lifecycle for provider config, environment, host tokens, and quota keys",
+    "uses the same secret lifecycle for provider config, environment, host tokens, quota keys, and git accounts",
     () =>
       Effect.gen(function* () {
         const service = yield* ServerSettingsModule.ServerSettingsService;
@@ -1300,6 +1301,18 @@ it.layer(NodeServices.layer)("server settings", (it) => {
               enabled: true,
             },
           },
+          gitAccounts: {
+            [GitAccountId.make("work")]: {
+              label: "Work",
+              authorName: "Work Name",
+              authorEmail: "work@example.test",
+              host: "github.com",
+              credentialKind: "token",
+              token: "git-account-secret",
+              cliLogin: "",
+              sshKeyPath: "",
+            },
+          },
           easDeviceHosts: [
             {
               kind: "eas",
@@ -1320,6 +1333,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           "gitcafe-secret",
           "quota-secret",
           "expo-secret",
+          "git-account-secret",
         ];
         const client = ServerSettingsModule.redactServerSettingsForClient(saved);
         const disk = yield* fs.readFileString(config.settingsPath);
@@ -1330,10 +1344,12 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         }
         assert.include(JSON.stringify(client), "https://example.test");
         assert.include(JSON.stringify(client), "me@example.test");
+        assert.include(JSON.stringify(client), "work@example.test");
         const echoed = yield* service.updateSettings({
           providerInstances: client.providerInstances,
           sourceControlHosts: client.sourceControlHosts,
           usageLimitSources: client.usageLimitSources,
+          gitAccounts: client.gitAccounts,
           easDeviceHosts: client.easDeviceHosts,
         });
         for (const value of values) assert.include(JSON.stringify(echoed), value);
@@ -1384,6 +1400,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           }),
           sourceControlHostSecretName({ kind: "gitcafe", field: "token", serverHost: null }),
           "usage-limit-source-aHVi",
+          "git-account-d29yaw-dG9rZW4",
         ];
         for (const name of secretNames) {
           assert.isTrue(Option.isSome(yield* store.get(name)), name);
@@ -1417,6 +1434,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
             gitcafe: { token: "" },
           },
           usageLimitSources: { [UsageLimitSourceId.make("hub")]: null },
+          gitAccounts: { [GitAccountId.make("work")]: null },
         });
         for (const name of secretNames) {
           assert.isTrue(Option.isNone(yield* store.get(name)));

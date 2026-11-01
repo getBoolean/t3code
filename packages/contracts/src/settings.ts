@@ -20,6 +20,7 @@ import {
   TrimmedString,
 } from "./baseSchemas.ts";
 import { UsageLimitSourceId } from "./usageLimitSourceId.ts";
+import { GitAccountId } from "./gitAccountId.ts";
 import { SecretProviderId, SecretProviderSlug } from "./secretReference.ts";
 import { EnvironmentMachineKind, ThreadEnvMode, WorktreeSubmodules } from "./environment.ts";
 import { KeybindingShortcut } from "./keybindings.ts";
@@ -862,6 +863,19 @@ export const UsageLimitSourceConfig = Schema.Struct({
 });
 export type UsageLimitSourceConfig = typeof UsageLimitSourceConfig.Type;
 
+/** One forge host per account; a forge credential is required because an SSH key cannot authenticate forge APIs. */
+export const GitAccountConfig = Schema.Struct({
+  label: TrimmedNonEmptyString,
+  authorName: TrimmedNonEmptyString,
+  authorEmail: TrimmedNonEmptyString,
+  host: TrimmedNonEmptyString,
+  credentialKind: Schema.Literals(["token", "cliLogin"]),
+  token: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed("")), secretSetting),
+  cliLogin: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  sshKeyPath: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+});
+export type GitAccountConfig = typeof GitAccountConfig.Type;
+
 export const SecretProviderKind = SecretProviderSlug.pipe(Schema.brand("SecretProviderKind"));
 export type SecretProviderKind = typeof SecretProviderKind.Type;
 
@@ -1047,6 +1061,8 @@ export const PROJECT_SCOPED_SERVER_SETTING_KEYS = [
   "sidebarAutoSettleKeepPullRequests",
   "continueThreadsAfterServerUpdate",
   "responseStreamingMode",
+  "gitAccountId",
+  "gitAccountWritesRepoConfig",
 ] as const;
 export type ProjectScopedServerSettingKey = (typeof PROJECT_SCOPED_SERVER_SETTING_KEYS)[number];
 
@@ -1084,6 +1100,8 @@ export const ProjectSettingsOverrides = Schema.Struct({
   sidebarAutoSettleKeepPullRequests: Schema.optionalKey(Schema.Boolean),
   continueThreadsAfterServerUpdate: Schema.optionalKey(Schema.Boolean),
   responseStreamingMode: Schema.optionalKey(ResponseStreamingMode),
+  gitAccountId: Schema.optionalKey(GitAccountId),
+  gitAccountWritesRepoConfig: Schema.optionalKey(Schema.Boolean),
   providerInstances: Schema.optionalKey(
     Schema.Record(ProviderInstanceId, ProjectProviderInstanceOverride),
   ),
@@ -1346,6 +1364,13 @@ export const ServerSettings = Schema.Struct({
   // User-chosen ids preserve rows across edits; undecodable entries round-trip untouched.
   usageLimitSources: Schema.Record(UsageLimitSourceId, UsageLimitSourceConfig).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
+  ),
+  gitAccounts: Schema.Record(GitAccountId, GitAccountConfig).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
+  gitAccountId: Schema.NullOr(GitAccountId).pipe(Schema.withDecodingDefault(Effect.succeed(null))),
+  gitAccountWritesRepoConfig: Schema.Boolean.pipe(
+    Schema.withDecodingDefault(Effect.succeed(false)),
   ),
   secretProviders: Schema.Record(SecretProviderId, SecretProviderConfig).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
@@ -1666,6 +1691,10 @@ export const ServerSettingsPatch = Schema.Struct({
   usageLimitSources: Schema.optionalKey(
     Schema.Record(UsageLimitSourceId, Schema.NullOr(UsageLimitSourceConfig)),
   ),
+  // Merge per account; null removes an entry.
+  gitAccounts: Schema.optionalKey(Schema.Record(GitAccountId, Schema.NullOr(GitAccountConfig))),
+  gitAccountId: Schema.optionalKey(Schema.NullOr(GitAccountId)),
+  gitAccountWritesRepoConfig: Schema.optionalKey(Schema.Boolean),
   secretProviders: Schema.optionalKey(
     Schema.Record(SecretProviderId, Schema.NullOr(SecretProviderConfigWrite)),
   ),
@@ -1692,6 +1721,7 @@ export function requiredScopesForServerSettingsPatch(
       key === "providers" ||
       key === "providerInstances" ||
       key === "usageLimitSources" ||
+      key === "gitAccounts" ||
       key === "secretProviders"
     ) {
       changesProviders = true;

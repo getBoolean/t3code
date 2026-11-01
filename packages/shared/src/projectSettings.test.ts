@@ -1,5 +1,6 @@
 import {
   DEFAULT_SERVER_SETTINGS,
+  GitAccountId,
   ProjectId,
   ProviderDriverKind,
   ProviderInstanceId,
@@ -56,8 +57,13 @@ describe("resolveProjectSettings", () => {
     const settings = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
       defaultAutoPull: true,
       sidebarAutoSettleAfterDays: 3,
+      gitAccountId: GitAccountId.make("personal"),
       projectSettingsOverrides: {
-        [projectId]: { defaultAutoPull: false, sidebarAutoSettleAfterDays: null },
+        [projectId]: {
+          defaultAutoPull: false,
+          sidebarAutoSettleAfterDays: null,
+          gitAccountId: GitAccountId.make("work"),
+        },
       },
     });
     const resolved = resolveProjectSettings(settings, projectId);
@@ -67,7 +73,10 @@ describe("resolveProjectSettings", () => {
     expect(resolved.sources.defaultAutoPull).toBe("project");
     expect(resolved.sources.sidebarAutoSettleAfterDays).toBe("project");
     expect(resolved.sources.defaultThreadEnvMode).toBe("environment");
+    expect(resolved.settings.gitAccountId).toBe("work");
+    expect(resolved.sources.gitAccountId).toBe("project");
     expect(resolveProjectSettings(settings, otherProjectId).settings.defaultAutoPull).toBe(true);
+    expect(resolveProjectSettings(settings, otherProjectId).settings.gitAccountId).toBe("personal");
   });
 
   it("honours the aggregate's own fields only until the server has folded them", () => {
