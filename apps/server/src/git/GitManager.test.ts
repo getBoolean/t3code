@@ -31,6 +31,7 @@ import type {
 import {
   DEFAULT_SERVER_SETTINGS,
   EventId,
+  GitAccountId,
   GitCommandError,
   MessageId,
   ProjectId,
@@ -63,6 +64,7 @@ import * as ProjectSetupScriptRunner from "../project/ProjectSetupScriptRunner.t
 import * as ProviderRegistry from "../provider/ProviderRegistry.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as GitManager from "./GitManager.ts";
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
 
 /** A change request the fake host reports. Omitted fields read as an open, undated request. */
 type FakeChangeRequest = Omit<ChangeRequest, "provider" | "state" | "updatedAt"> & {
@@ -598,6 +600,10 @@ function makeManager(input?: {
   setupScriptRunner?: ProjectSetupScriptRunner.ProjectSetupScriptRunner["Service"];
   gitConfigReads?: string[];
   gitCommands?: string[];
+  gitSpawnEnvs?: Array<{
+    readonly args: ReadonlyArray<string>;
+    readonly env: Readonly<Record<string, string | undefined>>;
+  }>;
   gitSpawnGate?: {
     readonly matches: (args: ReadonlyArray<string>) => boolean;
     readonly reached: Deferred.Deferred<void>;
@@ -620,8 +626,10 @@ function makeManager(input?: {
   const layerServerSettings = ServerSettings.ServerSettingsService.layerTest(input?.serverSettings);
 
   const gitCommands = input?.gitCommands;
+  const gitSpawnEnvs = input?.gitSpawnEnvs;
   const gitSpawnGate = input?.gitSpawnGate;
-  const watchesGitSpawns = gitCommands !== undefined || gitSpawnGate !== undefined;
+  const watchesGitSpawns =
+    gitCommands !== undefined || gitSpawnEnvs !== undefined || gitSpawnGate !== undefined;
   const layerGitDriverSpawner = watchesGitSpawns
     ? Layer.effect(
         ChildProcessSpawner.ChildProcessSpawner,
@@ -635,6 +643,9 @@ function makeManager(input?: {
                 ? command.args
                 : null;
             if (args !== null) gitCommands?.push(args.join(" "));
+            if (args !== null && command._tag === "StandardCommand") {
+              gitSpawnEnvs?.push({ args, env: command.options.env ?? {} });
+            }
             if (args === null || gitSpawnGate === undefined || !gitSpawnGate.matches(args)) {
               return spawner.spawn(command);
             }
@@ -725,7 +736,7 @@ function makeManager(input?: {
       yield* input.seed.pipe(Effect.provideContext(stores), Effect.orDie);
     }
     const manager = yield* GitManager.make.pipe(
-      Effect.provide(layerManager),
+      Effect.provide(GitAccounts.layer.pipe(Layer.provideMerge(layerManager))),
       Effect.provideContext(stores),
     );
     return { manager, providerCalls };
@@ -733,6 +744,47 @@ function makeManager(input?: {
 }
 
 const asThreadId = (threadId: string) => threadId as ThreadId;
+
+const workAccountId = GitAccountId.make("work");
+const workAccounts = (overrides: { readonly token?: string } = {}) => ({
+  [workAccountId]: {
+    label: "Work",
+    authorName: "Work Name",
+    authorEmail: "work@example.test",
+    forge: SourceControlProviderKind.make("github"),
+    host: "github.com",
+    credentialKind: "token" as const,
+    token: "work-token",
+    cliLogin: "",
+    sshKeyPath: "",
+    ...overrides,
+  },
+});
+const WORK_IDENTITY = "Work Name <work@example.test> Work Name <work@example.test>";
+
+const gitWithEnv = (
+  cwd: string,
+  args: ReadonlyArray<string>,
+  env: Readonly<Record<string, string | undefined>>,
+  stdin?: string,
+) =>
+  GitVcsDriver.GitVcsDriver.pipe(
+    Effect.flatMap((git) =>
+      git.execute({
+        operation: "GitManager.test.gitWithEnv",
+        cwd,
+        args,
+        env: { ...env, GIT_TERMINAL_PROMPT: "0" },
+        ...(stdin === undefined ? {} : { stdin }),
+      }),
+    ),
+    Effect.map((result) => result.stdout.trim()),
+  );
+
+const lastCommitIdentity = (cwd: string) =>
+  runGit(cwd, ["log", "-1", "--format=%an <%ae> %cn <%ce>"]).pipe(
+    Effect.map((result) => result.stdout.trim()),
+  );
 
 const layerGitManagerTest = GitVcsDriver.layer.pipe(
   Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "t3-git-manager-test-" })),
@@ -2733,6 +2785,185 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       });
 
       expect(generatedModelSelection).toEqual(projectModel);
+    }),
+  );
+
+  it.effect("commits and pushes as the project's git account, over SSH rewritten to HTTPS", () =>
+    Effect.gen(function* () {
+      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      yield* initRepo(repoDir);
+      yield* runGit(repoDir, ["checkout", "-b", "feature/account"]);
+      const remoteDir = yield* createBareRemote();
+      yield* runGit(repoDir, ["remote", "add", "origin", "git@github.com:acme/web.git"]);
+      yield* runGit(repoDir, ["config", "remote.origin.pushurl", remoteDir]);
+      NodeFS.writeFileSync(NodePath.join(repoDir, "README.md"), "hello\naccount\n");
+      const gitSpawnEnvs: Array<{
+        readonly args: ReadonlyArray<string>;
+        readonly env: Readonly<Record<string, string | undefined>>;
+      }> = [];
+      const { manager } = yield* makeManager({
+        serverSettings: { gitAccounts: workAccounts(), gitAccountId: workAccountId },
+        gitSpawnEnvs,
+      });
+
+      yield* runStackedAction(manager, {
+        cwd: repoDir,
+        action: "commit_push",
+        commitMessage: "Commit as the account",
+      });
+
+      expect(yield* lastCommitIdentity(repoDir)).toBe(WORK_IDENTITY);
+      const pushEnv = gitSpawnEnvs.find(({ args }) => args[0] === "push")?.env;
+      expect(pushEnv).toBeDefined();
+      expect(yield* gitWithEnv(repoDir, ["ls-remote", "--get-url", "origin"], pushEnv!)).toBe(
+        "https://github.com/acme/web.git",
+      );
+      expect(
+        yield* gitWithEnv(
+          repoDir,
+          ["credential", "fill"],
+          pushEnv!,
+          "protocol=https\nhost=github.com\n\n",
+        ),
+      ).toContain("password=work-token");
+    }),
+  );
+
+  it.effect("names the account when the host rejects its credentials on push", () =>
+    Effect.gen(function* () {
+      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      yield* initRepo(repoDir);
+      yield* runGit(repoDir, ["checkout", "-b", "feature/rejected"]);
+      const remoteDir = yield* createBareRemote();
+      yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
+      const hook = NodePath.join(repoDir, ".git", "hooks", "pre-push");
+      NodeFS.writeFileSync(
+        hook,
+        "#!/bin/sh\necho \"fatal: Authentication failed for 'https://github.com/acme/web.git/'\" >&2\nexit 1\n",
+      );
+      NodeFS.chmodSync(hook, 0o755);
+      const { manager } = yield* makeManager({
+        serverSettings: { gitAccounts: workAccounts(), gitAccountId: workAccountId },
+      });
+
+      const error = yield* runStackedAction(manager, { cwd: repoDir, action: "push" }).pipe(
+        Effect.flip,
+      );
+
+      expect(error._tag).toBe("GitManagerError");
+      expect(error.message).toContain('git account "Work"');
+    }),
+  );
+
+  it.effect.each([
+    { case: "has no saved token", token: "", remote: null, action: "commit" as const },
+    {
+      case: "is on another host than the remote",
+      token: "work-token",
+      remote: "https://gitlab.com/acme/web.git",
+      action: "commit_push" as const,
+    },
+  ])("makes no commit when the project's account $case", ({ token, remote, action }) =>
+    Effect.gen(function* () {
+      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      yield* initRepo(repoDir);
+      yield* runGit(repoDir, ["checkout", "-b", "feature/blocked"]);
+      if (remote !== null) yield* runGit(repoDir, ["remote", "add", "origin", remote]);
+      NodeFS.writeFileSync(NodePath.join(repoDir, "README.md"), "hello\nblocked\n");
+      const headBefore = (yield* runGit(repoDir, ["rev-parse", "HEAD"])).stdout;
+      const { manager } = yield* makeManager({
+        serverSettings: { gitAccounts: workAccounts({ token }), gitAccountId: workAccountId },
+      });
+
+      const error = yield* runStackedAction(manager, {
+        cwd: repoDir,
+        action,
+        commitMessage: "Should not land",
+      }).pipe(Effect.flip);
+
+      expect(error.message).toContain('git account "Work"');
+      expect((yield* runGit(repoDir, ["rev-parse", "HEAD"])).stdout).toBe(headBefore);
+    }),
+  );
+
+  it.effect("resolves a worktree's git account through its thread, not its folder", () =>
+    Effect.gen(function* () {
+      const repoDir = yield* makeTempDir("t3code-git-manager-");
+      yield* initRepo(repoDir);
+      NodeFS.writeFileSync(NodePath.join(repoDir, "README.md"), "hello\nworktree\n");
+      const projectId = ProjectId.make("project:git-account");
+      const threadId = ThreadId.make("thread:git-account");
+      const providerInstanceId = ProviderInstanceId.make("codex");
+      const createdAt = DateTime.makeUnsafe("2026-10-31T00:00:00.000Z");
+      const { manager } = yield* makeManager({
+        serverSettings: {
+          gitAccounts: workAccounts(),
+          projectSettingsOverrides: { [projectId]: { gitAccountId: workAccountId } },
+        },
+        seed: Effect.gen(function* () {
+          yield* (yield* ProjectStore.ProjectStoreV2).apply({
+            sequence: 1,
+            eventId: EventId.make("event:git-account:project"),
+            aggregateKind: "project",
+            aggregateId: projectId,
+            occurredAt: DateTime.formatIso(createdAt),
+            commandId: null,
+            causationEventId: null,
+            correlationId: null,
+            metadata: {},
+            type: "project.created",
+            payload: {
+              projectId,
+              title: "Git account",
+              workspaceRoot: "/elsewhere",
+              defaultModelSelection: null,
+              scripts: [],
+              createdAt: DateTime.formatIso(createdAt),
+              updatedAt: DateTime.formatIso(createdAt),
+            },
+          });
+          yield* (yield* ProjectionStore.ProjectionStoreV2).apply({
+            id: EventId.make("event:git-account:thread"),
+            type: "thread.created",
+            threadId,
+            providerInstanceId,
+            occurredAt: createdAt,
+            payload: {
+              createdBy: "user",
+              creationSource: "web",
+              id: threadId,
+              projectId,
+              title: "Git account",
+              providerInstanceId,
+              modelSelection: { instanceId: providerInstanceId, model: "gpt-5" },
+              runtimeMode: "full-access",
+              interactionMode: "default",
+              branch: null,
+              worktreePath: repoDir,
+              activeProviderThreadId: null,
+              lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
+              forkedFrom: null,
+              createdAt,
+              updatedAt: createdAt,
+              archivedAt: null,
+              settledOverride: null,
+              settledAt: null,
+              lastVisitedAt: null,
+              deletedAt: null,
+            },
+          });
+        }),
+      });
+
+      yield* manager.runStackedAction({
+        actionId: "test-action-id",
+        cwd: repoDir,
+        action: "commit",
+        commitMessage: "Commit in the worktree",
+        threadId,
+      });
+
+      expect(yield* lastCommitIdentity(repoDir)).toBe(WORK_IDENTITY);
     }),
   );
 

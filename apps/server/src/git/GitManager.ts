@@ -83,6 +83,9 @@ import * as ProviderRegistry from "../provider/ProviderRegistry.ts";
 import { extractBranchNameFromRemoteRef } from "./remoteRefs.ts";
 import { detachStackFrame } from "./detachStackFrame.ts";
 import * as ServerSettings from "../serverSettings.ts";
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
+import { withGitAccount } from "../sourceControl/ServerSourceControlHost.ts";
+import { applyEnvironmentOverlay } from "../gitAccounts/launchIdentity.ts";
 import type { GitManagerServiceError } from "@t3tools/contracts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as SourceControlProvider from "@t3tools/source-control-core/server/SourceControlProvider";
@@ -626,6 +629,18 @@ function toResolvedPullRequest(pr: {
   };
 }
 
+/** Unset names stay as undefined keys so the driver's merge over process.env drops them. */
+function accountEnv(identity: GitAccounts.LaunchIdentity): NodeJS.ProcessEnv {
+  return {
+    ...Object.fromEntries(identity.overlay.unset.map((name) => [name, undefined])),
+    ...applyEnvironmentOverlay(process.env, identity.overlay),
+  };
+}
+
+function accountUnavailableError(cwd: string, cause: GitAccounts.GitAccountUnavailable) {
+  return new GitManagerError({ operation: "runStackedAction", cwd, detail: cause.message, cause });
+}
+
 function shouldPreferSshRemote(url: string | null): boolean {
   if (!url) return false;
   return isSshRemoteUrl(url);
@@ -669,6 +684,7 @@ export const make = Effect.gen(function* () {
   const serverSettingsService = yield* ServerSettings.ServerSettingsService;
   const threads = yield* ProjectionStore.ProjectionStoreV2;
   const projects = yield* ProjectStore.ProjectStoreV2;
+  const gitAccounts = yield* GitAccounts.GitAccounts;
   const projectSettingsFor = Effect.fnUntraced(function* (input: {
     readonly cwd: string;
     readonly threadId?: ThreadId | undefined;
@@ -736,8 +752,9 @@ export const make = Effect.gen(function* () {
   const pushCurrentBranch = Effect.fn("GitManager.pushCurrentBranch")(function* (
     cwd: string,
     branch: string | null,
+    env?: NodeJS.ProcessEnv,
   ) {
-    const result = yield* gitCore.pushCurrentBranch(cwd, branch);
+    const result = yield* gitCore.pushCurrentBranch(cwd, branch, env ? { env } : undefined);
     if (result.status === "pushed" && result.branch) {
       yield* shareBranchBase(cwd, result.branch);
     }
@@ -2127,6 +2144,7 @@ export const make = Effect.gen(function* () {
     filePaths?: readonly string[],
     progressReporter?: GitActionProgressReporter,
     actionId?: string,
+    env?: NodeJS.ProcessEnv,
   ) {
     const emit = (event: GitActionProgressPayload) =>
       progressReporter && actionId
@@ -2214,6 +2232,7 @@ export const make = Effect.gen(function* () {
       timeoutMs: COMMIT_TIMEOUT_MS,
       stage: filePaths ? { filePaths } : {},
       ...(commitProgress ? { progress: commitProgress } : {}),
+      ...(env ? { env } : {}),
     });
     if (currentHookName !== null) {
       yield* emit({
@@ -3028,6 +3047,27 @@ export const make = Effect.gen(function* () {
     };
   });
 
+  // Follows git's push-remote order so the account's host is checked before anything is committed.
+  const readPushRemoteUrl = Effect.fn("GitManager.readPushRemoteUrl")(function* (
+    cwd: string,
+    branch: string | null,
+  ) {
+    const readBranchConfig = (key: string) =>
+      branch === null
+        ? Effect.succeed(null)
+        : readConfigValueNullable(cwd, `branch.${branch}.${key}`);
+    const remoteName =
+      (yield* readBranchConfig("pushRemote")) ??
+      (yield* readConfigValueNullable(cwd, "remote.pushDefault")) ??
+      (yield* readBranchConfig("remote")) ??
+      (yield* gitCore.resolvePrimaryRemoteName(cwd).pipe(Effect.orElseSucceed(() => null)));
+    if (remoteName === null) return null;
+    return (
+      (yield* readConfigValueNullable(cwd, `remote.${remoteName}.pushurl`)) ??
+      (yield* readConfigValueNullable(cwd, `remote.${remoteName}.url`))
+    );
+  });
+
   const runStackedAction: GitManager["Service"]["runStackedAction"] = Effect.fn("runStackedAction")(
     function* (input, options) {
       const progress = yield* createProgressEmitter(input, options);
@@ -3080,6 +3120,28 @@ export const make = Effect.gen(function* () {
             detail: "Cannot create a pull request from detached HEAD.",
           });
         }
+
+        const account =
+          wantsCommit || wantsPush || wantsPr
+            ? yield* gitAccounts.forWorkspace({
+                cwd: input.cwd,
+                threadId: input.threadId,
+                projectId: input.projectId,
+              })
+            : null;
+        if (account !== null) {
+          const remoteUrl =
+            wantsPush || wantsPr
+              ? yield* readPushRemoteUrl(
+                  input.cwd,
+                  input.featureBranch ? null : initialStatus.branch,
+                )
+              : null;
+          yield* gitAccounts
+            .requireUsable(account, { remoteUrl })
+            .pipe(Effect.mapError((cause) => accountUnavailableError(input.cwd, cause)));
+        }
+        const accountGitEnv = account === null ? undefined : accountEnv(account);
 
         let branchStep: { status: "created" | "skipped_not_requested"; name?: string };
         let commitMessageForStep = input.commitMessage;
@@ -3152,6 +3214,7 @@ export const make = Effect.gen(function* () {
                   input.filePaths,
                   options?.progressReporter,
                   progress.actionId,
+                  accountGitEnv,
                 ),
               ),
             )
@@ -3166,7 +3229,21 @@ export const make = Effect.gen(function* () {
               })
               .pipe(
                 Effect.tap(() => Ref.set(currentPhase, Option.some("push"))),
-                Effect.flatMap(() => pushCurrentBranch(input.cwd, currentBranch)),
+                Effect.flatMap(() =>
+                  pushCurrentBranch(input.cwd, currentBranch, accountGitEnv).pipe(
+                    Effect.mapError((error) =>
+                      account !== null && error.reason === "authentication_failed"
+                        ? accountUnavailableError(
+                            input.cwd,
+                            new GitAccounts.GitAccountUnavailable({
+                              accountLabel: account.label,
+                              reason: `${account.host} rejected its credentials; update it in Settings > Source Control`,
+                            }),
+                          )
+                        : error,
+                    ),
+                  ),
+                ),
               )
           : { status: "skipped_not_requested" as const };
 
@@ -3186,6 +3263,13 @@ export const make = Effect.gen(function* () {
                     currentBranch,
                     input.threadId,
                     progress.emit,
+                  ).pipe(
+                    withGitAccount(gitAccounts, account),
+                    Effect.mapError((error) =>
+                      error._tag === "GitAccountUnavailable"
+                        ? accountUnavailableError(input.cwd, error)
+                        : error,
+                    ),
                   ),
                 ),
               )

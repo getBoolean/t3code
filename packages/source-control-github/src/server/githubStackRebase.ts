@@ -41,12 +41,19 @@ export const cascadeRebaseStack = Effect.fn("cascadeRebaseStack")(function* (inp
   readonly base: string;
   readonly layers: ReadonlyArray<CascadeLayer>;
   readonly remote?: string;
+  /** The project's git account; without one the rebase runs as T3 Code with the app credential. */
+  readonly account?: {
+    readonly token: Redacted.Redacted<string>;
+    readonly authorName: string;
+    readonly authorEmail: string;
+  };
 }) {
   const appAccess = yield* GitHubAppAccess.GitHubAppAccess;
   const { process } = yield* SourceControlHost.SourceControlHost;
   const fileSystem = yield* FileSystem.FileSystem;
   // A push takes one credential up front, so it must be one that reaches the repository.
-  const { token } = yield* appAccess.credentialFor(input.host, input.repository);
+  const token =
+    input.account?.token ?? (yield* appAccess.credentialFor(input.host, input.repository)).token;
   const first = input.layers[0];
   if (first === undefined) return 0;
   const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-stack-rebase-" }).pipe(
@@ -63,15 +70,18 @@ export const cascadeRebaseStack = Effect.fn("cascadeRebaseStack")(function* (inp
   // Keep the token in this process's header, outside URLs, argv and git config.
   const remote = input.remote ?? remoteUrl(input.host, input.repository);
   const authorization = `AUTHORIZATION: basic ${Base64.encode(`x-access-token:${Redacted.value(token)}`)}`;
+  const name = input.account?.authorName ?? "T3 Code";
+  const email = input.account?.authorEmail ?? "noreply@t3.codes";
   const env = {
     GIT_TERMINAL_PROMPT: "0",
     GIT_CONFIG_COUNT: "3",
     GIT_CONFIG_KEY_0: `http.${remote}.extraheader`,
     GIT_CONFIG_VALUE_0: authorization,
     GIT_CONFIG_KEY_1: "user.name",
-    GIT_CONFIG_VALUE_1: "T3 Code",
+    GIT_CONFIG_VALUE_1: name,
     GIT_CONFIG_KEY_2: "user.email",
-    GIT_CONFIG_VALUE_2: "noreply@t3.codes",
+    GIT_CONFIG_VALUE_2: email,
+    ...(input.account ? { GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email } : {}),
   };
   const git = (args: ReadonlyArray<string>, allowNonZeroExit = false) =>
     process.run({
