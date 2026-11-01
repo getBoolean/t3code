@@ -19,7 +19,9 @@ import {
   OrchestratorMcpFailure,
   SourceControlCloneRepositoryInput,
   SourceControlCloneRepositoryResult,
+  GitAccountId,
 } from "@t3tools/contracts";
+import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
 import * as FileSystem from "effect/FileSystem";
 import * as DocumentText from "../../../provider/DocumentText.ts";
 import * as ServerConfig from "../../../config.ts";
@@ -176,7 +178,42 @@ const ThreadLaunchTool = Tool.make("t3_thread_launch", {
   .annotate(Tool.Destructive, true)
   .annotate(Tool.OpenWorld, true);
 
+const ProjectGitAccountTool = Tool.make("t3_project_git_account", {
+  description:
+    "Git accounts this project's commits, pushes and pull requests use. list: accounts and the current one. switch: move this thread's project to accountId; it first returns a phrase the user must type in this thread, then call switch again. You cannot confirm it yourself.",
+  parameters: Schema.Struct({
+    action: Schema.Literals(["list", "switch"]),
+    environmentId: OrchestratorMcpEnvironmentTarget,
+    accountId: Schema.optional(GitAccountId),
+  }),
+  success: Schema.Union([
+    Schema.Struct({
+      accounts: Schema.Array(
+        Schema.Struct({ id: GitAccountId, label: Schema.String, host: Schema.String }),
+      ),
+      current: Schema.NullOr(GitAccountId),
+    }),
+    Schema.Struct({
+      status: Schema.Literal("confirmation_required"),
+      phrase: Schema.String,
+      instructions: Schema.String,
+    }),
+    Schema.Struct({ status: Schema.Literal("switched"), accountLabel: Schema.String }),
+  ]),
+  failure: OrchestratorMcpFailure,
+  failureMode: "return",
+  dependencies: [
+    McpInvocationContext.McpInvocationContext,
+    ThreadManagementService.ThreadManagementService,
+    ServerSettings.ServerSettingsService,
+    GitAccountSwitch.GitAccountSwitch,
+  ],
+})
+  .annotate(Tool.Destructive, true)
+  .annotate(Tool.OpenWorld, false);
+
 export const ProjectToolkit = Toolkit.make(
+  ProjectGitAccountTool,
   ThreadLaunchTool,
   ProjectListTool,
   ProjectReadTool,

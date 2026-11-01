@@ -1,3 +1,5 @@
+import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
+import { GitAccountId } from "@t3tools/contracts";
 import {
   CommandId,
   MessageId,
@@ -282,6 +284,46 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
         .listPage({ cursor: input.cursor ?? 0, limit: input.limit ?? 20 })
         .pipe(Effect.mapError(unavailable));
     }),
+  ),
+  t3_project_git_account: McpToolAccess.either(
+    (input) => input.action === "list",
+    McpToolAccess.readsAsCaller(() =>
+      Effect.gen(function* () {
+        const context = yield* readCaller();
+        const projectId = yield* resolveProjectId(context, undefined);
+        const settings = yield* (yield* ServerSettings.ServerSettingsService).getSettings.pipe(
+          Effect.mapError(unavailable),
+        );
+        return {
+          accounts: Object.entries(settings.gitAccounts).map(([id, account]) => ({
+            id: GitAccountId.make(id),
+            label: account.label,
+            host: account.host,
+          })),
+          current: resolveProjectSettings(settings, projectId).settings.gitAccountId,
+        };
+      }),
+    ),
+    McpToolAccess.actsAsCaller((input) =>
+      Effect.gen(function* () {
+        const context = yield* readCaller();
+        if (context.caller === undefined || input.accountId === undefined) {
+          return yield* new OrchestratorMcpFailure({
+            code: "invalid_request",
+            message: "switch needs accountId and must come from a thread in the project.",
+          });
+        }
+        const switcher = yield* GitAccountSwitch.GitAccountSwitch;
+        return yield* switcher
+          .switchProject({ threadId: context.caller.id, accountId: input.accountId })
+          .pipe(
+            Effect.mapError(
+              (error) =>
+                new OrchestratorMcpFailure({ code: "invalid_request", message: error.message }),
+            ),
+          );
+      }),
+    ),
   ),
   t3_project_read: McpToolAccess.reads((input) =>
     Effect.gen(function* () {
