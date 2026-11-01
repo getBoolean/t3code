@@ -56,12 +56,16 @@ jobs:
           vp test run
           src/gitAccounts
           src/git/GitManager.test.ts
-          src/vcs/GitVcsDriverCore.test.ts
           src/terminal/Manager.test.ts
           src/project/ProjectSetupScriptRunner.test.ts
           src/pullRequest/PullRequestService.test.ts
           src/serverSettings.test.ts
           src/auth/RpcAuthorization.test.ts
+
+      # The rest of this file has macOS-only path failures unrelated to accounts.
+      - name: Test driver env passthrough
+        working-directory: apps/server
+        run: vp test run src/vcs/GitVcsDriverCore.test.ts -t "environment the caller passes"
 
       - name: Test source control packages
         run: |
