@@ -63,6 +63,9 @@ vi.mock("./use-vcs-action-state", () => ({
     state.results.push(result),
 }));
 vi.mock("../lib/uuid", () => ({ uuidv4: () => "action" }));
+vi.mock("../features/threads/useGitAccountGuard", () => ({
+  useGitAccountGuard: () => ({ ensureGitAccount: async () => true }),
+}));
 vi.mock("./threads", () => ({
   threadEnvironment: {
     updateMetadata: async ({

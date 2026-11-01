@@ -53,6 +53,7 @@ import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter"
 import { makeProviderFailure } from "@t3tools/provider-core/server/failure";
 import * as ProviderAdapterRegistry from "./ProviderAdapterRegistry.ts";
 import * as ProjectionStore from "./ProjectionStore.ts";
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
 
 const DEFAULT_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 const DEFAULT_MAX_IDLE_PIN_MS = 4 * 60 * 60 * 1000;
@@ -141,8 +142,18 @@ export class ProviderSessionActivityError extends Schema.TaggedError<ProviderSes
   }
 }
 
+export class ProviderSessionAccountChangedError extends Schema.TaggedError<ProviderSessionAccountChangedError>()(
+  "ProviderSessionAccountChangedError",
+  { providerSessionId: ProviderSessionId, threadId: ThreadId },
+) {
+  override get message(): string {
+    return `Provider session ${this.providerSessionId} runs under another git account than thread ${this.threadId}.`;
+  }
+}
+
 export const ProviderSessionManagerV2Error = Schema.Union([
   ProviderSessionOpenError,
+  ProviderSessionAccountChangedError,
   ProviderWorkspaceMissingError,
   ProviderSessionLookupError,
   ProviderSessionCloseError,
@@ -221,6 +232,7 @@ interface LiveSessionEntry {
   /** Scope revocation to recorded credential ids so superseded sessions cannot revoke replacements opened before detach. */
   readonly mcpCredentialIdByThread: ReadonlyMap<ThreadId, string>;
   readonly supportsMultipleProviderThreads: boolean;
+  readonly accountFingerprint: string | null;
   readonly runtime: ProviderAdapter.ProviderAdapterV2SessionRuntime;
   readonly exposedRuntime: ProviderAdapter.ProviderAdapterV2SessionRuntime;
   readonly eventSubscribers: Ref.Ref<
@@ -323,6 +335,7 @@ export const layerWithOptions = (
   | CommandOutputHub.CommandOutputHub
   | EventSink.EventSinkV2
   | FileSystem.FileSystem
+  | GitAccounts.GitAccounts
   | IdAllocator.IdAllocatorV2
   | McpProviderSessions.McpProviderSessions
   | McpSessionRegistry.McpSessionRegistry
@@ -345,6 +358,7 @@ export const layerWithOptions = (
       const idAllocator = yield* IdAllocator.IdAllocatorV2;
       const providerEventIngestor = yield* ProviderEventIngestor.ProviderEventIngestorV2;
       const projectionStore = yield* ProjectionStore.ProjectionStoreV2;
+      const gitAccounts = yield* GitAccounts.GitAccounts;
       const agentScope = yield* AgentScope;
       const agentAccessSettings = Effect.fn("ProviderSessionManagerV2.agentAccessSettings")(
         function* (threadId: ThreadId) {
@@ -2135,6 +2149,25 @@ export const layerWithOptions = (
                 }
               }
               const key = sessionKey(input.providerSessionId);
+              const account = yield* gitAccounts.forThread(input.threadId);
+              const accountFingerprint = account?.fingerprint ?? null;
+              const current = (yield* Ref.get(sessions)).get(key);
+              if (current !== undefined && current.accountFingerprint !== accountFingerprint) {
+                const servesOthers = [...current.attachedThreadIds].some(
+                  (threadId) => threadId !== input.threadId,
+                );
+                if (servesOthers) {
+                  return yield* new ProviderSessionAccountChangedError({
+                    providerSessionId: input.providerSessionId,
+                    threadId: input.threadId,
+                  });
+                }
+                yield* releaseEntry({
+                  providerSessionId: input.providerSessionId,
+                  reason: "manual_shutdown",
+                  detail: "The project's git account changed.",
+                });
+              }
               const existing = (yield* Ref.get(sessions)).get(key);
               if (existing !== undefined) {
                 const attached = existing.attachedThreadIds.has(input.threadId);
@@ -2165,6 +2198,13 @@ export const layerWithOptions = (
                     }),
                 ),
               );
+              if (account !== null && adapter.appliesAccountEnvironment !== true) {
+                return yield* new ProviderSessionOpenError({
+                  instanceId: input.modelSelection.instanceId,
+                  providerSessionId: input.providerSessionId,
+                  cause: `${adapter.driver} can't run as this project's git account "${account.label}". Pick another provider, or remove the project's git account.`,
+                });
+              }
               const prepared = yield* prepareMcpSession(
                 input.threadId,
                 input.modelSelection.instanceId,
@@ -2197,6 +2237,7 @@ export const layerWithOptions = (
                         initialProviderItemIdentityVersion:
                           input.initialProviderItemIdentityVersion,
                       }),
+                  ...(account === null ? {} : { accountOverlay: account.overlay }),
                 })
                 .pipe(
                   Effect.provideService(Scope.Scope, sessionScope),
@@ -2243,6 +2284,7 @@ export const layerWithOptions = (
                 supportsMultipleProviderThreads:
                   runtime.providerSession.capabilities.sessions
                     .supportsMultipleProviderThreadsPerSession,
+                accountFingerprint,
                 runtime,
                 exposedRuntime,
                 eventSubscribers,

@@ -40,6 +40,7 @@ import type * as Effect from "effect/Effect";
 import type * as Scope from "effect/Scope";
 import type * as Stream from "effect/Stream";
 
+import type { EnvironmentOverlay } from "./instanceEnvironment.ts";
 import type {
   ProviderSelectionTransitionInput,
   ProviderSelectionTransitionPlan,
@@ -426,6 +427,8 @@ export interface ProviderAdapterV2OpenSessionInput {
   readonly resumeFromSession?: OrchestrationV2ProviderSession;
   readonly initialNativeThreadId?: string;
   readonly initialProviderItemIdentityVersion?: 2;
+  /** Apply with `applyEnvironmentOverlay` to every process the session spawns. */
+  readonly accountOverlay?: EnvironmentOverlay;
 }
 
 export interface ProviderAdapterV2EnsureThreadInput {
@@ -669,5 +672,7 @@ export class ProviderAdapterV2 extends Context.Service<
     readonly openSession: (
       input: ProviderAdapterV2OpenSessionInput,
     ) => Effect.Effect<ProviderAdapterV2SessionRuntime, ProviderAdapterV2Error, Scope.Scope>;
+    /** True only when every process the session spawns gets `accountOverlay`; bound projects refuse others. */
+    readonly appliesAccountEnvironment?: boolean;
   }
 >()("@t3tools/provider-core/server/ProviderAdapter/ProviderAdapterV2") {}

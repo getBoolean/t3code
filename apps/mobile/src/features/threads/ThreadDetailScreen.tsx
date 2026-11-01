@@ -1,3 +1,4 @@
+import { useGitAccountGuard } from "./useGitAccountGuard";
 import { useOpenThreadInspector } from "./thread-inspector-navigation";
 import { useSidebarWorkspaceTabs } from "../workspace/useSystemWorkspaceTabBar";
 import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
@@ -1174,6 +1175,11 @@ function ThreadDetailBody(props: ThreadDetailScreenProps) {
       : (appAtomRegistry.get(
           environmentThreadDetails.pendingRequestsAtom(props.selectedThreadDetailRef),
         )?.approvals ?? []);
+  const gitAccountGuard = useGitAccountGuard({
+    environmentId: props.environmentId,
+    threadId: props.selectedThread.id,
+    projectId: props.selectedThread.projectId,
+  });
   const handleSendMessage = async (
     followUp?: ActiveTurnComposerAction,
     stillSendable?: () => boolean,
@@ -1219,6 +1225,7 @@ function ThreadDetailBody(props: ThreadDetailScreenProps) {
             );
           }
         : undefined;
+    if (!(await gitAccountGuard.ensureGitAccount())) return null;
     const messageId = await props.onSendMessage(followUp, declineBeforeDispatch);
     if (messageId === null || scope.aborted) {
       return messageId;

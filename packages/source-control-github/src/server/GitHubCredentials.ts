@@ -29,7 +29,7 @@ export const GH_PROCESS_CONCURRENCY = { key: "gh", limit: 4 } as const;
 const TOKEN_TTL = Duration.minutes(5);
 const MISSING_TTL = Duration.seconds(10);
 
-export const GitHubCredentialSource = Schema.Literals(["settings", "app", "env", "gh"]);
+export const GitHubCredentialSource = Schema.Literals(["account", "settings", "app", "env", "gh"]);
 export type GitHubCredentialSource = typeof GitHubCredentialSource.Type;
 
 export interface GitHubCredential {
@@ -252,6 +252,18 @@ export const make = Effect.gen(function* () {
   return GitHubCredentials.of({
     get: Effect.fn("GitHubCredentials.get")(function* (rawHost) {
       const host = normalizeHost(rawHost);
+      const account = yield* SourceControlHost.AccountCredential;
+      if (account !== null) {
+        if (normalizeHost(account.host) !== host) {
+          return yield* new GitHubNotSignedInError({ host, account: account.label });
+        }
+        return {
+          host,
+          token: account.token,
+          source: "account",
+          fingerprint: yield* fingerprintOf(host, Redacted.value(account.token)),
+        } satisfies GitHubCredential;
+      }
       const fromSettings = yield* saved(host);
       if (Option.isSome(fromSettings)) return fromSettings.value;
       return yield* Cache.get(cache, cacheKey(host, (yield* hostChoice(host))?.account));

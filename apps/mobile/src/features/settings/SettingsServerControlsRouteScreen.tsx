@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { SettingsRow } from "./components/SettingsRow";
-import { AuthSettingsWriteScope } from "@t3tools/contracts";
+import { AuthProvidersManageScope, AuthSettingsWriteScope, GitAccountId } from "@t3tools/contracts";
 import { readEnvironmentScope, useEnvironmentsWithScope } from "../../state/session";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
 import { AppText as Text } from "../../components/ui/AppText";
@@ -29,6 +29,7 @@ import { ListChoiceRow as SettingsChoiceRow } from "../../components/ui/ListChoi
 import { SettingsSection } from "./components/SettingsSection";
 import { SettingsSwitchRow } from "./components/SettingsSwitchRow";
 import { SourceControlSignInSection } from "./components/SourceControlSignInSection";
+import { GitAccountsSection } from "./components/GitAccountsSection";
 import { SettingsProjectOverridesSection } from "./components/SettingsProjectOverridesSection";
 import { useSettingsEnvironmentFilter } from "./settings-environment-filter";
 import { useSettingsWriter } from "./useSettingsWriter";
@@ -61,7 +62,12 @@ const PAGE_PROJECT_KEYS: Record<SettingsPage, readonly ProjectScopedServerSettin
     "sidebarAutoSettleOnMerge",
     "sidebarAutoSettleAfterDays",
   ],
-  "source-control": ["defaultAutoPull", "removeAgentCreditsOnMerge"],
+  "source-control": [
+    "defaultAutoPull",
+    "removeAgentCreditsOnMerge",
+    "gitAccountId",
+    "gitAccountWritesRepoConfig",
+  ],
   worktrees: [
     "newWorktreesStartFromOrigin",
     "worktreeSubmodules",
@@ -178,6 +184,7 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
   const { selectedTargets, projectGroups, selectedProjectKey } = useSettingsEnvironmentFilter();
   const selectedProject = projectGroups.find((group) => group.key === selectedProjectKey);
   const writableEnvironments = useEnvironmentsWithScope(selectedTargets, AuthSettingsWriteScope);
+  const accountManagers = useEnvironmentsWithScope(selectedTargets, AuthProvidersManageScope);
   const projectSelected = selectedProjectKey !== null;
   const targets = resolveMobileSettingsTargets(
     selectedTargets,
@@ -399,6 +406,50 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
                       onValueChange={(value) => write({ removeAgentCreditsOnMerge: value })}
                     />
                   </SettingsSection>
+                  <SettingsSection
+                    title="Git account"
+                    trailing={
+                      pendingWrites === 0 && isMixed("gitAccountId") ? (
+                        <MixedValuesLabel projectSelected={projectSelected} />
+                      ) : null
+                    }
+                  >
+                    {[
+                      ...(projectSelected ? [] : [{ id: null, label: "None", host: null }]),
+                      ...Object.entries(reference.settings.gitAccounts).map(([id, account]) => ({
+                        id: GitAccountId.make(id),
+                        label: account.label,
+                        host: account.host,
+                      })),
+                    ].map((choice, index) => (
+                      <SettingsChoiceRow
+                        key={choice.id ?? "none"}
+                        label={choice.label}
+                        description={
+                          choice.host === null ? "Use this machine's git login." : choice.host
+                        }
+                        selected={!isMixed("gitAccountId") && uniform("gitAccountId") === choice.id}
+                        separated={index > 0}
+                        disabled={disabledFor("gitAccountId")}
+                        onPress={() => write({ gitAccountId: choice.id })}
+                      />
+                    ))}
+                    <SettingsSwitchRow
+                      icon="doc.text"
+                      label="Write to repo git config"
+                      subtitle="Also set user.name and user.email in the repo. Turning it off restores the previous values."
+                      value={uniform("gitAccountWritesRepoConfig")}
+                      disabled={disabledFor("gitAccountWritesRepoConfig")}
+                      onValueChange={(value) => write({ gitAccountWritesRepoConfig: value })}
+                    />
+                  </SettingsSection>
+                  {!projectSelected && selectedTargets.length === 1 ? (
+                    <GitAccountsSection
+                      settings={reference.settings}
+                      disabled={disabled || accountManagers.size === 0}
+                      onChange={write}
+                    />
+                  ) : null}
                   <SettingsSection title="Default branch">
                     <SettingsSwitchRow
                       icon="arrow.down.circle"

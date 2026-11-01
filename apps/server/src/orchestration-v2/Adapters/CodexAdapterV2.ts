@@ -1,3 +1,4 @@
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import { pipe } from "effect/Function";
 import * as DocumentText from "../../provider/DocumentText.ts";
 import { revertCodexThread } from "../../provider/CodexThreadRevert.ts";
@@ -1642,6 +1643,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
   return ProviderAdapter.ProviderAdapterV2.of({
     instanceId: adapterOptions.instanceId,
     driver: CODEX_PROVIDER,
+    appliesAccountEnvironment: true,
     getCapabilities: Effect.fn("CodexAdapterV2.getCapabilities")(function () {
       return Effect.succeed(CodexProviderCapabilitiesV2);
     }),
@@ -1670,7 +1672,13 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
           providerSessionId: input.providerSessionId,
           runtimePolicy: input.runtimePolicy,
           settings: resolvedRuntime?.config ?? adapterOptions.settings,
-          environment: resolvedRuntime?.environment ?? adapterOptions.environment,
+          environment:
+            input.accountOverlay === undefined
+              ? (resolvedRuntime?.environment ?? adapterOptions.environment)
+              : applyEnvironmentOverlay(
+                  resolvedRuntime?.environment ?? adapterOptions.environment ?? process.env,
+                  input.accountOverlay,
+                ),
         });
         const additionalContextByThread = yield* Ref.make(
           new Map<

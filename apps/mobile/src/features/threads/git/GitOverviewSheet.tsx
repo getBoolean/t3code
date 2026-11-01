@@ -1,3 +1,4 @@
+import { useGitAccountGuard } from "../useGitAccountGuard";
 import * as Dialog from "../../../components/ui/Dialog";
 import { SheetHeader } from "../../../components/ui/SheetHeader";
 import { useOpenPullRequest } from "../../../native/useOpenPullRequest";
@@ -88,6 +89,12 @@ function GitOverviewSheetContent(props: GitOverviewSheetProps) {
     context: selectedThread ?? undefined,
   });
   const { selectedThreadCwd, selectedThreadWorktreePath } = useSelectedThreadWorktree();
+  const gitAccountGuard = useGitAccountGuard({
+    environmentId,
+    threadId,
+    projectId: selectedThread?.projectId ?? null,
+  });
+  const gitAccountStatus = gitAccountGuard.status;
   const linkedPrLines = useLinkedPullRequestLines(selectedThread, selectedEnvironmentRuntime);
   const linkedPrActions = useLinkedPullRequestActions({
     thread: selectedThread,
@@ -252,6 +259,16 @@ function GitOverviewSheetContent(props: GitOverviewSheetProps) {
         ) : undefined
       }
     >
+      {gitAccountStatus?.state === "bypassed" ? (
+        <ListSection>
+          <ListRow
+            icon="exclamationmark.triangle"
+            label="Using this machine's git login"
+            description={`The git account "${gitAccountStatus.accountLabel ?? "unknown"}" can't be used: ${gitAccountStatus.reason ?? "unknown reason"}. Tap to go back to the account.`}
+            onPress={() => void gitAccountGuard.setThreadBypass(false)}
+          />
+        </ListSection>
+      ) : null}
       <ListSection>
         {sheetMenuItems.map(({ item, disabledReason }) => (
           <ListRow

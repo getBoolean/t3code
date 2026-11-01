@@ -21,6 +21,8 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.serverRunStorageCleanup]: AuthSettingsWriteScope,
   [WS_METHODS.serverCheckOtlpEndpoint]: AuthSettingsWriteScope,
   [WS_METHODS.pullRequestsRunAction]: AuthSourceControlWriteScope,
+  // A bypass changes which identity the thread pushes and opens pull requests as.
+  [WS_METHODS.gitAccountsSetThreadBypass]: AuthSourceControlWriteScope,
   [WS_METHODS.pullRequestsUpdate]: AuthSourceControlWriteScope,
   [WS_METHODS.pullRequestsComment]: AuthSourceControlWriteScope,
   [WS_METHODS.pullRequestsUpdateComment]: AuthSourceControlWriteScope,

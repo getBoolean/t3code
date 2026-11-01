@@ -1,3 +1,6 @@
+import * as GitAccounts from "../../../gitAccounts/GitAccounts.ts";
+import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
+import { GitAccountId } from "@t3tools/contracts";
 import {
   CommandId,
   MessageId,
@@ -283,6 +286,69 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
         .pipe(Effect.mapError(unavailable));
     }),
   ),
+  t3_project_git_account: McpToolAccess.either(
+    (input) => input.action === "list",
+    McpToolAccess.readsAsCaller(() =>
+      Effect.gen(function* () {
+        const context = yield* readCaller();
+        const projectId = yield* resolveProjectId(context, undefined);
+        const settings = yield* (yield* ServerSettings.ServerSettingsService).getSettings.pipe(
+          Effect.mapError(unavailable),
+        );
+        return {
+          accounts: Object.entries(settings.gitAccounts).map(([id, account]) => ({
+            id: GitAccountId.make(id),
+            label: account.label,
+            host: account.host,
+          })),
+          current: resolveProjectSettings(settings, projectId).settings.gitAccountId,
+          thread:
+            context.caller === undefined
+              ? null
+              : yield* Effect.serviceOption(GitAccounts.GitAccounts).pipe(
+                  Effect.flatMap((service) =>
+                    service._tag === "Some"
+                      ? service.value.threadStatus(context.caller!.id)
+                      : Effect.succeed(null),
+                  ),
+                ),
+        };
+      }),
+    ),
+    McpToolAccess.actsAsCaller((input) =>
+      Effect.gen(function* () {
+        const context = yield* readCaller();
+        const switcher = yield* GitAccountSwitch.GitAccountSwitch;
+        const toFailure = (error: GitAccountSwitch.GitAccountSwitchError) =>
+          new OrchestratorMcpFailure({ code: "invalid_request", message: error.message });
+        if (context.caller === undefined) {
+          return yield* new OrchestratorMcpFailure({
+            code: "invalid_request",
+            message: `${input.action} must come from a thread in the project.`,
+          });
+        }
+        if (input.action === "bypass" || input.action === "end_bypass") {
+          return yield* switcher
+            .bypassThread({ threadId: context.caller.id, bypass: input.action === "bypass" })
+            .pipe(Effect.mapError(toFailure));
+        }
+        if (input.accountId === undefined) {
+          return yield* new OrchestratorMcpFailure({
+            code: "invalid_request",
+            message: "switch needs accountId.",
+          });
+        }
+        return yield* switcher
+          .switchProject({ threadId: context.caller.id, accountId: input.accountId })
+          .pipe(
+            Effect.mapError(
+              (error) =>
+                new OrchestratorMcpFailure({ code: "invalid_request", message: error.message }),
+            ),
+          );
+      }),
+    ),
+  ),
   t3_project_read: McpToolAccess.reads((input) =>
     Effect.gen(function* () {
       const projects = yield* access;
@@ -292,7 +358,25 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
           code: "invalid_request",
           message: "The project was not found.",
         });
-      return result.value;
+      const settings = yield* (yield* ServerSettings.ServerSettingsService).getSettings.pipe(
+        Effect.mapError(unavailable),
+      );
+      const accountId = resolveProjectSettings(settings, input.projectId).settings.gitAccountId;
+      return {
+        ...result.value,
+        gitAccount:
+          accountId === null
+            ? null
+            : {
+                id: accountId,
+                // A deleted account keeps its id so the agent can say which one is missing.
+                label: settings.gitAccounts[accountId]?.label ?? accountId,
+                source:
+                  settings.projectSettingsOverrides[input.projectId]?.gitAccountId === undefined
+                    ? ("default" as const)
+                    : ("project" as const),
+              },
+      };
     }),
   ),
   t3_project_create: McpToolAccess.writesEnvironment(

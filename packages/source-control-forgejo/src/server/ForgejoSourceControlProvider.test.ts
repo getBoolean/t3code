@@ -5,6 +5,7 @@ import * as Exit from "effect/Exit";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as HttpClient from "effect/http/HttpClient";
@@ -13,6 +14,7 @@ import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import { VcsProcessSpawnError } from "@t3tools/contracts";
 import { firstNonEmptyLine } from "@t3tools/source-control-core/server/discovery";
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
 
 import * as ForgejoCli from "./ForgejoCli.ts";
@@ -1320,6 +1322,72 @@ it.effect("rejects HTTP failures even when tea exits successfully", () =>
     ),
   ),
 );
+
+it.effect("calls Forgejo as a project's git account instead of the tea or fj logins", () => {
+  const commands: string[] = [];
+  const requests: Array<{ url: string; authorization: string | undefined }> = [];
+  const asAccount = (host: string) =>
+    Effect.provideService(SourceControlHost.AccountCredential, {
+      host,
+      token: Redacted.make("account-token"),
+      label: "Work",
+      authorName: "Work",
+      authorEmail: "work@example.test",
+    });
+  return Effect.gen(function* () {
+    const cli = yield* ForgejoCli.make;
+    const input = {
+      cwd: "/repo",
+      repository: "http://forgejo.local:3000/maria/project",
+      path: "repos/maria/project/pulls/42",
+    };
+    const result = yield* asAccount("forgejo.local:3000")(cli.api(input));
+    assert.strictEqual(result.stdout, "{}");
+    assert.deepStrictEqual(requests, [
+      {
+        url: "http://forgejo.local:3000/api/v1/repos/maria/project/pulls/42",
+        authorization: "token account-token",
+      },
+    ]);
+    const elsewhere = yield* Effect.flip(asAccount("codeberg.org")(cli.api(input)));
+    assert.strictEqual(elsewhere.reason, "authentication");
+    assert.include(elsewhere.detail, "Work");
+    assert.deepStrictEqual(commands, []);
+  }).pipe(
+    Effect.provideService(
+      FileSystem.FileSystem,
+      FileSystem.makeNoop({ exists: () => Effect.succeed(false) }),
+    ),
+    Effect.provideService(
+      HttpClient.HttpClient,
+      HttpClient.make((request) => {
+        requests.push({ url: request.url, authorization: request.headers.authorization });
+        return Effect.succeed(HttpClientResponse.fromWeb(request, new Response("{}")));
+      }),
+    ),
+    Effect.provide(
+      TestSourceControlHost.layer({
+        process: {
+          run: (input) => {
+            commands.push(input.command);
+            return Effect.succeed(
+              processOutput(
+                encodeJson([
+                  {
+                    name: "work",
+                    url: "http://forgejo.local:3000",
+                    user: "maria",
+                    default: "true",
+                  },
+                ]),
+              ),
+            );
+          },
+        },
+      }),
+    ),
+  );
+});
 
 it.effect("routes mounted Forgejo repositories without repeating the mount in API paths", () =>
   Effect.gen(function* () {

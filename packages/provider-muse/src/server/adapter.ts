@@ -1,3 +1,4 @@
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import { MspError, type ProcessExit, type SendUserTurnOptions } from "@muse-code/sdk";
 import {
   MUSE_DEFAULT_MODEL,
@@ -280,6 +281,7 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
   return ProviderAdapter.ProviderAdapterV2.of({
     instanceId: options.instanceId,
     driver: MUSE_PROVIDER,
+    appliesAccountEnvironment: true,
     getCapabilities: Effect.fn("MuseAdapter.getCapabilities")(function () {
       return Effect.succeed(MuseProviderCapabilitiesV2);
     }),
@@ -1670,7 +1672,9 @@ export const makeMuseAdapterV2 = Effect.fn("makeMuseAdapterV2")(function* (
         const epoch = ++hostEpoch;
         const mcpSession = yield* mcpSessions.read(input.threadId);
         const environment = McpProviderSession.withAgentDeviceEnvironment(
-          options.environment,
+          input.accountOverlay === undefined
+            ? options.environment
+            : applyEnvironmentOverlay(options.environment, input.accountOverlay),
           mcpSession,
         );
         const launch = yield* agentScope.wrap({

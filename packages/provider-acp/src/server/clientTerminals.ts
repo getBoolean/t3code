@@ -1,3 +1,7 @@
+import {
+  applyEnvironmentOverlay,
+  type EnvironmentOverlay,
+} from "@t3tools/provider-core/server/instanceEnvironment";
 import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -125,6 +129,7 @@ export interface AcpClientTerminalsOptions {
   readonly shellCommands?: boolean | undefined;
   readonly defaultCwd: string;
   readonly environment?: NodeJS.ProcessEnv | undefined;
+  readonly accountOverlay?: EnvironmentOverlay | undefined;
   readonly environmentForSession?:
     | ((sessionId: string) => NodeJS.ProcessEnv | undefined)
     | undefined;
@@ -217,12 +222,16 @@ export const makeAcpClientTerminals = Effect.fn("makeAcpClientTerminals")(functi
             (request.env ?? []).map((variable) => [variable.name, variable.value] as const),
           );
           const sessionEnvironment = options.environmentForSession?.(request.sessionId);
-          const environment =
+          const merged =
             options.environment === undefined &&
             sessionEnvironment === undefined &&
             (request.env?.length ?? 0) === 0
               ? undefined
               : { ...options.environment, ...sessionEnvironment, ...requestEnvironment };
+          const environment =
+            options.accountOverlay === undefined
+              ? merged
+              : applyEnvironmentOverlay(merged ?? process.env, options.accountOverlay);
           const terminalScope = yield* Scope.make();
           const child = yield* restore(
             spawner

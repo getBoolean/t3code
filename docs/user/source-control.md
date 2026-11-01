@@ -44,6 +44,9 @@ over that choice; a host turned off stays off either way.
 For GitHub Enterprise, sign in with `gh auth login --hostname YOUR_HOST`. T3 Code treats a
 custom server name as GitHub once it has a credential for that host.
 
+A project's git account, when it has one, replaces all of these for that project's host. See
+[Use a different git account per project](#use-a-different-git-account-per-project).
+
 ### Forgejo and Gitea
 
 Install [Forgejo CLI (`fj`)](https://codeberg.org/forgejo-contrib/forgejo-cli) or
@@ -128,6 +131,41 @@ sent to `git.cafe`; `CAFE_TOKEN` follows `CAFE_HOST` if you set it. Repositories
 
 Line comments are not available for GitCafe pull requests yet.
 Merging a stack lands it through GitCafe, and updating a branch restacks the layers above it.
+
+## Use a different git account per project
+
+If you use more than one account, such as personal and work GitHub accounts, add each one in
+**Settings → Source control → Git accounts** with its author name, email, host, and either a
+token or a `gh` login on the server. An optional SSH key is used for pushes over SSH.
+
+Pick the account a project uses with **Git account** in that project's source control settings,
+or set the default for every project at the environment level. Agents, terminals, and T3 Code's
+own commits, pushes, and pull requests in that project then use the account, even when another
+project uses a different one at the same time. Your machine's own git config and `gh` login are
+left alone.
+
+If the account can't be used, for example its token was revoked, the account was deleted, or the
+repository's remote is on another host, T3 Code asks before a thread sends a message, commits,
+pushes, opens a pull request, or opens a terminal. The warning says why and which of this
+machine's git and `gh` logins the thread would use instead. Continuing lets that one thread run as
+the machine login until the account works again; other threads stay blocked. A **Machine git
+login** badge next to the thread title shows the bypass, and clicking it goes back to the account.
+Cursor, and OpenCode connected to an external or shared server, can't run as a project's account,
+so they aren't available in projects that have one.
+
+Remotes that reach the forge through an SSH alias from `~/.ssh/config`, such as
+`git@github-work:org/repo.git`, count as that forge's host.
+
+Terminals follow the account as it changes: `git` and `gh` in an open T3 Code terminal pick up a
+switch or a bypass on their next run. A shell profile that puts its own `git` ahead of T3 Code's
+on `PATH` keeps the account the terminal started with until you open a new one.
+
+**Write to repo git config** also sets `user.name` and `user.email` in the repository, so your
+own terminal and apps like GitHub Desktop match. Turning it off restores the previous values.
+
+From a client without these settings, such as an older mobile app, ask an agent in one of the
+project's threads to switch accounts, or to continue without an account that can't be used. It
+replies with a short phrase; type that phrase in the thread to confirm.
 
 ## Start, clone, or publish a project
 

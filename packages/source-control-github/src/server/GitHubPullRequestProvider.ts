@@ -130,6 +130,8 @@ function gitHubProviderFailure(
 }
 
 const REPOSITORY_ACCESS_HINTS: Record<Exclude<GitHubCredentialSource, "app">, string> = {
+  account:
+    "This project's git account can't see it. Give it access, or pick another account for the project.",
   settings:
     "Your saved GitHub token can't see it. Give it access, or change it in Settings → Source Control.",
   env: "The server's environment token can't see it. Give it access, or unset it.",

@@ -42,6 +42,7 @@ import { cn } from "~/lib/utils";
 import { textDirection } from "~/textDirection";
 import { useClientSettings } from "../../hooks/useSettings";
 import { GuestShareIndicator } from "./GuestShareControls";
+import { GitAccountBypassBadge } from "./GitAccountBypassBadge";
 
 interface ChatHeaderProps {
   activeThreadEnvironmentId: EnvironmentId;
@@ -427,6 +428,15 @@ export const ChatHeader = memo(function ChatHeader({
                 Started by an agent on {activeThreadLinkOrigin} through a linked environment.
               </TooltipPopup>
             </Tooltip>
+          ) : null}
+          {renamingTitle === null ? (
+            <GitAccountBypassBadge
+              target={{
+                environmentId: activeThreadEnvironmentId,
+                threadId: activeThreadId,
+                projectId: activeProject?.id ?? null,
+              }}
+            />
           ) : null}
         </WorkspaceBreadcrumbItem>
       </WorkspaceBreadcrumb>

@@ -1,4 +1,5 @@
 import { RefreshIcon } from "~/components/ui/refresh-icon";
+import { GitAccountsSettings } from "./GitAccountsSettings";
 import { ChevronDownIcon } from "lucide-react";
 import * as Option from "effect/Option";
 import { useState, type ReactNode } from "react";
@@ -520,6 +521,8 @@ export function SourceControlSettingsPanel() {
           onScan={handleScan}
         />
       )}
+
+      {environmentId === null ? null : <GitAccountsSettings environmentId={environmentId} />}
 
       <SourceControlWritingSettingsSection />
     </SettingsPageContainer>

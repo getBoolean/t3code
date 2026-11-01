@@ -276,6 +276,7 @@ function makeLocalCommandHarness(input: {
   readonly previousMessages?: ReadonlyArray<string>;
   readonly logoutFailure?: string;
   readonly openFailure?: unknown;
+  readonly accountChangedOnce?: boolean;
   readonly ensureThreadFailure?: unknown;
   readonly historyReadFailureAfterFallback?: unknown;
   readonly interruptOpen?: boolean;
@@ -755,37 +756,54 @@ function makeLocalCommandHarness(input: {
     forkThread,
     startTurn,
   };
-  const open = vi.fn(() =>
-    input.sideChat !== undefined
-      ? Effect.succeed(sideChatSession as never)
-      : input.interruptOpen === true
-        ? Effect.interrupt
-        : "historyReadFailureAfterFallback" in input
-          ? Effect.succeed(resumeFallbackSession as never)
-          : "ensureThreadFailure" in input
-            ? Effect.succeed({ driver: providerThread.driver, ensureThread } as never)
-            : "openFailure" in input
-              ? Effect.sync(() => {
-                  if (input.interruptRunBeforeOpenFailure === true) interruptRun();
-                }).pipe(
-                  Effect.andThen(
-                    Effect.fail(
-                      new ProviderSessionManager.ProviderSessionOpenError({
-                        instanceId: newInstanceId,
-                        providerSessionId,
-                        cause: input.openFailure,
-                      }),
-                    ),
-                  ),
-                )
-              : input.failReadsAfterRunning === true || input.previousTurn !== undefined
-                ? Effect.succeed({
-                    driver: providerThread.driver,
-                    providerSession,
-                    ensureThread: () => Effect.succeed(providerThread),
-                    resumeThread: () => Effect.succeed(projection.providerThreads[0]),
-                  } as never)
-                : Effect.die("A local command must not open a native session."),
+  let accountChangeReported = false;
+  const open = vi.fn(
+    (_request?: {
+      readonly providerSessionId: ProviderSessionId;
+    }): Effect.Effect<never, ProviderSessionManager.ProviderSessionManagerV2Error> =>
+      input.accountChangedOnce === true && !accountChangeReported
+        ? Effect.sync(() => {
+            accountChangeReported = true;
+          }).pipe(
+            Effect.andThen(
+              Effect.fail(
+                new ProviderSessionManager.ProviderSessionAccountChangedError({
+                  providerSessionId,
+                  threadId,
+                }),
+              ),
+            ),
+          )
+        : input.sideChat !== undefined
+          ? Effect.succeed(sideChatSession as never)
+          : input.interruptOpen === true
+            ? Effect.interrupt
+            : "historyReadFailureAfterFallback" in input
+              ? Effect.succeed(resumeFallbackSession as never)
+              : "ensureThreadFailure" in input
+                ? Effect.succeed({ driver: providerThread.driver, ensureThread } as never)
+                : "openFailure" in input
+                  ? Effect.sync(() => {
+                      if (input.interruptRunBeforeOpenFailure === true) interruptRun();
+                    }).pipe(
+                      Effect.andThen(
+                        Effect.fail(
+                          new ProviderSessionManager.ProviderSessionOpenError({
+                            instanceId: newInstanceId,
+                            providerSessionId,
+                            cause: input.openFailure,
+                          }),
+                        ),
+                      ),
+                    )
+                  : input.failReadsAfterRunning === true || input.previousTurn !== undefined
+                    ? Effect.succeed({
+                        driver: providerThread.driver,
+                        providerSession,
+                        ensureThread: () => Effect.succeed(providerThread),
+                        resumeThread: () => Effect.succeed(projection.providerThreads[0]),
+                      } as never)
+                    : Effect.die("A local command must not open a native session."),
   );
   const startRootRun = vi.fn<
     (input: RunExecutionService.RunExecutionServiceV2StartRootRunInput) => Effect.Effect<void>
@@ -1289,6 +1307,26 @@ effectIt.effect.each([
     expect(harness.interruptTurn).not.toHaveBeenCalled();
     expect(harness.projection().runs.at(-1)?.status).toBe("running");
   }),
+);
+
+effectIt.effect(
+  "moves the thread to its own session when the shared one runs as another git account",
+  () =>
+    Effect.gen(function* () {
+      const harness = makeLocalCommandHarness({
+        text: "Continue",
+        previousTurn: { runStatus: "completed", turnStatus: "completed" },
+        accountChangedOnce: true,
+      });
+
+      yield* harness.start;
+
+      const sessionIds = harness.open.mock.calls.map(([request]) => request?.providerSessionId);
+      expect(sessionIds).toHaveLength(2);
+      expect(sessionIds[1]).not.toBe(sessionIds[0]);
+      expect(harness.projection().providerThreads[0]?.providerSessionId).toBe(sessionIds[1]);
+      expect(harness.startRootRun).toHaveBeenCalledOnce();
+    }),
 );
 
 effectIt.effect("does not start another turn when abandoned-turn cleanup fails", () =>

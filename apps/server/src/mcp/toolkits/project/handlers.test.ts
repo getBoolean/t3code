@@ -2,7 +2,10 @@ import * as ProviderRegistry from "../../../provider/ProviderRegistry.ts";
 import { expect, it } from "@effect/vitest";
 import {
   EnvironmentId,
+  GitAccountId,
   ProjectId,
+  SourceControlProviderKind,
+  ThreadId,
   ProviderInstanceId,
   ProviderDriverKind,
   type ServerProvider,
@@ -35,6 +38,8 @@ import * as GitVcsDriver from "../../../vcs/GitVcsDriver.ts";
 import * as VcsProcess from "../../../vcs/VcsProcess.ts";
 import * as McpInvocationContext from "../../McpInvocationContext.ts";
 import * as McpToolAccess from "../../McpToolAccess.ts";
+import * as GitAccounts from "../../../gitAccounts/GitAccounts.ts";
+import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
 import * as ProjectHandlers from "./handlers.ts";
 import { ProjectToolkit } from "./tools.ts";
 
@@ -630,5 +635,122 @@ it.effect("deleting a project through MCP also discards its clone record", () =>
       .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
 
     expect(discarded).toEqual([harness.projectId]);
+  }),
+);
+
+it.effect("project git account tools list accounts without credentials and route a bypass", () =>
+  Effect.gen(function* () {
+    const threadId = ThreadId.make("thread-git-account");
+    const harness = clientLaunchHarness({ runtimeModeCeiling: "full-access", launched: [] });
+    const bypassRequests: Array<{ readonly threadId: ThreadId; readonly bypass: boolean }> = [];
+    const status = {
+      state: "unavailable" as const,
+      accountId: GitAccountId.make("work"),
+      accountLabel: "Work",
+      reason: "it has no saved token",
+      machine: null,
+    };
+    const dependencies = Layer.merge(
+      harness.dependencies,
+      Layer.mergeAll(
+        Layer.succeed(McpInvocationContext.McpInvocationContext, {
+          environmentId: EnvironmentId.make("environment"),
+          requestNamespace: "thread:thread-git-account",
+          thread: {
+            threadId,
+            providerSessionId: "session",
+            providerInstanceId: ProviderInstanceId.make("claudeAgent"),
+          },
+          client: undefined,
+          issuedAt: 0,
+          capabilities: new Set(["orchestration" as const]),
+        }),
+        Layer.mock(ThreadManagement.ThreadManagementService)({
+          getThreadShell: () =>
+            Effect.succeed({
+              id: threadId,
+              projectId: harness.projectId,
+              deletedAt: null,
+              archivedAt: null,
+              activeRunId: "run-live",
+              providerInstanceId: ProviderInstanceId.make("claudeAgent"),
+            } as never),
+        }),
+        ServerSettings.ServerSettingsService.layerTest({
+          gitAccounts: {
+            [GitAccountId.make("work")]: {
+              label: "Work",
+              authorName: "Work Name",
+              authorEmail: "work@example.test",
+              forge: SourceControlProviderKind.make("github"),
+              host: "github.com",
+              credentialKind: "token",
+              token: "secret-token",
+              cliLogin: "",
+              sshKeyPath: "",
+            },
+          },
+          gitAccountId: GitAccountId.make("work"),
+        }),
+        Layer.mock(GitAccounts.GitAccounts)({ threadStatus: () => Effect.succeed(status) }),
+        Layer.mock(Project.ProjectService)({
+          getById: () =>
+            Effect.succeedSome({
+              id: harness.projectId,
+              title: "client-target",
+              workspaceRoot: "/projects/client-target",
+              repositoryIdentity: null,
+              faviconPath: null,
+              defaultModelSelection: null,
+              defaultThreadEnvMode: null,
+              autoPull: false,
+              projectIcon: null,
+              scripts: [],
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+              deletedAt: null,
+            }),
+        }),
+        Layer.mock(GitAccountSwitch.GitAccountSwitch)({
+          bypassThread: (input) =>
+            Effect.sync(() => void bypassRequests.push(input)).pipe(
+              Effect.as({ status: "bypass_ended" as const, machine: null }),
+            ),
+        }),
+      ),
+    );
+    const toolkit = yield* ProjectToolkit.pipe(
+      Effect.provide(
+        McpToolAccess.HandlersLayer.layer(ProjectHandlers.layer).pipe(Layer.provide(dependencies)),
+      ),
+    );
+    const call = (input: Record<string, unknown>) =>
+      toolkit
+        .handle("t3_project_git_account", input as never)
+        .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
+
+    const [listed] = yield* call({ action: "list" });
+    expect(JSON.stringify(listed)).not.toContain("secret-token");
+    expect(listed).toMatchObject({
+      result: {
+        accounts: [{ id: "work", label: "Work", host: "github.com" }],
+        current: "work",
+        thread: status,
+      },
+    });
+
+    const [missing] = yield* call({ action: "switch" });
+    expect(missing?.result).toHaveProperty("code", "invalid_request");
+
+    yield* call({ action: "end_bypass" });
+    expect(bypassRequests).toEqual([{ threadId, bypass: false }]);
+
+    // The project read names the account it commits as, and that it comes from the default.
+    const [read] = yield* toolkit
+      .handle("t3_project_read", { projectId: harness.projectId })
+      .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
+    expect(read).toMatchObject({
+      result: { gitAccount: { id: "work", label: "Work", source: "default" } },
+    });
   }),
 );

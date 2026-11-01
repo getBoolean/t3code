@@ -6,6 +6,7 @@ import * as Exit from "effect/Exit";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 
 import * as GitHubAppSignIn from "./GitHubAppSignIn.ts";
 import * as GitHubRequestPolicy from "./GitHubRequestPolicy.ts";
@@ -203,6 +204,7 @@ export const make = Effect.gen(function* () {
   const credentialFor: GitHubAppAccess["Service"]["credentialFor"] = Effect.fn(
     "GitHubAppAccess.credentialFor",
   )(function* (host, repository) {
+    if ((yield* SourceControlHost.AccountCredential) !== null) return yield* api.credential(host);
     // Pinned work cannot be handed on, so only confirmed app access keeps the app credential.
     if ((yield* coverageFor(host, repository)) === "covered") return yield* api.credential(host);
     return yield* api

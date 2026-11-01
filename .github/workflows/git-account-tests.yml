@@ -1,0 +1,106 @@
+# Git accounts inject git config, credential helpers and SSH commands that behave
+# differently per OS shell, so their tests also run on macOS and Windows (ci.yml covers Linux only).
+name: Git Account Tests
+
+on:
+  pull_request:
+    paths:
+      - apps/server/src/gitAccounts/**
+      - apps/server/src/git/GitManager*.ts
+      - apps/server/src/vcs/GitVcsDriver*.ts
+      - apps/server/src/terminal/Manager*.ts
+      - apps/server/src/pullRequest/PullRequestService*.ts
+      - packages/source-control-*/src/server/**
+      - .github/workflows/git-account-tests.yml
+  push:
+    branches: [feat/project-git-accounts]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: git-account-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: false
+
+      - name: Install
+        run: vp install
+
+      - name: Test server
+        working-directory: apps/server
+        run: >-
+          vp test run
+          src/gitAccounts
+          src/git/GitManager.test.ts
+          src/terminal/Manager.test.ts
+          src/project/ProjectSetupScriptRunner.test.ts
+          src/pullRequest/PullRequestService.test.ts
+          src/serverSettings.test.ts
+          src/auth/RpcAuthorization.test.ts
+
+      # The rest of this file has macOS-only path failures unrelated to accounts.
+      - name: Test driver env passthrough
+        working-directory: apps/server
+        run: vp test run src/vcs/GitVcsDriverCore.test.ts -t "environment the caller passes"
+
+      - name: Test source control packages
+        run: |
+          for forge in github gitlab forgejo bitbucket azure-devops gitcafe; do
+            (cd "packages/source-control-$forge" && vp test run src/server)
+          done
+
+      - name: Test shared settings
+        working-directory: packages/shared
+        run: vp test run src/projectSettings.test.ts
+
+  # Terminal shims are .cmd files on Windows, with their own quoting rules.
+  windows:
+    name: Test (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: false
+
+      - name: Install
+        run: vp install
+
+      - name: Test git accounts
+        working-directory: apps/server
+        run: vp test run src/gitAccounts

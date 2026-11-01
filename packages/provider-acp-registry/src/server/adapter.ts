@@ -1,3 +1,4 @@
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import {
   extractClaudeSubagentUpdate,
   extractClaudeSubagentSessionEvent,
@@ -142,7 +143,7 @@ function makeAcpRegistryRuntime(
     ChildProcessSpawner.ChildProcessSpawner | Crypto.Crypto | Scope.Scope
   > =>
     Effect.gen(function* () {
-      const { processEnvironment, ...runtimeInput } = input;
+      const { processEnvironment, accountOverlay, ...runtimeInput } = input;
       const resolved = yield* catalog
         .resolve(options.settings, input.cwd, options.environment)
         .pipe(
@@ -158,11 +159,17 @@ function makeAcpRegistryRuntime(
         AcpSessionRuntime.layer({
           ...runtimeInput,
           spawn:
-            processEnvironment === undefined
+            processEnvironment === undefined && accountOverlay === undefined
               ? resolved.spawn
               : {
                   ...resolved.spawn,
-                  env: { ...resolved.spawn.env, ...processEnvironment },
+                  env:
+                    accountOverlay === undefined
+                      ? { ...resolved.spawn.env, ...processEnvironment }
+                      : applyEnvironmentOverlay(
+                          { ...(resolved.spawn.env ?? process.env), ...processEnvironment },
+                          accountOverlay,
+                        ),
                 },
           ...(options.settings.authMethodId ? { authMethodId: options.settings.authMethodId } : {}),
           customModels: readCustomModelEntries(options.settings.customModels).map(
@@ -259,6 +266,7 @@ export const makeAcpRegistryAdapterV2 = Effect.fn("makeAcpRegistryAdapterV2")(fu
           restartRuntimeAfterPromptError: isCopilotLostSessionError,
         }),
     makeRuntime: options.makeRuntime ?? makeAcpRegistryRuntime(runtimeOptions, catalog),
+    appliesAccountEnvironment: true,
     ...(runtimeCoordinator === undefined
       ? {}
       : {

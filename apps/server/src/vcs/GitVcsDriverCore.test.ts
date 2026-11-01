@@ -5426,6 +5426,48 @@ it.layer(layerTest)("GitVcsDriver core integration", (it) => {
       }),
     );
 
+    it.effect("commits and pushes under the environment the caller passes", () =>
+      Effect.gen(function* () {
+        const cwd = yield* makeTmpDir();
+        const remote = (yield* makeTmpDir("git-remote-")).replaceAll("\\", "/");
+        yield* initRepoWithCommit(cwd);
+        yield* git(remote, ["init", "--bare"]);
+        // Only the passed environment maps this unreachable URL onto the local remote.
+        const unreachable = "https://example.invalid/acme/web.git";
+        yield* git(cwd, ["remote", "add", "origin", unreachable]);
+        const env = {
+          ...process.env,
+          GIT_AUTHOR_NAME: "Account",
+          GIT_AUTHOR_EMAIL: "account@example.test",
+          GIT_COMMITTER_NAME: "Account",
+          GIT_COMMITTER_EMAIL: "account@example.test",
+          ...gitConfigEnv(
+            process.env,
+            `url.${remote}.insteadOf`,
+            unreachable,
+            yield* HostProcess.Platform,
+          ),
+        };
+        const driver = yield* GitVcsDriver.GitVcsDriver;
+        yield* driver.createRef({ cwd, refName: "feature/account" });
+        yield* driver.switchRef({ cwd, refName: "feature/account" });
+        yield* writeTextFile(cwd, "feature.txt", "feature\n");
+
+        yield* driver.commit(cwd, "Add feature", "", { stage: {}, env });
+        assert.equal(
+          yield* git(cwd, ["log", "-1", "--format=%an <%ae> %cn <%ce>"]),
+          "Account <account@example.test> Account <account@example.test>",
+        );
+        assert.deepInclude(yield* driver.pushCurrentBranch(cwd, null, { env }), {
+          status: "pushed",
+        });
+        assert.equal(
+          yield* git(cwd, ["--git-dir", remote, "rev-parse", "refs/heads/feature/account"]),
+          yield* git(cwd, ["rev-parse", "HEAD"]),
+        );
+      }),
+    );
+
     it.effect("pushes with upstream setup and skips when already up to date", () =>
       Effect.gen(function* () {
         const cwd = yield* makeTmpDir();

@@ -2,6 +2,7 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as PlatformError from "effect/PlatformError";
+import * as Redacted from "effect/Redacted";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import {
@@ -367,30 +368,33 @@ export const make = Effect.gen(function* () {
   const { process } = yield* SourceControlHost.SourceControlHost;
 
   const execute: AzureDevOpsCli["Service"]["execute"] = (input) =>
-    process
-      .run({
+    Effect.flatMap(Effect.service(SourceControlHost.AccountCredential), (account) =>
+      process.run({
         operation: "AzureDevOpsCli.execute",
         command: "az",
         args: input.args,
         cwd: input.cwd,
+        ...(account === null
+          ? {}
+          : { env: { AZURE_DEVOPS_EXT_PAT: Redacted.value(account.token) } }),
         classifyFailure: classifyAzFailure,
         notFoundDetail: "Pull request not found.",
         timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         ...(input.maxOutputBytes === undefined ? {} : { maxOutputBytes: input.maxOutputBytes }),
-      })
-      .pipe(
-        Effect.mapError((error) =>
-          AzureDevOpsCommandFailedError.fromVcsError(
-            {
-              operation: "execute",
-              command: "az",
-              cwd: input.cwd,
-              argumentCount: input.args.length,
-            },
-            error,
-          ),
+      }),
+    ).pipe(
+      Effect.mapError((error) =>
+        AzureDevOpsCommandFailedError.fromVcsError(
+          {
+            operation: "execute",
+            command: "az",
+            cwd: input.cwd,
+            argumentCount: input.args.length,
+          },
+          error,
         ),
-      );
+      ),
+    );
 
   const executeJson = (input: Parameters<AzureDevOpsCli["Service"]["execute"]>[0]) =>
     execute({

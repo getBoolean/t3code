@@ -10,13 +10,14 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Queue from "effect/Queue";
+import * as Redacted from "effect/Redacted";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import * as TestClock from "effect/testing/TestClock";
 import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } from "effect/http";
 
 import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
-import type * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
 
 import * as BitbucketApi from "./BitbucketApi.ts";
@@ -663,6 +664,17 @@ it.effect("prefers credentials saved in settings over the environment, without a
     });
     yield* bitbucket.probeAuth;
     assert.strictEqual(lastAuthorization(), "Bearer saved-access-token");
+
+    yield* bitbucket.probeAuth.pipe(
+      Effect.provideService(SourceControlHost.AccountCredential, {
+        host: "bitbucket.org",
+        token: Redacted.make("account-token"),
+        label: "Work",
+        authorName: "Work",
+        authorEmail: "work@example.test",
+      }),
+    );
+    assert.strictEqual(lastAuthorization(), "Bearer account-token");
 
     yield* settings.update({
       sourceControlHosts: { bitbucket: { accessToken: "", apiToken: "" } },

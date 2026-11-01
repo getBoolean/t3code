@@ -25,7 +25,7 @@ import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
-import { AsyncResult, Atom } from "effect/reactivity";
+import { AsyncResult, Atom, type AtomRegistry } from "effect/reactivity";
 
 import {
   createAtomCommandScheduler,
@@ -1099,6 +1099,38 @@ export function createServerEnvironmentAtoms<R, E>(
       );
     }).pipe(Atom.withLabel(`environment-data:server:usage-prices:${environmentId}`)),
   );
+  // Bumped when a thread's git account bypass changes, so its status query refetches.
+  const gitAccountStatusRevisionAtom = Atom.family((_key: string) => Atom.make(0));
+  const bumpGitAccountStatus = (
+    target: {
+      readonly environmentId: EnvironmentId;
+      readonly input: { readonly threadId: string };
+    },
+    registry: AtomRegistry.AtomRegistry,
+  ) =>
+    Effect.sync(() =>
+      registry.update(
+        gitAccountStatusRevisionAtom(`${target.environmentId}|${target.input.threadId}`),
+        (revision) => revision + 1,
+      ),
+    );
+
+  // Account edits and project bindings can make a cached status wrong, so they refetch it too.
+  const gitAccountStatusTriggerAtom = Atom.family((key: string) =>
+    Atom.make((get) => {
+      const settings = get(settingsValueAtom(key.split("|")[0] as EnvironmentId));
+      // A string, so unrelated settings changes leave it equal and trigger nothing.
+      return JSON.stringify([
+        get(gitAccountStatusRevisionAtom(key)),
+        settings?.gitAccounts,
+        settings?.gitAccountId,
+        Object.values(settings?.projectSettingsOverrides ?? {}).map((project) => [
+          project.gitAccountId,
+        ]),
+      ]);
+    }),
+  );
+
   const usageScanSettingsAtom = Atom.family((environmentId: EnvironmentId) =>
     Atom.make((get) => {
       const settings = get(settingsValueAtom(environmentId));
@@ -1289,6 +1321,12 @@ export function createServerEnvironmentAtoms<R, E>(
     scheduledTaskWebhookDeliveries: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:scheduled-task:webhook-deliveries",
       tag: WS_METHODS.scheduledTasksListWebhookDeliveries,
+    }),
+    gitAccountThreadStatus: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:git-account:thread-status",
+      tag: WS_METHODS.gitAccountsThreadStatus,
+      refreshTrigger: ({ environmentId, input }) =>
+        gitAccountStatusTriggerAtom(`${environmentId}|${input.threadId}`),
     }),
     scheduledTaskWebhookDelivery: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:scheduled-task:webhook-delivery",
@@ -1536,6 +1574,16 @@ export function createServerEnvironmentAtoms<R, E>(
     runScheduledTaskNow: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:scheduled-task:run-now",
       tag: WS_METHODS.scheduledTasksRunNow,
+    }),
+    // A fresh read right before an action; the query above can be stale by then.
+    checkGitAccountThread: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:git-account:check-thread",
+      tag: WS_METHODS.gitAccountsThreadStatus,
+    }),
+    setGitAccountThreadBypass: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:git-account:set-thread-bypass",
+      tag: WS_METHODS.gitAccountsSetThreadBypass,
+      onSuccess: bumpGitAccountStatus,
     }),
     rotateScheduledTaskWebhookToken: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:scheduled-task:rotate-webhook-token",

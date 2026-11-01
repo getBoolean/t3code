@@ -4,6 +4,14 @@ T3 Code is an "agent harness control surface". It enables control of the agents 
 
 Works with your subscriptions on Claude Code, Codex, Cursor, Grok Build, OpenCode, Google Antigravity, and fx. If they're set up on your computer, T3 Code can control them.
 
+## What this fork adds
+
+This is a fork of [pingdotgg/t3code](https://github.com/pingdotgg/t3code). It adds:
+
+- **A git account per project.** Add several git accounts (author name and email, plus a saved token or an existing `gh` login, and an optional SSH key), set a default, and pick a different one for any project. Agents, terminals, setup scripts, and T3 Code's own commits, pushes, and pull requests in that project use that account, so you don't have to sign out and back in when you switch projects. If the account can't be used, T3 Code warns first and only falls back to your machine's login for a thread you confirm. Open terminals follow account switches too. Works with GitHub, GitLab, Forgejo/Gitea, Bitbucket, Azure DevOps, and GitCafe. See [Use a different git account per project](./docs/user/source-control.md#use-a-different-git-account-per-project).
+
+The installers and app stores below ship upstream T3 Code, which doesn't include these changes. To use them, build this fork from source (start at [docs/internals/overview.md](./docs/internals/overview.md)). With a server built from this fork, the published mobile app can still switch a project's account by asking an agent in a thread, and the switch only happens once you confirm it.
+
 ## "Wait, what are you selling me?"
 
 Nothing. We built T3 Code because we wanted the best possible development experience with agents. We were inspired by existing solutions like the Codex desktop app, Conductor, Claude Desktop and Cursor Glass, but none met our bar.

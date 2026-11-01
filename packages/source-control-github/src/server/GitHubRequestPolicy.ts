@@ -9,6 +9,7 @@ import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
 
 import * as Option from "effect/Option";
@@ -298,6 +299,8 @@ export const make = Effect.gen(function* () {
         fromApp: false,
       } satisfies ChosenCredential;
     }
+    if ((yield* SourceControlHost.AccountCredential) !== null)
+      return yield* personalCredential(host);
     const saved = yield* credentials.saved(host);
     if (Option.isSome(saved)) {
       return {

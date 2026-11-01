@@ -1,11 +1,12 @@
 import { assert, it, afterEach, expect, vi } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Redacted from "effect/Redacted";
 import { ChildProcessSpawner } from "effect/process";
 
 import { VcsProcessExitError } from "@t3tools/contracts";
 
-import type * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
 import * as GitLabCli from "./GitLabCli.ts";
 
@@ -217,6 +218,32 @@ layer("GitLabCli.layer", (it) => {
 
       assert.strictEqual(error._tag, "GitLabCliCommandError");
       assert.strictEqual(error.cause, cause);
+    }),
+  );
+
+  it.effect("runs glab as a project's git account instead of its own login", () =>
+    Effect.gen(function* () {
+      mockedRun.mockReturnValue(Effect.succeed(processOutput("[]")));
+      const glab = yield* GitLabCli.GitLabCli;
+      const input = { cwd: "/repo", host: "gitlab.com", args: ["api", "user"] };
+      yield* glab.execute(input);
+      yield* glab.execute(input).pipe(
+        Effect.provideService(SourceControlHost.AccountCredential, {
+          host: "gitlab.example.test",
+          token: Redacted.make("work-token"),
+          label: "Work",
+          authorName: "Work",
+          authorEmail: "work@example.test",
+        }),
+      );
+      assert.deepStrictEqual(
+        mockedRun.mock.calls.map(([call]) => call.env),
+        [
+          { GITLAB_HOST: "gitlab.com" },
+          // Pinned to the account's host so its token never reaches another one.
+          { GITLAB_HOST: "gitlab.example.test", GITLAB_TOKEN: "work-token" },
+        ],
+      );
     }),
   );
 

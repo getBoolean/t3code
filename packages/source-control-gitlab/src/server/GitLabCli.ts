@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Match from "effect/Match";
 import * as Option from "effect/Option";
+import * as Redacted from "effect/Redacted";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import type * as DateTime from "effect/DateTime";
@@ -434,21 +435,25 @@ export const make = Effect.gen(function* () {
     input: Parameters<GitLabCli["Service"]["execute"]>[0],
     mapError: (error: VcsError) => GitLabCliError,
   ) =>
-    process
-      .run({
+    Effect.flatMap(Effect.service(SourceControlHost.AccountCredential), (account) =>
+      process.run({
         operation: "GitLabCli.execute",
         command: "glab",
         args: input.args,
         cwd: input.cwd,
         // glab may otherwise prefer a different checkout remote.
-        ...(input.host === undefined ? {} : { env: { GITLAB_HOST: input.host } }),
+        ...(account !== null
+          ? { env: { GITLAB_HOST: account.host, GITLAB_TOKEN: Redacted.value(account.token) } }
+          : input.host === undefined
+            ? {}
+            : { env: { GITLAB_HOST: input.host } }),
         classifyFailure: classifyGlabFailure,
         notFoundDetail: "Merge request not found.",
         timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         ...(input.stdin === undefined ? {} : { stdin: input.stdin }),
         ...(input.maxOutputBytes === undefined ? {} : { maxOutputBytes: input.maxOutputBytes }),
-      })
-      .pipe(Effect.mapError(mapError));
+      }),
+    ).pipe(Effect.mapError(mapError));
 
   const execute: GitLabCli["Service"]["execute"] = (input) =>
     run(input, (error) =>

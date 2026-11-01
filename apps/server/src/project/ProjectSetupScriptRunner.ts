@@ -471,6 +471,7 @@ export const make = Effect.gen(function* () {
           cwd,
           worktreePath: input.worktreePath,
           env: { ...env, NO_COLOR: "1", FORCE_COLOR: "0" },
+          gitAccountProjectId: project.id,
         })
         .pipe(
           Effect.andThen(() =>

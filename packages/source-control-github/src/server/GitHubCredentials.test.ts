@@ -7,7 +7,7 @@ import { HttpClient } from "effect/http";
 import { ChildProcessSpawner } from "effect/process";
 
 import { DEFAULT_SERVER_SETTINGS } from "@t3tools/contracts";
-import type * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
 import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
 import * as GitHubCredentials from "./GitHubCredentials.ts";
@@ -140,6 +140,36 @@ describe("GitHubCredentials", () => {
       const credential = yield* credentials.get("github.com");
       expect(Redacted.value(credential.token)).toBe("saved-token");
       expect(credential.source).toBe("settings");
+      expect(calls).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("uses a project's git account over a saved token, GH_TOKEN and gh", () => {
+    vi.stubEnv("GH_TOKEN", "env-token");
+    const { layer, calls } = harness({ "github.com": { account: "work" } }, [], {
+      "github.com": "saved-token",
+    });
+    const asAccount = (label: string, token: string, host = "github.com") =>
+      Effect.flatMap(Effect.service(GitHubCredentials.GitHubCredentials), (credentials) =>
+        credentials.get("github.com"),
+      ).pipe(
+        Effect.provideService(SourceControlHost.AccountCredential, {
+          host,
+          token: Redacted.make(token),
+          label,
+          authorName: "Work",
+          authorEmail: "work@example.test",
+        }),
+      );
+    return Effect.gen(function* () {
+      const personal = yield* asAccount("Personal", "personal-token");
+      const work = yield* asAccount("Work", "work-token");
+      expect(Redacted.value(personal.token)).toBe("personal-token");
+      expect(Redacted.value(work.token)).toBe("work-token");
+      expect(personal.source).toBe("account");
+      expect(personal.fingerprint).not.toBe(work.fingerprint);
+      const elsewhere = yield* Effect.flip(asAccount("Work", "work-token", "ghe.example.com"));
+      expect(elsewhere).toMatchObject({ _tag: "GitHubNotSignedInError", account: "Work" });
       expect(calls).toEqual([]);
     }).pipe(Effect.provide(layer));
   });

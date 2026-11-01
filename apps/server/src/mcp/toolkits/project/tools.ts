@@ -19,7 +19,11 @@ import {
   OrchestratorMcpFailure,
   SourceControlCloneRepositoryInput,
   SourceControlCloneRepositoryResult,
+  GitAccountId,
+  GitAccountMachineIdentity,
+  GitAccountThreadStatus,
 } from "@t3tools/contracts";
+import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
 import * as FileSystem from "effect/FileSystem";
 import * as DocumentText from "../../../provider/DocumentText.ts";
 import * as ServerConfig from "../../../config.ts";
@@ -65,11 +69,23 @@ const ProjectListTool = Tool.make("t3_project_list", {
   .annotate(Tool.Destructive, false);
 const ProjectReadTool = Tool.make("t3_project_read", {
   ...shared,
-  description: "Read one project: workspace and saved scripts.",
+  description:
+    "Read one project: workspace, saved scripts, and the git account its commits, pushes and pull requests use.",
   parameters: Schema.Struct({
     environmentId: OrchestratorMcpEnvironmentTarget,
     projectId: ProjectId,
   }),
+  success: Schema.Struct({
+    ...Project.fields,
+    gitAccount: Schema.NullOr(
+      Schema.Struct({
+        id: GitAccountId,
+        label: Schema.String,
+        source: Schema.Literals(["project", "default"]),
+      }),
+    ),
+  }),
+  dependencies: [...shared.dependencies, ServerSettings.ServerSettingsService],
 })
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false);
@@ -176,7 +192,49 @@ const ThreadLaunchTool = Tool.make("t3_thread_launch", {
   .annotate(Tool.Destructive, true)
   .annotate(Tool.OpenWorld, true);
 
+const ProjectGitAccountTool = Tool.make("t3_project_git_account", {
+  description:
+    "Git accounts this project's commits, pushes and pull requests use. list: accounts, the current one, and whether this thread's account works. switch: move this thread's project to accountId. bypass: when this thread's account can't be used, run this thread as the machine's git login instead. switch and bypass first return a phrase the user must type in this thread, then call again; you cannot confirm it yourself. end_bypass: go back to the account at once.",
+  parameters: Schema.Struct({
+    action: Schema.Literals(["list", "switch", "bypass", "end_bypass"]),
+    environmentId: OrchestratorMcpEnvironmentTarget,
+    accountId: Schema.optional(GitAccountId),
+  }),
+  success: Schema.Union([
+    Schema.Struct({
+      accounts: Schema.Array(
+        Schema.Struct({ id: GitAccountId, label: Schema.String, host: Schema.String }),
+      ),
+      current: Schema.NullOr(GitAccountId),
+      thread: Schema.NullOr(GitAccountThreadStatus),
+    }),
+    Schema.Struct({
+      status: Schema.Literal("confirmation_required"),
+      phrase: Schema.String,
+      instructions: Schema.String,
+      reason: Schema.optional(Schema.String),
+      machine: Schema.optional(Schema.NullOr(GitAccountMachineIdentity)),
+    }),
+    Schema.Struct({ status: Schema.Literal("switched"), accountLabel: Schema.String }),
+    Schema.Struct({
+      status: Schema.Literals(["bypassed", "bypass_ended"]),
+      machine: Schema.NullOr(GitAccountMachineIdentity),
+    }),
+  ]),
+  failure: OrchestratorMcpFailure,
+  failureMode: "return",
+  dependencies: [
+    McpInvocationContext.McpInvocationContext,
+    ThreadManagementService.ThreadManagementService,
+    ServerSettings.ServerSettingsService,
+    GitAccountSwitch.GitAccountSwitch,
+  ],
+})
+  .annotate(Tool.Destructive, true)
+  .annotate(Tool.OpenWorld, false);
+
 export const ProjectToolkit = Toolkit.make(
+  ProjectGitAccountTool,
   ThreadLaunchTool,
   ProjectListTool,
   ProjectReadTool,

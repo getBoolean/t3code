@@ -247,6 +247,11 @@ it.effect(
         expect((yield* git.authorize(registry, env).pipe(Effect.flip)).requiredPermission).toBe(
           AuthSourceControlWriteScope,
         );
+        // A git account bypass changes who the thread pushes as, so it needs the same grant.
+        const bypass = createCommandPermissions(runtime, WS_METHODS.gitAccountsSetThreadBypass);
+        expect((yield* bypass.authorize(registry, env).pipe(Effect.flip)).requiredPermission).toBe(
+          AuthSourceControlWriteScope,
+        );
         registry.set(
           sessions(env),
           AsyncResult.success({
@@ -256,6 +261,7 @@ it.effect(
           }),
         );
         yield* git.authorize(registry, env);
+        yield* bypass.authorize(registry, env);
         const prepare = createCommandPermissions(runtime, WS_METHODS.gitPreparePullRequestThread);
         const input = {
           cwd: "/repo",

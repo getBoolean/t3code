@@ -187,6 +187,7 @@ export function makeAntigravityAcpAdapterFlavor(
 
   return {
     driver: ANTIGRAVITY_PROVIDER,
+    appliesAccountEnvironment: true,
     runtimeHarness: "Antigravity",
     capabilities: AntigravityProviderCapabilitiesV2,
     makeRuntime,

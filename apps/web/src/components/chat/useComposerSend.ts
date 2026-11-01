@@ -1,3 +1,4 @@
+import { useGitAccountGuard } from "./useGitAccountGuard";
 import {
   mergeDirectPreviewAnnotation,
   resolveBackgroundDraftWorkspaceOptions,
@@ -372,6 +373,15 @@ export function useComposerSend(input: ComposerSendInput) {
     resetLocalDispatch,
     setThreadError,
   });
+  const gitAccountGuard = useGitAccountGuard(
+    activeThread
+      ? {
+          environmentId: activeThread.environmentId,
+          threadId: activeThread.id,
+          projectId: activeProject?.id ?? null,
+        }
+      : null,
+  );
   const submitPlanFollowUp = usePlanFollowUpSend({
     environmentId,
     routeThreadKey,
@@ -835,6 +845,7 @@ export function useComposerSend(input: ComposerSendInput) {
       );
       return;
     }
+    if (!(await gitAccountGuard.ensureGitAccount())) return;
     const threadIdForSend = activeThread.id;
     const sendSnapshot = snapshotComposerSend({
       prompt: promptForSend,

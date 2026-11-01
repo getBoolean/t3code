@@ -2,9 +2,9 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import {
   DEFAULT_TERMINAL_ID,
+  GitAccountId,
   type TerminalAttachStreamEvent,
   type TerminalEvent,
-  type TerminalOpenInput,
   ProviderDriverKind,
   ProviderInstanceId,
   ProjectId,
@@ -24,6 +24,7 @@ import * as Option from "effect/Option";
 import * as PlatformError from "effect/PlatformError";
 import * as Path from "effect/Path";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
+import * as Queue from "effect/Queue";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
@@ -32,6 +33,8 @@ import * as SynchronizedRef from "effect/SynchronizedRef";
 import * as TestClock from "effect/testing/TestClock";
 import { expect, vi } from "vite-plus/test";
 
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
+import { blockedOverlay, buildOverlay } from "../gitAccounts/launchIdentity.ts";
 import * as ProjectionStore from "../orchestration-v2/ProjectionStore.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -201,7 +204,9 @@ class GatedPtyAdapter extends FakePtyAdapter {
   }
 }
 
-function openInput(overrides: Partial<TerminalOpenInput> = {}): TerminalOpenInput {
+function openInput(
+  overrides: Partial<TerminalManager.TerminalManagerOpenInput> = {},
+): TerminalManager.TerminalManagerOpenInput {
   return {
     threadId: "thread-1",
     terminalId: DEFAULT_TERMINAL_ID,
@@ -240,6 +245,9 @@ interface CreateManagerOptions {
   resolveProviderInstanceEnvironment?: Parameters<
     typeof TerminalManager.makeWithOptions
   >[0]["resolveProviderInstanceEnvironment"];
+  resolveGitAccount?: Parameters<typeof TerminalManager.makeWithOptions>[0]["resolveGitAccount"];
+  gitAccountShims?: boolean;
+  gitAccountChanges?: Stream.Stream<unknown>;
   managedBinaryCacheDir?: string;
   managedBinaryToolsDir?: string;
 }
@@ -292,6 +300,15 @@ const createManager = (
           : {}),
         ...(options.resolveProviderInstanceEnvironment !== undefined
           ? { resolveProviderInstanceEnvironment: options.resolveProviderInstanceEnvironment }
+          : {}),
+        ...(options.resolveGitAccount !== undefined
+          ? { resolveGitAccount: options.resolveGitAccount }
+          : {}),
+        ...(options.gitAccountShims === true
+          ? { gitAccountShimsDir: join(baseDir, "git-account-shims") }
+          : {}),
+        ...(options.gitAccountChanges !== undefined
+          ? { gitAccountChanges: options.gitAccountChanges }
           : {}),
         ...(options.managedBinaryCacheDir === undefined
           ? {}
@@ -1920,6 +1937,146 @@ it.layer(
       expect(ptyAdapter.spawnInputs[0]?.env.T3CODE_SECRET).toBeUndefined();
       expect(snapshot).not.toHaveProperty("env");
       expect(snapshot).not.toHaveProperty("providerInstanceId");
+    }),
+  );
+
+  it.effect("starts terminals under the project's git account", () =>
+    Effect.gen(function* () {
+      const account = {
+        label: "Work",
+        authorName: "Work Name",
+        authorEmail: "work@example.test",
+        forge: "github",
+        host: "github.com",
+        credentialKind: "token",
+        token: "work-token",
+        cliLogin: "",
+        sshKeyPath: "",
+      } as const;
+      const identity = (unavailable: boolean): GitAccounts.LaunchIdentity => ({
+        accountId: GitAccountId.make("work"),
+        label: account.label,
+        authorName: "Work",
+        authorEmail: "work@example.test",
+        forge: account.forge,
+        host: account.host,
+        fingerprint: "fp",
+        overlay: unavailable
+          ? blockedOverlay({ account, reason: "it has no saved token" })
+          : buildOverlay({ id: "work", account, token: account.token }),
+        token: unavailable ? null : account.token,
+        unavailable: unavailable
+          ? new GitAccounts.GitAccountUnavailable({
+              accountLabel: account.label,
+              reason: "it has no saved token",
+            })
+          : null,
+      });
+      const requested: Array<{ threadId: string; projectId: string | null }> = [];
+      const { manager, ptyAdapter } = yield* createManager(5, {
+        env: { GH_TOKEN: "machine-token", GIT_AUTHOR_NAME: "Machine" },
+        resolveGitAccount: (input) => {
+          requested.push(input);
+          if (input.threadId === "thread-bound" || input.projectId === "project-bound")
+            return Effect.succeed(identity(false));
+          if (input.threadId === "thread-unusable") return Effect.succeed(identity(true));
+          return Effect.succeed(null);
+        },
+      });
+      const notice = yield* Deferred.make<string>();
+      const unsubscribe = yield* manager.subscribe((event) =>
+        event.type === "output" && event.threadId === "thread-unusable"
+          ? Deferred.succeed(notice, event.data).pipe(Effect.asVoid)
+          : Effect.void,
+      );
+
+      yield* manager.open(openInput({ threadId: "thread-bound" }));
+      yield* manager.open(openInput({ threadId: "thread-unbound" }));
+      yield* manager.open(
+        openInput({
+          threadId: "thread-setup",
+          gitAccountProjectId: ProjectId.make("project-bound"),
+        }),
+      );
+      yield* manager.open(openInput({ threadId: "thread-unusable" }));
+
+      const [bound, unbound, setup, unusable] = ptyAdapter.spawnInputs.map((input) => input.env);
+      expect(bound).toMatchObject({
+        GIT_AUTHOR_NAME: "Work Name",
+        GIT_COMMITTER_EMAIL: "work@example.test",
+        GH_TOKEN: "work-token",
+      });
+      expect(unbound).toMatchObject({ GH_TOKEN: "machine-token", GIT_AUTHOR_NAME: "Machine" });
+      expect(unbound?.GIT_CONFIG_COUNT).toBeUndefined();
+      expect(setup).toMatchObject({ GIT_AUTHOR_NAME: "Work Name", GH_TOKEN: "work-token" });
+      expect(requested[2]).toEqual({ threadId: "thread-setup", projectId: "project-bound" });
+      expect(unusable).toMatchObject({ GH_TOKEN: "t3code-git-account-unavailable" });
+      expect(unusable?.GIT_AUTHOR_NAME).toBeUndefined();
+      expect(unusable?.GIT_CONFIG_KEY_0).toBe("user.name");
+      expect(yield* Deferred.await(notice)).toContain(
+        'The git account "Work" can\'t be used: it has no saved token',
+      );
+      unsubscribe();
+    }),
+  );
+
+  it.effect("moves an open terminal's git and gh shims to the current account", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const account = {
+        label: "Work",
+        authorName: "Work Name",
+        authorEmail: "work@example.test",
+        forge: "github",
+        host: "github.com",
+        credentialKind: "token",
+        token: "work-token",
+        cliLogin: "",
+        sshKeyPath: "",
+      } as const;
+      const current = yield* Ref.make<GitAccounts.LaunchIdentity | null>({
+        accountId: GitAccountId.make("work"),
+        label: account.label,
+        authorName: account.authorName,
+        authorEmail: account.authorEmail,
+        forge: account.forge,
+        host: account.host,
+        fingerprint: "fp",
+        overlay: buildOverlay({ id: "work", account, token: account.token }),
+        token: account.token,
+        unavailable: null,
+      });
+      // The stream pulls its next change only after the manager has handled the previous one.
+      const pulled = yield* Queue.unbounded<void>();
+      const changes = yield* Queue.unbounded<void>();
+      const { manager, ptyAdapter } = yield* createManager(5, {
+        env: { GH_TOKEN: "machine-token", PATH: "/usr/bin" },
+        gitAccountShims: true,
+        gitAccountChanges: Stream.fromEffectRepeat(
+          Queue.offer(pulled, undefined).pipe(Effect.andThen(Queue.take(changes))),
+        ),
+        resolveGitAccount: () => Ref.get(current),
+      });
+      yield* Queue.take(pulled);
+
+      yield* manager.open(openInput({ threadId: "thread-bound" }));
+      const env = ptyAdapter.spawnInputs[0]!.env;
+      const file = env.T3CODE_GIT_ACCOUNT_ENV!;
+      expect(env.PATH).toMatch(/git-account-shims[\\/]bin[;:]\/usr\/bin$/);
+
+      expect(yield* fs.readFileString(file)).toContain("work-token");
+
+      // A bypass resolves to the machine login, so the file restores the start environment.
+      yield* Ref.set(current, null);
+      yield* Queue.offer(changes, undefined);
+      yield* Queue.take(pulled);
+      const restored = yield* fs.readFileString(file);
+      expect(restored).not.toContain("work-token");
+      expect(restored).toContain("machine-token");
+      expect(restored).toMatch(/GIT_CONFIG_COUNT/);
+
+      yield* manager.close({ threadId: "thread-bound", terminalId: DEFAULT_TERMINAL_ID });
+      expect(yield* fs.exists(file)).toBe(false);
     }),
   );
 

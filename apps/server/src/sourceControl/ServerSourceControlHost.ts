@@ -2,13 +2,44 @@ import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretReso
 import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Redacted from "effect/Redacted";
 
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
 import * as SecretResolverLayer from "../secrets/SecretResolver.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as VcsDriverRegistry from "../vcs/VcsDriverRegistry.ts";
 import * as VcsProcess from "../vcs/VcsProcess.ts";
 import { resolveSourceControlHostSecrets } from "./sourceControlHostSecrets.ts";
+
+/**
+ * Runs forge calls as `identity`'s account, which replaces every other credential for its host,
+ * and fails closed when it can't be used. `null` leaves each host to its own lookup.
+ */
+export const withGitAccount =
+  (
+    accounts: GitAccounts.GitAccounts["Service"],
+    identity: GitAccounts.LaunchIdentity | null,
+    options?: { readonly remoteUrl?: string | null | undefined },
+  ) =>
+  <A, E, R>(
+    effect: Effect.Effect<A, E, R>,
+  ): Effect.Effect<A, E | GitAccounts.GitAccountUnavailable, R> =>
+    identity === null
+      ? effect
+      : accounts.requireUsable(identity, options).pipe(
+          Effect.andThen(
+            effect.pipe(
+              Effect.provideService(SourceControlHost.AccountCredential, {
+                host: identity.host,
+                token: Redacted.make(identity.token ?? ""),
+                label: identity.label,
+                authorName: identity.authorName,
+                authorEmail: identity.authorEmail,
+              }),
+            ),
+          ),
+        );
 
 export const layer = Layer.effect(
   SourceControlHost.SourceControlHost,

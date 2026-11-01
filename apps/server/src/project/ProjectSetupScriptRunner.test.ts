@@ -45,12 +45,17 @@ const makeHarness = Effect.fn(function* (options: {
   const listeners = new Set<(event: TerminalEvent) => Effect.Effect<void>>();
   const writes = yield* Queue.unbounded<string>();
   const outputLines = yield* Queue.unbounded<string>();
+  const opened: Array<TerminalManager.TerminalManagerOpenInput> = [];
   const terminals = Layer.mock(TerminalManager.TerminalManager)({
-    open: () =>
-      (options.opening
-        ? Deferred.succeed(options.opening, undefined).pipe(Effect.andThen(Effect.never))
-        : Effect.void
-      ).pipe(Effect.as(openSnapshot(options.history ?? ""))),
+    open: (input) =>
+      Effect.sync(() => opened.push(input)).pipe(
+        Effect.andThen(
+          options.opening
+            ? Deferred.succeed(options.opening, undefined).pipe(Effect.andThen(Effect.never))
+            : Effect.void,
+        ),
+        Effect.as(openSnapshot(options.history ?? "")),
+      ),
     getShell: () =>
       options.shell === null
         ? Effect.fail(new TerminalNotRunningError({ threadId, terminalId }))
@@ -96,7 +101,7 @@ const makeHarness = Effect.fn(function* (options: {
   });
   const emit = (terminalEvent: TerminalEvent) =>
     Effect.forEach([...listeners], (listener) => listener(terminalEvent), { discard: true });
-  return { start, listeners, writes, outputLines, emit };
+  return { start, listeners, writes, outputLines, emit, opened };
 });
 
 const setup = Effect.fn(function* (
@@ -124,8 +129,9 @@ describe("ProjectSetupScriptRunner", () => {
 
   it.effect("shows a startup prompt and types only once the line editor starts", () =>
     Effect.gen(function* () {
-      const { result, writes, outputLines, emit } = yield* setup();
+      const { result, writes, outputLines, emit, opened } = yield* setup();
       expect(result).toMatchObject({ status: "started", terminalId });
+      expect(opened[0]?.gitAccountProjectId).toBe("project-1");
 
       yield* emit({ ...event, type: "output", data: "Missing Node.\r\nInstall it? [y/N]: " });
       yield* emit({ ...event, type: "activity", hasRunningSubprocess: true, label: "fnm" });

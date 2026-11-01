@@ -55,6 +55,8 @@ import * as ThreadLaunchService from "./ThreadLaunchService.ts";
 import * as ThreadForkService from "./ThreadForkService.ts";
 import * as TurnItemPositionStore from "./TurnItemPositionStore.ts";
 import * as ScheduledTaskService from "../scheduledTasks/ScheduledTaskService.ts";
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
+import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as SecretRequests from "../secrets/SecretRequests.ts";
 
 export const layerEventInfrastructure = Layer.mergeAll(
@@ -130,9 +132,15 @@ const layerCommandOutputHubProvided = CommandOutputHub.layer.pipe(
   Layer.provide(Layer.merge(layerEventSink, ProjectionStore.layer)),
 );
 
+// One instance for the whole server: per-thread bypasses live in memory and must reach every consumer.
+export const layerGitAccounts = GitAccounts.layer.pipe(
+  Layer.provide(Layer.mergeAll(ProjectionStore.layer, ProjectStore.layer, VcsProcess.layer)),
+);
+
 const layerProviderSessionManagerProvided = ProviderSessionManager.layer.pipe(
   Layer.provide(
     Layer.mergeAll(
+      layerGitAccounts,
       layerCommandOutputHubProvided,
       ProviderAdapterRegistry.layerFromProviderInstanceRegistry,
       layerEventSink,

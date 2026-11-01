@@ -1,4 +1,6 @@
 import * as NetAddress from "effect/net/NetAddress";
+import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import { AgentScope } from "@t3tools/shared/AgentScope";
@@ -16,6 +18,7 @@ import {
   ProviderInstanceId,
   type ProviderSessionId,
   ThreadId,
+  GitAccountId,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
@@ -174,6 +177,7 @@ interface TestProviderRuntimeState {
   readonly closeCount: number;
   readonly interruptCount: number;
   readonly resumeCount: number;
+  readonly accountOverlays: ReadonlyArray<EnvironmentOverlay | undefined>;
   readonly unloadedNativeThreadIds: ReadonlyArray<string>;
   readonly eventQueues: ReadonlyMap<
     string,
@@ -186,6 +190,7 @@ const emptyState: TestProviderRuntimeState = {
   closeCount: 0,
   interruptCount: 0,
   resumeCount: 0,
+  accountOverlays: [],
   unloadedNativeThreadIds: [],
   eventQueues: new Map(),
 };
@@ -342,6 +347,7 @@ const makeProviderAdapter = Effect.fnUntraced(function* (
     readonly beforeUnload?: Effect.Effect<void>;
     readonly spawnBeforeOpen?: boolean;
     readonly scopeCloseReached?: Deferred.Deferred<void>;
+    readonly appliesAccountEnvironment?: boolean;
   } = {},
 ) {
   const mcpSessions = yield* McpProviderSessions.McpProviderSessions;
@@ -363,6 +369,7 @@ const makeProviderAdapter = Effect.fnUntraced(function* (
     driver: CODEX_DRIVER,
     getCapabilities: () => Effect.succeed(options.capabilities ?? CodexCapabilities),
     planSelectionTransition: () => Effect.succeed({ type: "apply_on_next_turn" }),
+    appliesAccountEnvironment: options.appliesAccountEnvironment ?? true,
     openSession: (input) =>
       Effect.gen(function* () {
         if (options.spawnBeforeOpen === true) {
@@ -393,6 +400,7 @@ const makeProviderAdapter = Effect.fnUntraced(function* (
           return {
             ...current,
             openCount: current.openCount + 1,
+            accountOverlays: [...current.accountOverlays, input.accountOverlay],
             eventQueues,
           };
         });
@@ -492,6 +500,8 @@ function layerTest(input: {
   readonly scopeCloseReached?: Deferred.Deferred<void>;
   readonly serverSettingsLayer?: ReturnType<typeof ServerSettings.layerTest>;
   readonly projectServiceLayer?: Layer.Layer<ProjectService.ProjectService>;
+  readonly gitAccount?: Ref.Ref<GitAccounts.LaunchIdentity | null>;
+  readonly appliesAccountEnvironment?: boolean;
 }) {
   const layerConfiguredEventSink =
     input.flakyReleaseWrites !== undefined
@@ -528,6 +538,9 @@ function layerTest(input: {
       ...(input.scopeCloseReached === undefined
         ? {}
         : { scopeCloseReached: input.scopeCloseReached }),
+      ...(input.appliesAccountEnvironment === undefined
+        ? {}
+        : { appliesAccountEnvironment: input.appliesAccountEnvironment }),
     }).pipe(Effect.map(ProviderAdapterRegistry.layerSingle)),
   );
   const layerConfiguredMcpRegistry =
@@ -572,6 +585,10 @@ function layerTest(input: {
           layerProviderEventIngestorTest,
           layerConfiguredMcpRegistry,
           layerTestStores,
+          Layer.mock(GitAccounts.GitAccounts)({
+            forThread: () =>
+              input.gitAccount === undefined ? Effect.succeed(null) : Ref.get(input.gitAccount),
+          }),
           ...(input.serverSettingsLayer === undefined ? [] : [input.serverSettingsLayer]),
           ...(input.projectServiceLayer === undefined ? [] : [input.projectServiceLayer]),
         ),
@@ -972,6 +989,141 @@ it.effect("ProviderSessionManagerV2 closes every live session for a provider ins
       ),
     );
   }),
+);
+
+const accountIdentity = (label: string): GitAccounts.LaunchIdentity => ({
+  accountId: GitAccountId.make(label.toLowerCase()),
+  authorName: "Work",
+  authorEmail: "work@example.test",
+  label,
+  forge: "github",
+  host: "github.com",
+  fingerprint: `fingerprint-${label}`,
+  overlay: { set: { GIT_AUTHOR_NAME: label }, unset: ["GH_TOKEN"], gitConfig: [] },
+  token: `${label}-token`,
+  unavailable: null,
+});
+
+it.effect(
+  "ProviderSessionManagerV2 opens sessions as the thread's git account and reopens when it changes",
+  () =>
+    Effect.gen(function* () {
+      const state = yield* Ref.make(emptyState);
+      const gitAccount = yield* Ref.make<GitAccounts.LaunchIdentity | null>(
+        accountIdentity("Work"),
+      );
+      yield* Effect.gen(function* () {
+        const eventSink = yield* EventSink.EventSinkV2;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const manager = yield* ProviderSessionManager.ProviderSessionManagerV2;
+        const threadId = ThreadId.make("thread-provider-session-manager-git-account");
+        const providerSessionId = yield* idAllocator.allocate.providerSession({
+          providerInstanceId: modelSelection.instanceId,
+          threadId,
+        });
+        yield* eventSink.write({
+          events: [
+            yield* makeThreadCreatedEvent({ idAllocator, threadId, now: yield* DateTime.now }),
+          ],
+        });
+        const open = manager.open({ threadId, providerSessionId, modelSelection, runtimePolicy });
+        yield* open;
+        yield* open;
+        assert.equal((yield* Ref.get(state)).openCount, 1);
+        yield* Ref.set(gitAccount, accountIdentity("Personal"));
+        yield* open;
+        const after = yield* Ref.get(state);
+        assert.equal(after.openCount, 2);
+        assert.equal(after.closeCount, 1);
+        assert.deepEqual(
+          after.accountOverlays.map((overlay) => overlay?.set.GIT_AUTHOR_NAME),
+          ["Work", "Personal"],
+        );
+      }).pipe(
+        Effect.provide(
+          layerTest({
+            state,
+            idleTimeoutMs: 60_000,
+            gitAccount,
+            capabilities: ExclusiveCapabilities,
+          }),
+        ),
+      );
+    }),
+);
+
+it.effect(
+  "ProviderSessionManagerV2 keeps a shared session on its account and refuses other accounts",
+  () =>
+    Effect.gen(function* () {
+      const state = yield* Ref.make(emptyState);
+      const gitAccount = yield* Ref.make<GitAccounts.LaunchIdentity | null>(
+        accountIdentity("Work"),
+      );
+      yield* Effect.gen(function* () {
+        const eventSink = yield* EventSink.EventSinkV2;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const manager = yield* ProviderSessionManager.ProviderSessionManagerV2;
+        const now = yield* DateTime.now;
+        const first = ThreadId.make("thread-provider-session-manager-shared-a");
+        const second = ThreadId.make("thread-provider-session-manager-shared-b");
+        const providerSessionId = idAllocator.derive.providerSession({
+          providerInstanceId: modelSelection.instanceId,
+        });
+        yield* eventSink.write({
+          events: [
+            yield* makeThreadCreatedEvent({ idAllocator, threadId: first, now }),
+            yield* makeThreadCreatedEvent({ idAllocator, threadId: second, now }),
+          ],
+        });
+        yield* manager.open({ threadId: first, providerSessionId, modelSelection, runtimePolicy });
+        yield* Ref.set(gitAccount, accountIdentity("Personal"));
+        const error = yield* manager
+          .open({ threadId: second, providerSessionId, modelSelection, runtimePolicy })
+          .pipe(Effect.flip);
+        assert.equal(error._tag, "ProviderSessionAccountChangedError");
+        assert.equal((yield* Ref.get(state)).openCount, 1);
+      }).pipe(Effect.provide(layerTest({ state, idleTimeoutMs: 60_000, gitAccount })));
+    }),
+);
+
+it.effect(
+  "ProviderSessionManagerV2 refuses a provider that can't run as the project's git account",
+  () =>
+    Effect.gen(function* () {
+      const state = yield* Ref.make(emptyState);
+      const gitAccount = yield* Ref.make<GitAccounts.LaunchIdentity | null>(
+        accountIdentity("Work"),
+      );
+      yield* Effect.gen(function* () {
+        const eventSink = yield* EventSink.EventSinkV2;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const manager = yield* ProviderSessionManager.ProviderSessionManagerV2;
+        const threadId = ThreadId.make("thread-provider-session-manager-unsupported-account");
+        const providerSessionId = yield* idAllocator.allocate.providerSession({
+          providerInstanceId: modelSelection.instanceId,
+          threadId,
+        });
+        yield* eventSink.write({
+          events: [
+            yield* makeThreadCreatedEvent({ idAllocator, threadId, now: yield* DateTime.now }),
+          ],
+        });
+        const error = yield* manager
+          .open({ threadId, providerSessionId, modelSelection, runtimePolicy })
+          .pipe(Effect.flip);
+        assert.equal(error._tag, "ProviderSessionOpenError");
+        assert.include(
+          String(error._tag === "ProviderSessionOpenError" ? error.cause : ""),
+          "Work",
+        );
+        assert.equal((yield* Ref.get(state)).openCount, 0);
+      }).pipe(
+        Effect.provide(
+          layerTest({ state, idleTimeoutMs: 60_000, gitAccount, appliesAccountEnvironment: false }),
+        ),
+      );
+    }),
 );
 
 it.effect("ProviderSessionManagerV2 opens a duplicate session only once", () =>

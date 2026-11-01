@@ -9,9 +9,11 @@ import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Redacted from "effect/Redacted";
 import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 import type {
+  GitAccountId,
   OrchestrationProjectShell,
   ProjectId,
   PullRequestReviewCapabilities,
@@ -22,6 +24,7 @@ import type { ServerSettings } from "@t3tools/contracts";
 import * as ServerSettingsService from "../serverSettings.ts";
 import { PullRequestOperationError } from "@t3tools/contracts";
 
+import * as GitAccounts from "../gitAccounts/GitAccounts.ts";
 import * as ProjectService from "../project/ProjectService.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as PullRequestFilesViewed from "../persistence/PullRequestFilesViewed.ts";
@@ -29,6 +32,7 @@ import * as RepositoryIdentityResolver from "../project/RepositoryIdentityResolv
 import * as SourceControlProviderRegistry from "../sourceControl/SourceControlProviderRegistry.ts";
 import type { SourceControlProvider } from "@t3tools/source-control-core/server/SourceControlProvider";
 import { isSshRemoteUrl } from "@t3tools/shared/sourceControl";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
 import { fakePullRequestProvider } from "@t3tools/source-control-testing/fakeSourceControlDriver";
 import {
@@ -148,6 +152,102 @@ it.effect("reads maintainer edits and changes them through the update command", 
   }),
 );
 
+function gitAccount(label: string, token: string | null): GitAccounts.LaunchIdentity {
+  return {
+    accountId: label.toLowerCase() as GitAccountId,
+    label,
+    authorName: label,
+    authorEmail: "work@example.test",
+    forge: "github",
+    host: "github.com",
+    fingerprint: label,
+    overlay: { set: {}, unset: [], gitConfig: [] },
+    token,
+    unavailable:
+      token === null
+        ? new GitAccounts.GitAccountUnavailable({ accountLabel: label, reason: "gh has no login" })
+        : null,
+  };
+}
+
+it.effect("calls the host as each project's git account, and not at all when it is unusable", () =>
+  Effect.gen(function* () {
+    const calls: Array<readonly [string, string | null]> = [];
+    const service = yield* makeService({
+      projects: [
+        project({ id: "p1", title: "web", workspaceRoot: "/web", repository: "acme/web" }),
+        project({ id: "p2", title: "api", workspaceRoot: "/api", repository: "acme/api" }),
+        project({ id: "p3", title: "docs", workspaceRoot: "/docs", repository: "acme/docs" }),
+        project({ id: "p4", title: "ops", workspaceRoot: "/ops", repository: "acme/ops" }),
+      ],
+      gitAccounts: {
+        p1: gitAccount("Personal", "personal-token"),
+        p2: gitAccount("Work", "work-token"),
+        p4: gitAccount("Broken", null),
+      },
+      providers: [
+        fakePullRequestProvider(SourceControlProviderKind.make("github"), {
+          getChangeRequest: ({ cwd }) =>
+            Effect.gen(function* () {
+              const account = yield* SourceControlHost.AccountCredential;
+              calls.push([cwd, account === null ? null : Redacted.value(account.token)]);
+              return hostedChangeRequest("Body");
+            }),
+        }),
+      ],
+    });
+    const detail = (projectId: string, repository: string) =>
+      service.detail({ projectId: projectId as ProjectId, repository, number: 1 });
+    yield* detail("p1", "acme/web");
+    yield* detail("p2", "acme/api");
+    yield* detail("p3", "acme/docs");
+    const blocked = yield* Effect.flip(detail("p4", "acme/ops"));
+    assert.include(blocked.message, "Broken");
+    assert.deepStrictEqual(calls, [
+      ["/web", "personal-token"],
+      ["/api", "work-token"],
+      ["/docs", null],
+    ]);
+  }),
+);
+
+it.effect("lists each project on one host as its own git account's viewer", () =>
+  Effect.gen(function* () {
+    const listed: Array<readonly [string, string]> = [];
+    const service = yield* makeService({
+      projects: [
+        project({ id: "p1", title: "web", workspaceRoot: "/web", repository: "acme/web" }),
+        project({ id: "p2", title: "api", workspaceRoot: "/api", repository: "acme/api" }),
+      ],
+      gitAccounts: {
+        p1: gitAccount("Personal", "personal-token"),
+        p2: gitAccount("Work", "work-token"),
+      },
+      providers: [
+        fakePullRequestProvider(SourceControlProviderKind.make("github"), {
+          getViewer: () =>
+            Effect.map(SourceControlHost.AccountCredential, (account) =>
+              account === null ? "machine" : account.label.toLowerCase(),
+            ),
+          listChangeRequests: ({ repository, viewer }) =>
+            Effect.sync(() => {
+              listed.push([repository, viewer]);
+              return { items: [], truncated: false, continues: false };
+            }),
+        }),
+      ],
+    });
+    yield* service.list({ state: "open" });
+    assert.deepStrictEqual(
+      [...listed].sort(([a], [b]) => a.localeCompare(b)),
+      [
+        ["acme/api", "work"],
+        ["acme/web", "personal"],
+      ],
+    );
+  }),
+);
+
 it.effect("refuses maintainer edits on a host without the capability", () =>
   Effect.gen(function* () {
     let writes = 0;
@@ -258,7 +358,10 @@ function makeService(input: {
   readonly resolveHandle?: SourceControlProviderRegistry.SourceControlProviderRegistry["Service"]["resolveHandle"];
   readonly resolveRepositoryIdentity?: RepositoryIdentityResolver.RepositoryIdentityResolver["Service"]["resolve"];
   readonly onProjectRead?: () => void;
+  readonly gitAccounts?: Readonly<Record<string, GitAccounts.LaunchIdentity>>;
 }) {
+  const forProject = (projectId: ProjectId | null) =>
+    Effect.succeed((projectId === null ? undefined : input.gitAccounts?.[projectId]) ?? null);
   // Build in the test scope; per-call Effect.provide would close the marks database on service acquisition.
   return Effect.flatMap(
     Layer.build(
@@ -292,6 +395,13 @@ function makeService(input: {
               input.onProjectRead?.();
               return Option.fromNullishOr(input.projects.find((p) => p.id === projectId));
             }),
+        }),
+        Layer.mock(GitAccounts.GitAccounts)({
+          forProject,
+          forWorkspace: ({ cwd }) =>
+            forProject(input.projects.find((p) => p.workspaceRoot === cwd)?.id ?? null),
+          requireUsable: (identity) =>
+            identity.unavailable === null ? Effect.void : Effect.fail(identity.unavailable),
         }),
         Layer.mock(RepositoryIdentityResolver.RepositoryIdentityResolver)({
           resolve: input.resolveRepositoryIdentity ?? (() => Effect.succeed(null)),

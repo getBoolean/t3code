@@ -10,6 +10,8 @@ import * as RequestResolver from "effect/RequestResolver";
 import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
+
 import * as GitHubRest from "./GitHubRest.ts";
 import * as GitHubGraphQlClient from "./gitHubGraphQlClient.ts";
 import { decodePullRequestStacksJson, toCanWrite } from "./gitHubPullRequestJson.ts";
@@ -202,10 +204,12 @@ export const runGitHubStackAction = Effect.fn("runGitHubStackAction")(function* 
     )
       return yield* new GitHubStackPermissionError({ ...identity });
     // GitHub has no stack-rebase API; per-PR updates replay lower layers' old commits.
+    const account = yield* SourceControlHost.AccountCredential;
     yield* cascadeRebaseStack({
       host: input.host,
       repository: input.repository,
       base: stack.base,
+      ...(account === null ? {} : { account }),
       layers: open.map((layer) => ({
         number: layer.number,
         headBranch: layer.headBranch,

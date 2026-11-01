@@ -7,6 +7,11 @@ import {
 } from "./orchestrationV2.ts";
 import { OrchestrationDispatchCommandError } from "./orchestrationDispatch.ts";
 import {
+  GitAccountSetThreadBypassInput,
+  GitAccountThreadStatus,
+  GitAccountThreadStatusInput,
+} from "./gitAccountStatus.ts";
+import {
   McpAppCallToolInput,
   McpAppCallToolResult,
   McpAppReadResourceInput,
@@ -547,6 +552,8 @@ export const WS_METHODS = {
   guestShareCreate: "guestShare.create",
   scheduledTasksListWebhookDeliveries: "scheduledTasks.listWebhookDeliveries",
   scheduledTasksGetWebhookDelivery: "scheduledTasks.getWebhookDelivery",
+  gitAccountsThreadStatus: "gitAccounts.threadStatus",
+  gitAccountsSetThreadBypass: "gitAccounts.setThreadBypass",
 
   cloudGetRelayClientStatus: "cloud.getRelayClientStatus",
   cloudInstallRelayClient: "cloud.installRelayClient",
@@ -1912,6 +1919,18 @@ const WsScheduledTasksRunNowRpc = Rpc.make(WS_METHODS.scheduledTasksRunNow, {
   error: Schema.Union([ScheduledTaskError, EnvironmentAuthorizationError]),
 });
 
+const WsGitAccountsThreadStatusRpc = Rpc.make(WS_METHODS.gitAccountsThreadStatus, {
+  payload: GitAccountThreadStatusInput,
+  success: GitAccountThreadStatus,
+  error: EnvironmentAuthorizationError,
+});
+
+const WsGitAccountsSetThreadBypassRpc = Rpc.make(WS_METHODS.gitAccountsSetThreadBypass, {
+  payload: GitAccountSetThreadBypassInput,
+  success: GitAccountThreadStatus,
+  error: EnvironmentAuthorizationError,
+});
+
 const WsScheduledTasksRotateWebhookTokenRpc = Rpc.make(
   WS_METHODS.scheduledTasksRotateWebhookToken,
   {
@@ -2032,6 +2051,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsScheduledTasksDeleteRpc,
   WsScheduledTasksRunNowRpc,
   WsScheduledTasksRotateWebhookTokenRpc,
+  WsGitAccountsThreadStatusRpc,
+  WsGitAccountsSetThreadBypassRpc,
   WsSecretsAnswerRequestRpc,
   WsScheduledTasksListWebhookDeliveriesRpc,
   WsScheduledTasksGetWebhookDeliveryRpc,

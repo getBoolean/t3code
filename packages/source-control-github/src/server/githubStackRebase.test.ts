@@ -4,6 +4,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
+import * as Base64 from "effect/encoding/Base64";
 
 import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as TestSourceControlHost from "@t3tools/source-control-testing/TestSourceControlHost";
@@ -89,6 +90,50 @@ it.layer(layer)("cascadeRebaseStack", (it) => {
       expect(yield* repo.git("log", "--format=%s", `${bottom}..${top}`)).toBe(
         "B: document the answer",
       );
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("commits and pushes as the project's account instead of the app", () =>
+    Effect.gen(function* () {
+      const repo = yield* setup;
+      const host = yield* SourceControlHost.SourceControlHost;
+      const pushes: Array<Readonly<Record<string, string | undefined>>> = [];
+      yield* cascadeRebaseStack({
+        host: "github.com",
+        repository: "acme/web",
+        base: "main",
+        layers: repo.layers,
+        remote: repo.remote,
+        account: {
+          token: Redacted.make("account-token"),
+          authorName: "Work Name",
+          authorEmail: "work@example.test",
+        },
+      }).pipe(
+        Effect.provideService(SourceControlHost.SourceControlHost, {
+          ...host,
+          process: {
+            ...host.process,
+            run: (input) => {
+              if (input.args[0] === "push") pushes.push(input.env ?? {});
+              return host.process.run(input);
+            },
+          },
+        }),
+        Effect.provide(
+          Layer.mock(GitHubAppAccess.GitHubAppAccess)({
+            credentialFor: () => Effect.die("the app credential must not be used"),
+          }),
+        ),
+      );
+
+      const top = yield* repo.head("feat/answer-doc");
+      expect(yield* repo.git("log", "--format=%cn <%ce>", "-2", top)).toBe(
+        "Work Name <work@example.test>\nWork Name <work@example.test>",
+      );
+      const header = `AUTHORIZATION: basic ${Base64.encode("x-access-token:account-token")}`;
+      expect(pushes).toHaveLength(2);
+      for (const env of pushes) expect(Object.values(env)).toContain(header);
     }).pipe(Effect.scoped),
   );
 

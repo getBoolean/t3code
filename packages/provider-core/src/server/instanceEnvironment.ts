@@ -24,3 +24,28 @@ export const mergeProviderInstanceEnvironment = Effect.fn(function* (
   }
   return next;
 });
+
+/** Environment changes that make a process act as a git account. */
+export interface EnvironmentOverlay {
+  readonly set: Readonly<Record<string, string>>;
+  readonly unset: ReadonlyArray<string>;
+  readonly gitConfig: ReadonlyArray<readonly [string, string]>;
+}
+
+export function applyEnvironmentOverlay(
+  base: Readonly<Record<string, string | undefined>>,
+  overlay: EnvironmentOverlay,
+): Record<string, string | undefined> {
+  const next: Record<string, string | undefined> = { ...base };
+  for (const name of overlay.unset) delete next[name];
+  Object.assign(next, overlay.set);
+  let count = Number.parseInt(next.GIT_CONFIG_COUNT ?? "0", 10);
+  if (!Number.isFinite(count) || count < 0) count = 0;
+  for (const [key, value] of overlay.gitConfig) {
+    next[`GIT_CONFIG_KEY_${count}`] = key;
+    next[`GIT_CONFIG_VALUE_${count}`] = value;
+    count += 1;
+  }
+  next.GIT_CONFIG_COUNT = String(count);
+  return next;
+}

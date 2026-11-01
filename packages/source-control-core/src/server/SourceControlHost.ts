@@ -11,7 +11,23 @@ import type {
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
+import type * as Redacted from "effect/Redacted";
 import type * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
+
+/** A project's git account: its token stands in for every other credential for `host`. */
+export interface SourceControlAccountCredential {
+  readonly host: string;
+  readonly token: Redacted.Redacted<string>;
+  readonly label: string;
+  readonly authorName: string;
+  readonly authorEmail: string;
+}
+
+/** Set around forge calls for a project with a git account; `null` keeps each host's lookup. */
+export const AccountCredential = Context.Reference<SourceControlAccountCredential | null>(
+  "@t3tools/source-control-core/server/SourceControlHost/AccountCredential",
+  { defaultValue: () => null },
+);
 
 export interface SourceControlProcessInput {
   readonly operation: string;

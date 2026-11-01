@@ -5,6 +5,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import {
@@ -668,7 +669,7 @@ export const make = Effect.gen(function* () {
 
   const apiUrl = (path: string) => `${config.baseUrl.replace(/\/+$/u, "")}${path}`;
 
-  const currentCredential = host.settings.getWithSecrets(BitbucketClient.definition.kind).pipe(
+  const configuredCredential = host.settings.getWithSecrets(BitbucketClient.definition.kind).pipe(
     Effect.map((settings) =>
       resolveCredential(
         readSourceControlHostSettings(
@@ -688,6 +689,16 @@ export const make = Effect.gen(function* () {
         ),
       ),
     ),
+  );
+
+  const currentCredential = Effect.flatMap(
+    Effect.service(SourceControlHost.AccountCredential),
+    (account) =>
+      account === null
+        ? configuredCredential
+        : Effect.succeed(
+            credentialFrom({ accessToken: Redacted.value(account.token), email: "", apiToken: "" }),
+          ),
   );
 
   const withAuth = (request: HttpClientRequest.HttpClientRequest) =>

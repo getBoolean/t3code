@@ -560,6 +560,30 @@ describe("GitHubAppAccess", () => {
     }).pipe(Effect.provide(layer));
   });
 
+  it.effect("gives a project's git account its own token, even where the app reaches", () => {
+    const { layer, requests } = harness({
+      signIns: { "github.com": session() },
+      tokens: { "github.com": "saved-pat" },
+      handle: (sent) => ({ body: { login: sent.token } }),
+    });
+    return Effect.gen(function* () {
+      const access = yield* GitHubAppAccess.GitHubAppAccess;
+      const held = yield* access.credentialFor("github.com", "pingdotgg/t3code");
+      expect(Redacted.value(held.token)).toBe("work-token");
+      yield* readUser;
+      expect(requests.map((sent) => sent.token)).toEqual(["work-token"]);
+    }).pipe(
+      Effect.provideService(SourceControlHost.AccountCredential, {
+        host: "github.com",
+        token: Redacted.make("work-token"),
+        label: "Work",
+        authorName: "Work",
+        authorEmail: "work@example.test",
+      }),
+      Effect.provide(layer),
+    );
+  });
+
   it.effect("pins the user's credential while the app's reach is unknown", () => {
     const failing = (sent: Sent): Reply =>
       sent.path.startsWith("/user/installations") ? { status: 502, body: {} } : { body: {} };

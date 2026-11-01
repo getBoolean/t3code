@@ -62,6 +62,8 @@ import {
   restartCancelledBackgroundWorkNote,
 } from "./RestartBackgroundNote.ts";
 
+const MOVED_TO_OWN_SESSION = Symbol("moved-to-own-session");
+
 export class ProviderTurnStartError extends Schema.TaggedError<ProviderTurnStartError>()(
   "ProviderTurnStartError",
   {
@@ -788,6 +790,39 @@ export const layer: Layer.Layer<
               }),
         }),
       );
+      if (
+        sessionResult._tag === "Failure" &&
+        sessionResult.failure._tag === "ProviderSessionAccountChangedError"
+      ) {
+        const movedAt = yield* DateTime.now;
+        const moved = yield* eventSink.writeIfRunCurrent({
+          threadId: projection.thread.id,
+          runId: run.id,
+          activeAttemptId: attempt.id,
+          expectedStatus: "starting",
+          events: [
+            {
+              id: yield* idAllocator.allocate.event({ threadId: projection.thread.id }),
+              type: "provider-thread.updated" as const,
+              threadId: projection.thread.id,
+              driver: providerThread.driver,
+              providerInstanceId: providerThread.providerInstanceId,
+              occurredAt: movedAt,
+              payload: {
+                ...providerThread,
+                providerSessionId: yield* idAllocator.allocate.providerSession({
+                  providerInstanceId: providerThread.providerInstanceId,
+                  threadId: projection.thread.id,
+                }),
+                status: "not_loaded" as const,
+                updatedAt: movedAt,
+              },
+            },
+          ],
+        });
+        if (!moved.committed) return;
+        return MOVED_TO_OWN_SESSION;
+      }
       if (sessionResult._tag === "Failure") {
         const failure = sessionResult.failure;
         const requiresSignIn =
@@ -1689,10 +1724,15 @@ export const layer: Layer.Layer<
           // Storage cleanup removes worktrees under the same lease. Only startup
           // holds it; the provider turn runs after it is released.
           const { thread } = yield* projectionStore.getThreadRecords(input.threadId, []);
-          const providerTurn = yield* thread.worktreePath === null
-            ? start(input)
-            : withWorkspaceLease(path.resolve(thread.worktreePath), start(input));
-          if (providerTurn !== undefined) yield* providerTurn;
+          const startOnce = () =>
+            thread.worktreePath === null
+              ? start(input)
+              : withWorkspaceLease(path.resolve(thread.worktreePath), start(input));
+          let providerTurn = yield* startOnce();
+          if (providerTurn === MOVED_TO_OWN_SESSION) providerTurn = yield* startOnce();
+          if (providerTurn !== undefined && providerTurn !== MOVED_TO_OWN_SESSION) {
+            yield* providerTurn;
+          }
         },
         (effect, input) =>
           effect.pipe(

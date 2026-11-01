@@ -1,3 +1,4 @@
+import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import type {
   Event as OpenCodeEvent,
   Message as OpenCodeMessage,
@@ -930,6 +931,8 @@ export const makeOpenCodeAdapterV2 = Effect.fn("makeOpenCodeAdapterV2")(function
   return ProviderAdapter.ProviderAdapterV2.of({
     instanceId: options.instanceId,
     driver: OPENCODE_PROVIDER,
+    // An external server is shared by every project, so it can't take one project's account.
+    appliesAccountEnvironment: (options.settings.serverUrl?.trim() ?? "") === "",
     getCapabilities: Effect.fn("OpencodeAdapter.getCapabilities")(function () {
       return Effect.succeed(OpenCodeProviderCapabilitiesV2);
     }),
@@ -947,7 +950,10 @@ export const makeOpenCodeAdapterV2 = Effect.fn("makeOpenCodeAdapterV2")(function
           ...(options.settings.serverPassword
             ? { serverPassword: options.settings.serverPassword }
             : {}),
-          environment: options.environment,
+          environment:
+            input.accountOverlay === undefined
+              ? options.environment
+              : applyEnvironmentOverlay(options.environment, input.accountOverlay),
         });
         const client = runtime.createOpenCodeSdkClient({
           baseUrl: connection.url,

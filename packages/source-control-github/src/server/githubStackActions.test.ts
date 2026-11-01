@@ -6,6 +6,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Redacted from "effect/Redacted";
 import { HttpClient, HttpClientResponse } from "effect/http";
 import { ChildProcessSpawner } from "effect/process";
+import * as SourceControlHost from "@t3tools/source-control-core/server/SourceControlHost";
 import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
 import * as GitHubRest from "./GitHubRest.ts";
 import * as GitHubCredentials from "./GitHubCredentials.ts";
@@ -26,12 +27,14 @@ type Call = ReadonlyArray<string>;
 type Send = (call: Call, kind: "graphql" | "rest") => Effect.Effect<unknown>;
 
 let gitCalls: Array<ReadonlyArray<string>> = [];
+let gitEnv: Readonly<Record<string, string | undefined>> | undefined;
 const fakeGit = Layer.mergeAll(
   TestSourceControlHost.layer({
     process: {
       run: (input) =>
         Effect.sync(() => {
           gitCalls.push(input.args);
+          gitEnv = input.env;
           const stdout =
             input.args[0] === "rev-parse" || input.args[0] === "merge-base" ? "new-sha\n" : "";
           return {
@@ -327,6 +330,27 @@ it.effect("rebases for a GitHub App, which GitHub gives no permission to read", 
     ]);
     yield* runGitHubStackAction(api.execute, { ...input, action: "update-branch" });
     expect(gitCalls.filter((args) => args[0] === "push")).toHaveLength(2);
+  }),
+);
+
+it.effect("rebases as the project's git account when one is set", () =>
+  Effect.gen(function* () {
+    gitCalls = [];
+    const api = fake([stack, access]);
+    yield* runGitHubStackAction(api.execute, { ...input, action: "update-branch" }).pipe(
+      Effect.provideService(SourceControlHost.AccountCredential, {
+        host: "github.com",
+        token: Redacted.make("account-token"),
+        label: "Work",
+        authorName: "Work Person",
+        authorEmail: "work@example.test",
+      }),
+    );
+    expect(gitEnv).toMatchObject({
+      GIT_CONFIG_VALUE_1: "Work Person",
+      GIT_CONFIG_VALUE_2: "work@example.test",
+      GIT_COMMITTER_NAME: "Work Person",
+    });
   }),
 );
 
