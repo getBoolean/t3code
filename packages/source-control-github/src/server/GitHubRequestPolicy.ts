@@ -299,7 +299,6 @@ export const make = Effect.gen(function* () {
         fromApp: false,
       } satisfies ChosenCredential;
     }
-    // A git account outranks the saved token and the app sign-in alike.
     if ((yield* SourceControlHost.AccountCredential) !== null)
       return yield* personalCredential(host);
     const saved = yield* credentials.saved(host);

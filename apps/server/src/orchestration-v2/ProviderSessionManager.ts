@@ -142,7 +142,6 @@ export class ProviderSessionActivityError extends Schema.TaggedError<ProviderSes
   }
 }
 
-/** The live session runs under another git account than the thread's project and serves other threads. */
 export class ProviderSessionAccountChangedError extends Schema.TaggedError<ProviderSessionAccountChangedError>()(
   "ProviderSessionAccountChangedError",
   { providerSessionId: ProviderSessionId, threadId: ThreadId },
@@ -233,7 +232,6 @@ interface LiveSessionEntry {
   /** Scope revocation to recorded credential ids so superseded sessions cannot revoke replacements opened before detach. */
   readonly mcpCredentialIdByThread: ReadonlyMap<ThreadId, string>;
   readonly supportsMultipleProviderThreads: boolean;
-  /** `null` when the session runs with the machine's git identity. */
   readonly accountFingerprint: string | null;
   readonly runtime: ProviderAdapter.ProviderAdapterV2SessionRuntime;
   readonly exposedRuntime: ProviderAdapter.ProviderAdapterV2SessionRuntime;

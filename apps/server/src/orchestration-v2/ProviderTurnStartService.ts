@@ -62,7 +62,6 @@ import {
   restartCancelledBackgroundWorkNote,
 } from "./RestartBackgroundNote.ts";
 
-/** `start` moved the thread off a shared session that runs as another git account. */
 const MOVED_TO_OWN_SESSION = Symbol("moved-to-own-session");
 
 export class ProviderTurnStartError extends Schema.TaggedError<ProviderTurnStartError>()(
@@ -795,7 +794,6 @@ export const layer: Layer.Layer<
         sessionResult._tag === "Failure" &&
         sessionResult.failure._tag === "ProviderSessionAccountChangedError"
       ) {
-        // The shared session runs as another git account; this thread moves to its own session.
         const movedAt = yield* DateTime.now;
         const moved = yield* eventSink.writeIfRunCurrent({
           threadId: projection.thread.id,

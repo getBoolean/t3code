@@ -40,7 +40,6 @@ const sameIdentity = (left: RepoIdentity | null, right: RepoIdentity | null) =>
 export class RepoConfigSync extends Context.Service<
   RepoConfigSync,
   {
-    /** Applies the current settings, then follows changes; repos are only touched when their project's desired identity changes. */
     readonly start: () => Effect.Effect<void, never, Scope.Scope>;
     readonly apply: (settings: ServerSettingsValue) => Effect.Effect<void>;
   }

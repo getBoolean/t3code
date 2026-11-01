@@ -61,7 +61,7 @@ const forgeFor = (account: OverlayAccount): ForgeEnvironment =>
   forges[account.forge] ?? forges.github!;
 
 /** Single-quotes a value for the POSIX shell git uses to run `!` helpers and `core.sshCommand`. */
-const shellQuote = (value: string) => `'${value.replaceAll("'", `'\\''`)}'`;
+export const shellQuote = (value: string) => `'${value.replaceAll("'", `'\\''`)}'`;
 
 const tokenVariablesFor = (account: OverlayAccount, token: string) =>
   Object.fromEntries(
@@ -73,7 +73,6 @@ const tokenVariablesFor = (account: OverlayAccount, token: string) =>
 
 const helperKey = (host: string) => `credential.https://${host}.helper`;
 
-/** The environment that makes git and the forge CLIs act as `account`. */
 export function buildOverlay(input: {
   readonly id: string;
   readonly account: OverlayAccount;

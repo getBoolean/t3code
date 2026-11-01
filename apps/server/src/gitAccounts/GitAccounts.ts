@@ -6,6 +6,7 @@ import {
   type ThreadId,
 } from "@t3tools/contracts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -18,7 +19,7 @@ import * as ProjectStore from "../orchestration-v2/ProjectStore.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as VcsProcess from "../vcs/VcsProcess.ts";
 import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
-import { blockedOverlay, buildOverlay, fingerprint } from "./launchIdentity.ts";
+import { blockedOverlay, buildOverlay, fingerprint, shellQuote } from "./launchIdentity.ts";
 
 export class GitAccountUnavailable extends Schema.TaggedError<GitAccountUnavailable>()(
   "GitAccountUnavailable",
@@ -41,13 +42,6 @@ export interface LaunchIdentity {
   readonly unavailable: GitAccountUnavailable | null;
 }
 
-export interface GitAccountSummary {
-  readonly id: GitAccountId;
-  readonly label: string;
-  readonly forge: string;
-  readonly host: string;
-}
-
 export class GitAccounts extends Context.Service<
   GitAccounts,
   {
@@ -64,11 +58,9 @@ export class GitAccounts extends Context.Service<
       identity: LaunchIdentity,
       options?: { readonly remoteUrl?: string | null | undefined },
     ) => Effect.Effect<void, GitAccountUnavailable>;
-    readonly list: Effect.Effect<ReadonlyArray<GitAccountSummary>>;
   }
 >()("t3/gitAccounts/GitAccounts") {}
 
-/** Host of an HTTPS, `ssh://` or scp-style remote, lower-cased; `null` for local paths. */
 function remoteHost(remoteUrl: string): string | null {
   const trimmed = remoteUrl.trim();
   const scp = /^[^@/:]+@([^:/]+):/.exec(trimmed);
@@ -83,7 +75,7 @@ function remoteHost(remoteUrl: string): string | null {
 
 /** Without the account its host is unknown, so transport is blocked for every host. */
 const missingAccountOverlay = (message: string): EnvironmentOverlay => {
-  const fail = `echo '${message.replaceAll("'", `'\\''`)}' >&2; false`;
+  const fail = `echo ${shellQuote(message)} >&2; false`;
   return {
     set: { GIT_TERMINAL_PROMPT: "0" },
     unset: ["GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"],
@@ -98,6 +90,8 @@ const missingAccountOverlay = (message: string): EnvironmentOverlay => {
   };
 };
 
+const LOGIN_TOKEN_TTL_MS = 30_000;
+
 const accountIdFor = (settings: ServerSettingsValue, projectId: ProjectId | null) =>
   resolveProjectSettings(settings, projectId).settings.gitAccountId;
 
@@ -108,9 +102,15 @@ const make = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const process = yield* VcsProcess.VcsProcess;
 
+  // Every turn, terminal and forge call resolves the account; don't spawn gh for each one.
+  const cachedLoginTokens = new Map<string, { readonly token: string; readonly at: number }>();
   const cliLoginToken = Effect.fn("GitAccounts.cliLoginToken")(function* (
     account: GitAccountConfig,
   ) {
+    const cacheKey = `${account.host}\0${account.cliLogin}`;
+    const now = yield* Clock.currentTimeMillis;
+    const cached = cachedLoginTokens.get(cacheKey);
+    if (cached !== undefined && now - cached.at < LOGIN_TOKEN_TTL_MS) return cached.token;
     if (account.forge !== "github") {
       return yield* Effect.fail(
         `machine logins are supported for GitHub accounts; save a token for ${account.forge}`,
@@ -129,6 +129,7 @@ const make = Effect.gen(function* () {
     const token = output.stdout.trim();
     if (token === "")
       return yield* Effect.fail(`gh has no login "${account.cliLogin}" for ${account.host}`);
+    cachedLoginTokens.set(cacheKey, { token, at: now });
     return token;
   });
 
@@ -237,19 +238,7 @@ const make = Effect.gen(function* () {
     }
   });
 
-  const list: GitAccounts["Service"]["list"] = settingsService.getSettings.pipe(
-    Effect.orDie,
-    Effect.map((settings) =>
-      Object.entries(settings.gitAccounts).map(([id, account]) => ({
-        id: id as GitAccountId,
-        label: account.label,
-        forge: account.forge,
-        host: account.host,
-      })),
-    ),
-  );
-
-  return GitAccounts.of({ forProject, forThread, forWorkspace, requireUsable, list });
+  return GitAccounts.of({ forProject, forThread, forWorkspace, requireUsable });
 });
 
 export const layer = Layer.effect(GitAccounts, make);

@@ -1693,7 +1693,6 @@ export const ServerSettingsPatch = Schema.Struct({
   usageLimitSources: Schema.optionalKey(
     Schema.Record(UsageLimitSourceId, Schema.NullOr(UsageLimitSourceConfig)),
   ),
-  // Merge per account; null removes an entry.
   gitAccounts: Schema.optionalKey(Schema.Record(GitAccountId, Schema.NullOr(GitAccountConfig))),
   gitAccountId: Schema.optionalKey(Schema.NullOr(GitAccountId)),
   gitAccountWritesRepoConfig: Schema.optionalKey(Schema.Boolean),

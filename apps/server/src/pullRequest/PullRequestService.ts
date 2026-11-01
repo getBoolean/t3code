@@ -455,7 +455,6 @@ function toPullRequestErrorWith(
   };
 }
 
-/** Runs one provider call as the project's git account, if it has one. */
 type AccountScope = <A, E, R>(
   operation: string,
   effect: Effect.Effect<A, E, R>,
@@ -737,7 +736,6 @@ export const make = Effect.gen(function* () {
   const clock = yield* Clock.Clock;
   const gitAccounts = yield* GitAccounts.GitAccounts;
 
-  /** The account is resolved per call, so a changed binding applies to the next one. */
   const accountScope =
     (
       identity: Effect.Effect<GitAccounts.LaunchIdentity | null>,
