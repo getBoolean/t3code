@@ -211,6 +211,43 @@ it.effect("calls the host as each project's git account, and not at all when it 
   }),
 );
 
+it.effect("lists each project on one host as its own git account's viewer", () =>
+  Effect.gen(function* () {
+    const listed: Array<readonly [string, string]> = [];
+    const service = yield* makeService({
+      projects: [
+        project({ id: "p1", title: "web", workspaceRoot: "/web", repository: "acme/web" }),
+        project({ id: "p2", title: "api", workspaceRoot: "/api", repository: "acme/api" }),
+      ],
+      gitAccounts: {
+        p1: gitAccount("Personal", "personal-token"),
+        p2: gitAccount("Work", "work-token"),
+      },
+      providers: [
+        fakePullRequestProvider(SourceControlProviderKind.make("github"), {
+          getViewer: () =>
+            Effect.map(SourceControlHost.AccountCredential, (account) =>
+              account === null ? "machine" : account.label.toLowerCase(),
+            ),
+          listChangeRequests: ({ repository, viewer }) =>
+            Effect.sync(() => {
+              listed.push([repository, viewer]);
+              return { items: [], truncated: false, continues: false };
+            }),
+        }),
+      ],
+    });
+    yield* service.list({ state: "open" });
+    assert.deepStrictEqual(
+      [...listed].sort(([a], [b]) => a.localeCompare(b)),
+      [
+        ["acme/api", "work"],
+        ["acme/web", "personal"],
+      ],
+    );
+  }),
+);
+
 it.effect("refuses maintainer edits on a host without the capability", () =>
   Effect.gen(function* () {
     let writes = 0;
