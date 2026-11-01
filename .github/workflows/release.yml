@@ -50,8 +50,10 @@ jobs:
   # have already run. Scheduled runs also decide here whether a nightly is due.
   resolve_commit:
     name: Resolve release commit
-    if: github.repository == 'pingdotgg/t3code'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    # Forks opt in with the T3CODE_RELEASES repository variable; see
+    # docs/operations/fork-releases.md for the variables a fork sets.
+    if: github.repository == 'pingdotgg/t3code' || vars.T3CODE_RELEASES == 'true'
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 5
     outputs:
       ref: ${{ steps.resolve.outputs.ref }}
@@ -105,7 +107,7 @@ jobs:
     if: |
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     outputs:
       release_channel: ${{ steps.release_meta.outputs.release_channel }}
@@ -233,7 +235,7 @@ jobs:
     name: Release quality checks
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -265,7 +267,7 @@ jobs:
     name: Release tests
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -301,7 +303,7 @@ jobs:
     name: Release web tests
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -355,7 +357,7 @@ jobs:
     name: Release server tests ${{ matrix.shard }}
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -393,7 +395,7 @@ jobs:
     if: |
       needs.resolve_commit.result == 'success' &&
       (github.event_name != 'schedule' || needs.resolve_commit.outputs.has_changes == 'true')
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 5
     environment:
       name: production
@@ -434,8 +436,15 @@ jobs:
       - name: Read production relay tracing config
         shell: bash
         working-directory: infra/relay
+        env:
+          UPSTREAM: ${{ github.repository == 'pingdotgg/t3code' }}
         run: |
           set -euo pipefail
+          if [[ "$UPSTREAM" != "true" && -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            echo "::notice::No relay deployment state for this repository; client tracing stays off."
+            : > "$RUNNER_TEMP/relay-client-tracing.env"
+            exit 0
+          fi
           output="$(npx alchemy state read T3CodeRelay/prod/output --backend cloudflare --log-level error --no-input | sed -n '/^{/,$p')"
           field() {
             jq -er --arg key "$1" '.[$key] | if type == "object" then .__redacted__ else . end | select(. != null and . != "")' <<<"$output" \
@@ -501,13 +510,15 @@ jobs:
     # this runs alongside preflight. See the condition comment there.
     needs: [preflight, relay_public_config]
     if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' }}
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-32vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     env:
       T3CODE_CLERK_PUBLISHABLE_KEY: ${{ needs.relay_public_config.outputs.clerk_publishable_key }}
       T3CODE_CLERK_JWT_TEMPLATE: ${{ needs.relay_public_config.outputs.clerk_jwt_template }}
       T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       T3CODE_RELAY_URL: ${{ needs.relay_public_config.outputs.relay_url }}
+      # Without the npm package, servers check this repository's GitHub releases for updates.
+      T3CODE_NPM_RELEASES: ${{ (github.repository == 'pingdotgg/t3code' || vars.T3CODE_NPM_PUBLISH == 'true') && 'true' || 'false' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -603,7 +614,7 @@ jobs:
       clerk_cli_oauth_client_id: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
       label: macOS arm64
-      runner: blacksmith-12vcpu-macos-26
+      runner: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
       platform: mac
       target: dmg
       arch: arm64
@@ -627,7 +638,7 @@ jobs:
       clerk_cli_oauth_client_id: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
       label: macOS x64
-      runner: blacksmith-12vcpu-macos-26
+      runner: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
       platform: mac
       target: dmg
       arch: x64
@@ -653,7 +664,7 @@ jobs:
       clerk_cli_oauth_client_id: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
       label: Linux x64
-      runner: blacksmith-32vcpu-ubuntu-2404
+      runner: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-32vcpu-ubuntu-2404' }}
       platform: linux
       target: AppImage
       arch: x64
@@ -679,7 +690,7 @@ jobs:
       clerk_cli_oauth_client_id: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
       label: Linux arm64
-      runner: blacksmith-16vcpu-ubuntu-2404-arm
+      runner: ${{ vars.T3CODE_LINUX_ARM_RUNNER || 'blacksmith-16vcpu-ubuntu-2404-arm' }}
       platform: linux
       target: AppImage
       arch: arm64
@@ -707,7 +718,7 @@ jobs:
       clerk_cli_oauth_client_id: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
       label: Windows x64
-      runner: blacksmith-16vcpu-ubuntu-2404
+      runner: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-16vcpu-ubuntu-2404' }}
       verify_runner: windows-2025
       platform: win
       target: nsis
@@ -731,7 +742,7 @@ jobs:
       clerk_cli_oauth_client_id: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
       label: Windows arm64
-      runner: blacksmith-16vcpu-ubuntu-2404
+      runner: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-16vcpu-ubuntu-2404' }}
       verify_runner: windows-11-arm
       platform: win
       target: nsis
@@ -758,7 +769,7 @@ jobs:
         desktop_win_arm64,
       ]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_mac_x64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     permissions:
       contents: write
@@ -871,6 +882,19 @@ jobs:
             fi
           done
 
+      # Servers built without the npm package read t3-release.json for update checks, and the
+      # attached install scripts default to the repository that cut this release.
+      - name: Write release manifest and install scripts
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          node scripts/write-release-manifest.ts --version "$RELEASE_VERSION" --output release-assets/t3-release.json
+          for script in install.sh install.ps1; do
+            sed "s#pingdotgg/t3code#${GITHUB_REPOSITORY}#g" "scripts/$script" > "release-assets/$script"
+          done
+
       # Updater manifests and blockmaps are what electron-updater consumes.
       # They are only listed for channels an updater is meant to follow.
       - id: release_files
@@ -894,6 +918,9 @@ jobs:
               [[ -f "$apk" ]] && echo "$apk"
             done
             echo 'release-assets/SHA256SUMS'
+            echo 'release-assets/t3-release.json'
+            echo 'release-assets/install.sh'
+            echo 'release-assets/install.ps1'
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -931,7 +958,7 @@ jobs:
           > [!WARNING]
           > **This is a preview build. Do not install it unless you know exactly why you are here.**
           >
-          > Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, are never offered as updates, and are not supported. If you want T3 Code, install the [latest release](https://github.com/pingdotgg/t3code/releases/latest) or a nightly instead.
+          > Preview builds are cut by maintainers from unreleased branches to exercise the release pipeline. They can be broken, receive no fixes, are never offered as updates, and are not supported. If you want T3 Code, install the [latest release](https://github.com/${{ github.repository }}/releases/latest) or a nightly instead.
 
           Built from `${{ needs.preflight.outputs.ref }}`.
           EOF
@@ -987,7 +1014,7 @@ jobs:
   publish_cli:
     name: Publish CLI to npm
     needs: [preflight, release]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' }}
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' && (github.repository == 'pingdotgg/t3code' || vars.T3CODE_NPM_PUBLISH == 'true') }}
     runs-on: ubuntu-24.04 # blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 15
     permissions:
@@ -1021,7 +1048,7 @@ jobs:
   publish_aur:
     name: Publish AUR package
     needs: [preflight, release]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel != 'preview' }}
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel != 'preview' && github.repository == 'pingdotgg/t3code' }}
     uses: ./.github/workflows/publish-aur.yml
     with:
       release_tag: ${{ needs.preflight.outputs.tag }}
@@ -1037,8 +1064,8 @@ jobs:
   build_web:
     name: Build hosted web app
     needs: [preflight, relay_public_config]
-    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.preflight.outputs.release_channel != 'preview' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.preflight.outputs.release_channel != 'preview' && (github.repository == 'pingdotgg/t3code' || vars.T3CODE_WEB_DEPLOY == 'true') }}
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     outputs:
       deployment_url: ${{ steps.deploy.outputs.deployment_url }}
@@ -1139,7 +1166,7 @@ jobs:
     name: Deploy hosted web app
     needs: [preflight, build_web, release, publish_cli]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.build_web.result == 'success' && needs.release.result == 'success' && needs.publish_cli.result == 'success' && needs.preflight.outputs.release_channel != 'preview' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-2vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     env:
       DEPLOYMENT_URL: ${{ needs.build_web.outputs.deployment_url }}
@@ -1210,8 +1237,8 @@ jobs:
   build_marketing:
     name: Build marketing site
     needs: [preflight]
-    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.preflight.outputs.release_channel == 'nightly' }}
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.preflight.outputs.release_channel == 'nightly' && github.repository == 'pingdotgg/t3code' }}
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     outputs:
       deployment_url: ${{ steps.deploy.outputs.deployment_url }}
@@ -1278,7 +1305,7 @@ jobs:
     name: Deploy marketing site
     needs: [preflight, build_marketing, release]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.build_marketing.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel == 'nightly' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-2vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     env:
       DEPLOYMENT_URL: ${{ needs.build_marketing.outputs.deployment_url }}
@@ -1319,9 +1346,10 @@ jobs:
 
   finalize:
     name: Finalize release
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel == 'stable' }}
+    # The version bump is pushed by the release GitHub App; without one, bump versions by hand.
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.release.result == 'success' && needs.preflight.outputs.release_channel == 'stable' && (github.repository == 'pingdotgg/t3code' || vars.T3CODE_RELEASE_APP == 'true') }}
     needs: [preflight, release]
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     steps:
       - id: app_token
@@ -1395,6 +1423,7 @@ jobs:
     name: Announce release on Discord
     if: |
       always() && !cancelled() &&
+      github.repository == 'pingdotgg/t3code' &&
       needs.preflight.result == 'success' &&
       needs.preflight.outputs.release_channel != 'preview' &&
       needs.relay_public_config.result == 'success' &&
@@ -1402,7 +1431,7 @@ jobs:
       needs.deploy_web.result == 'success' &&
       (needs.finalize.result == 'success' || needs.finalize.result == 'skipped')
     needs: [preflight, relay_public_config, release, deploy_web, finalize]
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     steps:
       - name: Checkout
