@@ -87,13 +87,22 @@ export class GitAccounts extends Context.Service<
   }
 >()("t3/gitAccounts/GitAccounts") {}
 
-function remoteHost(remoteUrl: string): string | null {
+// Forges serve git over SSH on a different host than the web host an account names.
+const FORGE_SSH_HOSTS: Readonly<Record<string, string>> = {
+  "ssh.dev.azure.com": "dev.azure.com",
+  "vs-ssh.visualstudio.com": "dev.azure.com",
+  "ssh.github.com": "github.com",
+  "altssh.gitlab.com": "gitlab.com",
+  "altssh.bitbucket.org": "bitbucket.org",
+};
+
+function remoteTarget(remoteUrl: string): { readonly host: string; readonly ssh: boolean } | null {
   const trimmed = remoteUrl.trim();
   const scp = /^[^@/:]+@([^:/]+):/.exec(trimmed);
-  if (scp) return scp[1]!.toLowerCase();
+  if (scp) return { host: scp[1]!.toLowerCase(), ssh: true };
   try {
     const url = new URL(trimmed);
-    return url.hostname ? url.hostname.toLowerCase() : null;
+    return url.hostname ? { host: url.hostname.toLowerCase(), ssh: url.protocol === "ssh:" } : null;
   } catch {
     return null;
   }
@@ -302,16 +311,47 @@ const make = Effect.gen(function* () {
     );
   });
 
-  const hostMismatch = (identity: LaunchIdentity, remoteUrl: string | null | undefined) => {
-    const host = remoteUrl ? remoteHost(remoteUrl) : null;
-    return host !== null && host !== identity.host ? host : null;
-  };
+  // An SSH alias such as `github-work` names its real host in ~/.ssh/config.
+  const sshHostname = (alias: string) =>
+    process
+      .run({
+        operation: "GitAccounts.sshHostname",
+        command: "ssh",
+        args: ["-G", alias],
+        cwd: ".",
+        timeoutMs: 5_000,
+        allowNonZeroExit: true,
+      })
+      .pipe(
+        Effect.map((output) =>
+          output.exitCode === 0
+            ? (/^hostname\s+(\S+)/m.exec(output.stdout)?.[1]?.toLowerCase() ?? null)
+            : null,
+        ),
+        Effect.orElseSucceed(() => null),
+      );
+
+  /** The remote's host when it isn't the account's, after resolving SSH aliases. */
+  const hostMismatch = Effect.fn("GitAccounts.hostMismatch")(function* (
+    identity: LaunchIdentity,
+    remoteUrl: string | null | undefined,
+  ) {
+    const target = remoteUrl ? remoteTarget(remoteUrl) : null;
+    if (target === null) return null;
+    const matches = (host: string) => (FORGE_SSH_HOSTS[host] ?? host) === identity.host;
+    if (matches(target.host)) return null;
+    const resolved = target.ssh ? yield* sshHostname(target.host) : null;
+    if (resolved !== null && matches(resolved)) return null;
+    return resolved !== null && resolved !== target.host
+      ? `${target.host} (${resolved})`
+      : target.host;
+  });
 
   const requireUsable: GitAccounts["Service"]["requireUsable"] = Effect.fn(
     "GitAccounts.requireUsable",
   )(function* (identity, options) {
     if (identity.unavailable !== null) return yield* identity.unavailable;
-    const host = hostMismatch(identity, options?.remoteUrl);
+    const host = yield* hostMismatch(identity, options?.remoteUrl);
     if (host !== null) {
       return yield* new GitAccountUnavailable({
         accountLabel: identity.label,
@@ -413,7 +453,7 @@ const make = Effect.gen(function* () {
         },
       };
     }
-    const host = cwd === null ? null : hostMismatch(identity, yield* pushRemoteUrl(cwd));
+    const host = cwd === null ? null : yield* hostMismatch(identity, yield* pushRemoteUrl(cwd));
     return {
       identity,
       cwd,

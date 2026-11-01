@@ -39,9 +39,11 @@ const machineOutput = (args: ReadonlyArray<string>, remote: string) =>
       ? "machine@example.test\n"
       : args[0] === "auth" && args[1] === "status"
         ? "github.com\n  Logged in to github.com account machine-login (keyring)\n"
-        : args[0] === "remote"
-          ? `${remote}\n`
-          : null;
+        : args[0] === "-G"
+          ? `hostname ${args[1] === "github-work" ? "github.com" : args[1]}\n`
+          : args[0] === "remote"
+            ? `${remote}\n`
+            : null;
 
 const layer = (
   settings: Parameters<typeof ServerSettings.ServerSettingsService.layerTest>[0],
@@ -176,6 +178,11 @@ it.effect("blocks a remote on another host but not a project without a remote", 
     const identity = (yield* accounts.forProject(projectA))!;
     yield* accounts.requireUsable(identity);
     yield* accounts.requireUsable(identity, { remoteUrl: "git@github.com:me/repo.git" });
+    // Multi-account setups reach GitHub through an SSH alias or GitHub's SSH-over-443 host.
+    yield* accounts.requireUsable(identity, { remoteUrl: "git@github-work:me/repo.git" });
+    yield* accounts.requireUsable(identity, {
+      remoteUrl: "ssh://git@ssh.github.com:443/me/repo.git",
+    });
     const error = yield* accounts
       .requireUsable(identity, { remoteUrl: "https://git.cafe/me/repo.git" })
       .pipe(Effect.flip);
