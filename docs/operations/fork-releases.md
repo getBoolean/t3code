@@ -17,7 +17,8 @@ are free for public repositories:
 | `T3CODE_WINDOWS_RUNNER`   | `windows-2025`     |
 
 One variable covers every size of its platform, so jobs sized for 32 vCPU on Blacksmith run on a
-standard runner and take longer.
+standard runner and take longer. CI's Test Web job does not fit its 10-minute limit on a 4 vCPU
+runner; set `T3CODE_TEST_WEB_TIMEOUT_MINUTES` (for example `20`) to raise it.
 
 ## Releases
 
