@@ -2637,8 +2637,10 @@ describe("UsageService", () => {
     }).pipe(Effect.scoped),
   );
 
-  it.live("reports saved usage of a removed directory only for windows it reaches", () =>
+  it.effect("reports saved usage of a removed directory only for windows it reaches", () =>
     Effect.gen(function* () {
+      // Saved usage is kept for a fixed number of days, so pin "now" near the transcript's date.
+      yield* TestClock.setTime(Date.parse("2026-08-05T00:00:00Z"));
       const { transcript, settings, home } = yield* setup;
       yield* Effect.promise(async () => {
         await NodeFSP.writeFile(transcript, claudeLine(1, 5));
