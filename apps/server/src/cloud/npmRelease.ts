@@ -3,7 +3,13 @@ import {
   ServerNpmReleaseInput,
   type ServerNpmRelease,
 } from "@t3tools/contracts";
-import { npmReleaseDatabaseMigration } from "@t3tools/shared/cliRelease";
+import {
+  CLI_RELEASE_MANIFEST_ASSET,
+  CLI_RELEASES_ON_NPM,
+  cliReleaseIndexPageUrl,
+  newestCliReleaseVersion,
+  npmReleaseDatabaseMigration,
+} from "@t3tools/shared/cliRelease";
 import { resolveCommandPath } from "@t3tools/shared/shell";
 import * as Cache from "effect/Cache";
 import * as Context from "effect/Context";
@@ -27,6 +33,21 @@ const decodeError = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Struct({ error: Schema.Struct({ code: Schema.String }) })),
 );
 const decodeInput = Schema.decodeUnknownEffect(ServerNpmReleaseInput);
+const decodeGitHubReleases = Schema.decodeUnknownOption(
+  Schema.fromJsonString(
+    Schema.Array(
+      Schema.Struct({
+        tag_name: Schema.String,
+        draft: Schema.optionalKey(Schema.Boolean),
+        assets: Schema.Array(
+          Schema.Struct({ name: Schema.String, browser_download_url: Schema.String }),
+        ),
+      }),
+    ),
+  ),
+);
+// Nightlies can push a stable or exact release several pages back.
+const GITHUB_RELEASE_PAGES = 5;
 
 export class NpmRelease extends Context.Service<
   NpmRelease,
@@ -55,9 +76,56 @@ function toRelease(spec: string, json: string) {
   });
 }
 
-export const make = Effect.fn("NpmRelease.make")(function* () {
+/** `github` reads the build's GitHub releases, for a fork that publishes no npm package. */
+export const make = Effect.fn("NpmRelease.make")(function* (options?: {
+  readonly source?: "npm" | "github";
+}) {
+  const source = options?.source ?? (CLI_RELEASES_ON_NPM ? "npm" : "github");
   const runner = yield* ProcessRunner.ProcessRunner;
   const http = yield* HttpClient.HttpClient;
+  const githubUnreachable = new ServerNpmReleaseError({
+    reason: "GitHub releases could not be reached.",
+  });
+  const githubText = Effect.fn("NpmRelease.githubText")(
+    function* (url: string) {
+      const response = yield* http.get(url, {
+        headers: { accept: "application/vnd.github+json", "user-agent": "t3code-server" },
+      });
+      if (response.status < 200 || response.status >= 300) return yield* githubUnreachable;
+      return yield* response.text;
+    },
+    Effect.timeout(Duration.seconds(15)),
+    Effect.mapError(() => githubUnreachable),
+  );
+  const lookupGitHub = Effect.fn("NpmRelease.lookupGitHub")(function* (
+    spec: string,
+  ): Effect.fn.Return<ServerNpmRelease | null, ServerNpmReleaseError> {
+    for (let page = 1; page <= GITHUB_RELEASE_PAGES; page += 1) {
+      const releases = Option.getOrUndefined(
+        decodeGitHubReleases(yield* githubText(cliReleaseIndexPageUrl(page))),
+      );
+      if (releases === undefined) {
+        return yield* new ServerNpmReleaseError({
+          reason: "GitHub returned invalid release metadata.",
+        });
+      }
+      if (releases.length === 0) return null;
+      const version =
+        spec === "latest" || spec === "nightly"
+          ? newestCliReleaseVersion(releases, spec === "nightly" ? "nightly" : "stable")
+          : releases.some((release) => !release.draft && release.tag_name === `v${spec}`)
+            ? spec
+            : undefined;
+      if (version === undefined) continue;
+      const manifest = releases
+        .find((release) => release.tag_name === `v${version}`)
+        ?.assets.find((asset) => asset.name === CLI_RELEASE_MANIFEST_ASSET);
+      // Releases cut before the manifest existed carry no migration metadata.
+      if (manifest === undefined) return { version };
+      return yield* toRelease(version, yield* githubText(manifest.browser_download_url));
+    }
+    return null;
+  });
   const lookupPublic = Effect.fn("NpmRelease.lookupPublic")(function* (spec: string) {
     const unreachable = new ServerNpmReleaseError({
       reason: "npm is not installed and the public npm registry could not be reached.",
@@ -79,6 +147,7 @@ export const make = Effect.fn("NpmRelease.make")(function* () {
     capacity: 32,
     timeToLive: Duration.minutes(1),
     lookup: Effect.fn("NpmRelease.lookup")(function* (spec: string) {
+      if (source === "github") return yield* lookupGitHub(spec);
       // Without npm there is no configured registry to honor, so use the public one.
       const npmPath = yield* resolveCommandPath("npm");
       if (npmPath === null) return yield* lookupPublic(spec);

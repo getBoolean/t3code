@@ -1,3 +1,4 @@
+import { isNonRepositoryGitStderr } from "./gitNonRepository.ts";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
@@ -557,9 +558,6 @@ function isMissingGitCwdError(error: GitCommandError): boolean {
   );
 }
 
-function isNonRepositoryGitStderr(stderr: string): boolean {
-  return stderr.toLowerCase().includes("not a git repository");
-}
 function isUnbornHeadStderr(stderr: string): boolean {
   const normalized = stderr.toLowerCase();
   return (

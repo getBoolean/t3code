@@ -3,7 +3,25 @@ import * as Schema from "effect/Schema";
 
 import { compareSemverVersions } from "./semver.ts";
 
-const CLI_RELEASE_REPOSITORY = "pingdotgg/t3code";
+declare const __T3CODE_RELEASE_REPOSITORY__: string | undefined;
+declare const __T3CODE_NPM_RELEASES__: string | undefined;
+
+const UPSTREAM_RELEASE_REPOSITORY = "pingdotgg/t3code";
+
+/** The GitHub repository whose releases this build installs and updates from; a fork's CI sets its own. */
+export const CLI_RELEASE_REPOSITORY =
+  typeof __T3CODE_RELEASE_REPOSITORY__ === "string" &&
+  /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(__T3CODE_RELEASE_REPOSITORY__)
+    ? __T3CODE_RELEASE_REPOSITORY__
+    : UPSTREAM_RELEASE_REPOSITORY;
+
+/** Upstream also publishes the `t3` npm package; a fork does only when its build opts in. */
+export const CLI_RELEASES_ON_NPM =
+  CLI_RELEASE_REPOSITORY === UPSTREAM_RELEASE_REPOSITORY ||
+  (typeof __T3CODE_NPM_RELEASES__ === "string" && __T3CODE_NPM_RELEASES__ === "true");
+
+/** Each GitHub release carries this manifest, with the same fields as the npm `t3` package. */
+export const CLI_RELEASE_MANIFEST_ASSET = "t3-release.json";
 export const CLI_RELEASES_PAGE_URL = `https://github.com/${CLI_RELEASE_REPOSITORY}/releases`;
 export const CLI_RELEASE_CHECKSUMS_FILE = "SHA256SUMS";
 export const CLI_RELEASE_BASE_URL_ENV = "T3CODE_RELEASE_BASE_URL";

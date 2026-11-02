@@ -62,6 +62,10 @@ vi.mock("../state/shell", () => ({ environmentShell: { stateValueAtom: () => nul
 vi.mock("@t3tools/client-runtime/state/runtime", () => ({
   isAtomCommandInterrupted: () => false,
 }));
+// The guard reads server state through the runtime mocked above.
+vi.mock("../components/chat/useGitAccountGuard", () => ({
+  useGitAccountGuard: () => ({ ensureGitAccount: async () => true }),
+}));
 
 function setup() {
   fixture.allowed = new Set(["environment-a", "environment-b"]);
