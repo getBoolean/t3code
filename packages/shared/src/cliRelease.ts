@@ -6,7 +6,7 @@ import { compareSemverVersions } from "./semver.ts";
 declare const __T3CODE_RELEASE_REPOSITORY__: string | undefined;
 declare const __T3CODE_NPM_RELEASES__: string | undefined;
 
-export const UPSTREAM_RELEASE_REPOSITORY = "pingdotgg/t3code";
+const UPSTREAM_RELEASE_REPOSITORY = "pingdotgg/t3code";
 
 /** The GitHub repository whose releases this build installs and updates from; a fork's CI sets its own. */
 export const CLI_RELEASE_REPOSITORY =

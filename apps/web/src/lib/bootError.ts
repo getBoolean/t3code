@@ -1,16 +1,15 @@
 import type { DesktopBridge, DesktopUpdateState } from "@t3tools/contracts";
-import {
-  CLI_RELEASE_REPOSITORY,
-  CLI_RELEASES_ON_NPM,
-  CLI_RELEASES_PAGE_URL,
-  UPSTREAM_RELEASE_REPOSITORY,
-} from "@t3tools/shared/cliRelease";
 
-const UPSTREAM_BUILD = CLI_RELEASE_REPOSITORY === UPSTREAM_RELEASE_REPOSITORY;
+// The boot bundle can't import packages, so it reads the repository the web build injected.
+const RELEASE_REPOSITORY = import.meta.env.T3CODE_DESKTOP_UPDATE_REPOSITORY || "pingdotgg/t3code";
+const UPSTREAM_BUILD = RELEASE_REPOSITORY === "pingdotgg/t3code";
 // A fork without the npm package would run upstream's CLI through npx.
-const FALLBACK_TRIAGE_COMMAND = CLI_RELEASES_ON_NPM ? "npx t3 triage" : "t3 triage";
-const DOWNLOAD_URL = UPSTREAM_BUILD ? "https://t3.codes/download" : CLI_RELEASES_PAGE_URL;
-const ISSUE_URL = `https://github.com/${CLI_RELEASE_REPOSITORY}/issues/new`;
+const FALLBACK_TRIAGE_COMMAND =
+  UPSTREAM_BUILD || import.meta.env.T3CODE_NPM_RELEASES === "true" ? "npx t3 triage" : "t3 triage";
+const DOWNLOAD_URL = UPSTREAM_BUILD
+  ? "https://t3.codes/download"
+  : `https://github.com/${RELEASE_REPOSITORY}/releases`;
+const ISSUE_URL = `https://github.com/${RELEASE_REPOSITORY}/issues/new`;
 const LAST_FAILURE_KEY = "t3code:boot-failed-at";
 const REPEAT_FAILURE_MS = 5 * 60_000;
 const MAX_CAUSES = 3;

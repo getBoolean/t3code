@@ -45,10 +45,13 @@ const configuredHostedAppChannel = process.env.VITE_HOSTED_APP_CHANNEL?.trim() |
 const configuredReleaseChannel =
   process.env.T3CODE_BUILT_DEV === "1" ? "dev" : process.env.VITE_RELEASE_CHANNEL?.trim() || "";
 const configuredAppVersion = process.env.APP_VERSION?.trim() || pkg.version;
-const configuredDesktopUpdateRepository =
-  process.env.T3CODE_DESKTOP_UPDATE_REPOSITORY?.trim() ||
-  process.env.GITHUB_REPOSITORY?.trim() ||
-  "";
+// Tests keep upstream's identity whichever repository CI runs in.
+const configuredDesktopUpdateRepository = process.env.VITEST
+  ? ""
+  : process.env.T3CODE_DESKTOP_UPDATE_REPOSITORY?.trim() ||
+    process.env.T3CODE_RELEASE_REPOSITORY?.trim() ||
+    process.env.GITHUB_REPOSITORY?.trim() ||
+    "";
 const configuredFeatureSecrets = process.env.T3CODE_FEATURE_SECRETS?.trim() || "";
 const configuredHostedAppUrl = (() => {
   const explicitHostedAppUrl = process.env.VITE_HOSTED_APP_URL?.trim();
@@ -319,6 +322,9 @@ export default defineConfig(() => {
         configuredDesktopUpdateRepository,
       ),
       "import.meta.env.T3CODE_FEATURE_SECRETS": JSON.stringify(configuredFeatureSecrets),
+      "import.meta.env.T3CODE_NPM_RELEASES": JSON.stringify(
+        process.env.VITEST ? "" : (process.env.T3CODE_NPM_RELEASES?.trim() ?? ""),
+      ),
       "import.meta.env.VITE_RELEASE_CHANNEL": JSON.stringify(configuredReleaseChannel),
       "import.meta.env.APP_VERSION": JSON.stringify(configuredAppVersion),
     },

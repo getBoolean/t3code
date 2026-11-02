@@ -172,9 +172,10 @@ function readEnvFile(path: string): Record<string, string | undefined> {
 
 /**
  * Which GitHub releases a build installs and updates from. Actions sets GITHUB_REPOSITORY, so a
- * fork's release builds point at the fork; local builds keep upstream.
+ * fork's release builds point at the fork; local builds and tests keep upstream.
  */
 export function releaseIdentityDefine(env: Environment = process.env) {
+  if (env.VITEST) return { __T3CODE_RELEASE_REPOSITORY__: '""', __T3CODE_NPM_RELEASES__: '""' };
   return {
     __T3CODE_RELEASE_REPOSITORY__: JSON.stringify(
       env.T3CODE_RELEASE_REPOSITORY?.trim() || env.GITHUB_REPOSITORY?.trim() || "",

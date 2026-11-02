@@ -440,7 +440,7 @@ jobs:
           UPSTREAM: ${{ github.repository == 'pingdotgg/t3code' }}
         run: |
           set -euo pipefail
-          if [[ "$UPSTREAM" != "true" && -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+          if [[ "${UPSTREAM:-true}" != "true" && -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
             echo "::notice::No relay deployment state for this repository; client tracing stays off."
             : > "$RUNNER_TEMP/relay-client-tracing.env"
             exit 0
