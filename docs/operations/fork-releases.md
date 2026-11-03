@@ -89,7 +89,9 @@ each marked `Fork:`. Keep them all when merging upstream:
   stable Nitro release includes that fix.
 
 Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
-iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs.
+iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs. It then
+runs `.github/scripts/check-ios17-libcxx-imports.sh`, which fails when the app imports a libc++ symbol
+that iOS 17.0 doesn't export. The compiler misses those, as described above.
 Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
 Features that need iOS 26 or later, such as liquid glass, voice transcription and the native iPad
 workspace columns, stay hidden on iOS 17.

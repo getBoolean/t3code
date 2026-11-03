@@ -9,6 +9,9 @@ on:
       - "packages/client-runtime/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/mobile-ios17-compile.yml"
+      - ".github/scripts/check-ios17-libcxx-imports.sh"
+      - ".github/scripts/ios17-libcxx-exports.txt"
+      - "patches/react-native-nitro-modules@*.patch"
   workflow_dispatch:
     inputs:
       simulator:
@@ -75,6 +78,11 @@ jobs:
             -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | tail -200
 
+      # Compiling at 17.0 still lets Swift's C++ interop link libc++ symbols that only iOS 18+
+      # exports, and dyld kills the app at launch. Compare every libc++ import with iOS 17.0's.
+      - name: Check libc++ imports against iOS 17.0
+        run: ../../.github/scripts/check-ios17-libcxx-imports.sh build/Build/Products/Debug-iphonesimulator/T3CodeDev.app
+
       # Release embeds the JS bundle; the Debug dev client would only wait for Metro.
       # Proves the app starts on iOS 17, not that every screen works.
       - name: Launch a Release build on an iOS 17 simulator
@@ -85,6 +93,7 @@ jobs:
           xcodebuild -workspace ios/T3CodeDev.xcworkspace -scheme T3CodeDev -configuration Release \
             -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | tail -50
+          ../../.github/scripts/check-ios17-libcxx-imports.sh build/Build/Products/Release-iphonesimulator/T3CodeDev.app
           xcodebuild -downloadPlatform iOS -buildVersion 17.5
           runtime=$(xcrun simctl list runtimes -j | jq -r '.runtimes[] | select(.version | startswith("17.")) | .identifier' | tail -1)
           [ -n "$runtime" ] || { echo "::error::this Xcode offers no iOS 17 simulator runtime"; exit 1; }
