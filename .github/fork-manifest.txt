@@ -36,9 +36,11 @@ scripts/check-fork-manifest.sh
 
 # iOS 17.0 support
 apps/mobile/app.config.ts	deploymentTarget: "17.0"
+apps/mobile/app.config.ts	buildReactNativeFromSource: true
 apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec	:ios => '17.0'
 apps/mobile/src/features/agent-awareness/registrationPayload.ts	HOSTED_RELAY_MIN_IOS_MAJOR
 patches/react-native-nitro-modules@0.37.1.patch
+patches/expo-modules-core@58.0.22.patch	case .failure(let error):
 pnpm-workspace.yaml	react-native-nitro-modules@0.37.1
 .github/workflows/mobile-ios17-compile.yml
 .github/scripts/check-ios17-libcxx-imports.sh
