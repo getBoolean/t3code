@@ -104,13 +104,16 @@ each marked `Fork:`. Keep them all when merging upstream:
   exports them only from libc++abi, so dyld binds them to its missing-symbol abort and folly crashes
   the first time it creates an exception through `make_exception_ptr_with`. Built from source at 17.0,
   the linker binds them to libc++abi. The prebuilt React core links that framework, so both build
-  from source, and so do Expo's modules. That makes a Release build about 40% slower (8.2 to 11.5
-  minutes on an M1; an estimated 28 to 39 minutes on GitHub's `macos-26` runner). Drop it once React
-  Native's prebuilt dependencies pass the libc++ check below.
+  from source, and so do Expo's modules. That makes builds slower: a Release build takes 11.5
+  instead of 8.2 minutes on an M1, and about 45 instead of 28 minutes on GitHub's `macos-26` runner.
+  Drop it once React Native's prebuilt dependencies pass the libc++ check below.
 - The `AsyncFunctionDefinition.swift` hunk in `patches/expo-modules-core@58.0.22.patch`. Building
   ExpoModulesCore from source crashes Xcode 27's Swift 6.4 compiler on a cast pattern inside a
   consuming `switch`. The hunk drops the cast; `reject` takes `any Error` either way. When upstream
   bumps expo-modules-core, carry the hunk to the new patch file if the cast is still there.
+- `patches/expo-modules-autolinking@58.0.13.patch`. Building Expo's modules from source makes the
+  app's `[Expo] Configure project` phase scan their Swift sources, and autolinking gives that scan
+  5 seconds. On a busy CI runner it times out and the Release build fails. The patch allows 60.
 
 Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
 iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs. It then

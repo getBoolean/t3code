@@ -13,7 +13,7 @@ This is a fork of [pingdotgg/t3code](https://github.com/pingdotgg/t3code). It ad
   - **iOS 18-only effects.** A few third-party UI components use iOS 18-only system effects and fall back to their simpler iOS 17 behaviour. Liquid glass, voice transcription and the native iPad workspace columns need iOS 26 or later, so iOS 17 and iOS 18 both go without them.
   - **Device list.** iOS 17 devices appear as "iOS 18" in the T3 Connect device list. The hosted relay rejects anything older, so the app reports 18 to register.
   - **Testing so far.** Every library and framework in the app is checked against iOS 17.0's system libraries, and none uses a function iOS 17.0 lacks. An earlier build launched and ran on iOS 17.0 iPhone and iPad simulators. The current build, which compiles React Native from source, hasn't been run on an iOS 17 simulator yet, and the settings, compose and other screens haven't been checked on iOS 17.
-  - **React Native built from source.** React Native's prebuilt libraries call two C++ functions that iOS 17.0 doesn't provide where they look for them, which could crash the app the first time that code runs. This fork compiles React Native from source for iOS instead, so those calls find the functions iOS 17.0 has. iOS builds take about 40% longer.
+  - **React Native built from source.** React Native's prebuilt libraries call two C++ functions that iOS 17.0 doesn't provide where they look for them, which could crash the app the first time that code runs. This fork compiles React Native from source for iOS instead, so those calls find the functions iOS 17.0 has. That makes iOS builds take about 60% longer.
 
 ### Installing this fork
 
