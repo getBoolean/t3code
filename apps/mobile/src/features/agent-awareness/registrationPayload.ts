@@ -3,6 +3,9 @@ import type { RelayDeviceRegistrationRequest } from "@t3tools/contracts/relay";
 import type { Preferences } from "../../persistence/mobile-preferences";
 import { supportsAgentAwarenessPush } from "./capabilities";
 
+// Fork: the app supports iOS 17, but the hosted relay rejects versions below 18 and only stores the value.
+const HOSTED_RELAY_MIN_IOS_MAJOR = 18;
+
 // Development builds use sandbox APNs; distribution builds use production APNs.
 export function resolveApsEnvironment(appVariant: unknown): "sandbox" | "production" {
   return appVariant === "development" ? "sandbox" : "production";
@@ -32,7 +35,7 @@ export function makeRelayDeviceRegistrationRequest(
     platform: input.platform ?? "ios",
     ...(input.platform === "android"
       ? { androidApiLevel: input.androidApiLevel }
-      : { iosMajorVersion: input.iosMajorVersion }),
+      : { iosMajorVersion: Math.max(input.iosMajorVersion, HOSTED_RELAY_MIN_IOS_MAJOR) }),
     appVersion: input.appVersion,
     ...(input.bundleId ? { bundleId: input.bundleId } : {}),
     ...(input.apsEnvironment ? { apsEnvironment: input.apsEnvironment } : {}),
