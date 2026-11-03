@@ -398,6 +398,9 @@ patchedDependencies:
   # Observe the owned host exit independently of descendants retaining its stdio.
   "@muse-code/sdk@1.4.6": patches/@muse-code__sdk@1.4.6.patch
   app-builder-lib@26.16.1: patches/app-builder-lib@26.16.1.patch
+  # Fork: iOS 17 launch crash; Swift-imported Nitro headers must not call make_exception_ptr.
+  # Drop on a Nitro release that includes upstream nitro#1824.
+  react-native-nitro-modules@0.37.1: patches/react-native-nitro-modules@0.37.1.patch
 
 peerDependencyRules:
   allowAny:
