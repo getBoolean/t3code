@@ -413,7 +413,8 @@ const config: ExpoConfig = {
           ].join("\n"),
         },
         ios: {
-          deploymentTarget: "18.0",
+          // Fork: supports iOS 17 (upstream requires 18.0).
+          deploymentTarget: "17.0",
           // AppCheckCore 11.3+ includes Swift and needs module maps for these Objective-C dependencies.
           extraPods: [
             { name: "GoogleUtilities", modular_headers: true },
