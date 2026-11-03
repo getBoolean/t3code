@@ -1,0 +1,97 @@
+# Fork-only: proves the mobile app still compiles at its iOS 17.0 deployment target.
+# Enable with the repository variable T3CODE_IOS17_CHECK=true. See docs/operations/fork-releases.md.
+name: Mobile iOS 17 compile
+
+on:
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - "packages/client-runtime/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mobile-ios17-compile.yml"
+  workflow_dispatch:
+    inputs:
+      simulator:
+        description: Also launch a Release build on an iOS 17 simulator (downloads the runtime)
+        type: boolean
+        default: false
+
+concurrency:
+  group: mobile-ios17-compile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    if: vars.T3CODE_IOS17_CHECK == 'true'
+    runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'macos-26' }}
+    timeout-minutes: 90
+    env:
+      APP_VARIANT: development
+      MOBILE_VERSION_POLICY: appVersion
+      T3CODE_IOS_PERSONAL_TEAM: "0"
+      EXPO_NO_GIT_STATUS: "1"
+      CI: "1"
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: |
+            args:
+              - --filter=@t3tools/mobile...
+
+      - name: Generate the iOS project
+        run: |
+          vp exec expo prebuild --clean --platform ios --no-install
+          (cd ios && pod install)
+
+      - name: Assert every target is at most iOS 17.0
+        run: |
+          grep -ho 'IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*' ios/*.xcodeproj/project.pbxproj | sort -u | tee /dev/stderr \
+            | awk '{ if ($3 + 0 > 17.0) bad = 1 } END { exit bad }' \
+            || { echo "::error::an iOS target is above 17.0"; exit 1; }
+
+      # The simulator SDK compiles every pod and Swift module against the 17.0 target,
+      # so an unguarded iOS 18+ API fails here without needing an iOS 17 runtime.
+      - name: Compile for the iOS Simulator SDK
+        run: |
+          set -o pipefail
+          xcodebuild -workspace ios/T3CodeDev.xcworkspace -scheme T3CodeDev -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | tail -200
+
+      # Release embeds the JS bundle; the Debug dev client would only wait for Metro.
+      # Proves the app starts on iOS 17, not that every screen works.
+      - name: Launch a Release build on an iOS 17 simulator
+        if: inputs.simulator
+        run: |
+          set -o pipefail
+          rm -rf build
+          xcodebuild -workspace ios/T3CodeDev.xcworkspace -scheme T3CodeDev -configuration Release \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build | tail -50
+          xcodebuild -downloadPlatform iOS -buildVersion 17.5
+          runtime=$(xcrun simctl list runtimes -j | jq -r '.runtimes[] | select(.version | startswith("17.")) | .identifier' | tail -1)
+          [ -n "$runtime" ] || { echo "::error::this Xcode offers no iOS 17 simulator runtime"; exit 1; }
+          device=$(xcrun simctl list devicetypes -j | jq -r '.devicetypes[] | select(.name | startswith("iPhone")) | .identifier' | head -1)
+          udid=$(xcrun simctl create ios17 "$device" "$runtime")
+          xcrun simctl boot "$udid"
+          app=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
+          xcrun simctl install "$udid" "$app"
+          bundle=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")
+          xcrun simctl launch "$udid" "$bundle"
+          sleep 30
+          xcrun simctl spawn "$udid" launchctl list | grep -q "UIKitApplication:$bundle" \
+            || { echo "::error::the app exited within 30 seconds"; exit 1; }

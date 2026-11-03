@@ -70,3 +70,21 @@ point these variables at it.
 
 The release workflow uses a `production` environment for these values; GitHub creates it on the
 first run.
+
+## iOS 17
+
+This fork lowers the mobile app's iOS minimum from upstream's 18.0 to 17.0. Three fork lines carry it,
+each marked `Fork:`. Keep all three when merging upstream:
+
+- `deploymentTarget` in `apps/mobile/app.config.ts`
+- `:ios` in `apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec`
+- `HOSTED_RELAY_MIN_IOS_MAJOR` in `apps/mobile/src/features/agent-awareness/registrationPayload.ts`.
+  The hosted relay rejects devices reporting iOS below 18, so iOS 17 devices report 18. They show
+  as iOS 18 in the device list. This gets registration accepted. Push delivery still needs a build
+  signed with the relay's APNs team and bundle ID.
+
+Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
+iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs.
+Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
+Features that need iOS 18 or later, such as liquid glass and the iPad split inspector, stay hidden
+on iOS 17.
