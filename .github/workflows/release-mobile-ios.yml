@@ -41,6 +41,11 @@ jobs:
   ipa:
     name: iOS unsigned IPA
     if: vars.T3CODE_MOBILE_RELEASE == 'true'
+    # One build per PR or branch. A new PR push cancels the stale build so it frees a scarce macOS
+    # runner; a release build waits instead of being cancelled.
+    concurrency:
+      group: release-mobile-ios-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 120
     env:
