@@ -88,7 +88,10 @@ jobs:
           xcodebuild -downloadPlatform iOS -buildVersion 17.5
           runtime=$(xcrun simctl list runtimes -j | jq -r '.runtimes[] | select(.version | startswith("17.")) | .identifier' | tail -1)
           [ -n "$runtime" ] || { echo "::error::this Xcode offers no iOS 17 simulator runtime"; exit 1; }
-          device=$(xcrun simctl list devicetypes -j | jq -r '.devicetypes[] | select(.name | startswith("iPhone")) | .identifier' | head -1)
+          # Xcode lists device types the iOS 17 runtime can't run; take one the runtime supports.
+          device=$(xcrun simctl list runtimes -j | jq -r --arg r "$runtime" \
+            '.runtimes[] | select(.identifier == $r) | .supportedDeviceTypes[] | select(.productFamily == "iPhone") | .identifier' | tail -1)
+          [ -n "$device" ] || { echo "::error::the iOS 17 runtime supports no iPhone device type"; exit 1; }
           udid=$(xcrun simctl create ios17 "$device" "$runtime")
           xcrun simctl boot "$udid"
           app=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
@@ -96,5 +99,7 @@ jobs:
           bundle=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")
           xcrun simctl launch "$udid" "$bundle"
           sleep 30
-          xcrun simctl spawn "$udid" launchctl list | grep -q "UIKitApplication:$bundle" \
+          # A crashed app can leave its label loaded with "-" as the PID, so require a live PID.
+          services=$(xcrun simctl spawn "$udid" launchctl list)
+          awk -v label="UIKitApplication:$bundle" 'index($3, label) == 1 && $1 ~ /^[0-9]+$/ { alive = 1 } END { exit !alive }' <<<"$services" \
             || { echo "::error::the app exited within 30 seconds"; exit 1; }
