@@ -98,11 +98,27 @@ each marked `Fork:`. Keep them all when merging upstream:
   calls then link `std::exception_ptr::__from_native_exception_pointer`, which only iOS 18 exports,
   and dyld kills the app at launch on iOS 17. The patch mirrors upstream nitro#1824. Drop it once a
   stable Nitro release includes that fix.
+- `buildReactNativeFromSource` in `apps/mobile/app.config.ts`. React Native's prebuilt
+  `ReactNativeDependencies.framework` was linked with the iOS 18.5 SDK and binds folly's
+  `__cxa_increment_exception_refcount` and `__cxa_decrement_exception_refcount` to libc++. iOS 17.0
+  exports them only from libc++abi, so dyld binds them to its missing-symbol abort and folly crashes
+  the first time it creates an exception through `make_exception_ptr_with`. Built from source at 17.0,
+  the linker binds them to libc++abi. The prebuilt React core links that framework, so both build
+  from source, and so do Expo's modules. That makes a Release build about 40% slower (8.2 to 11.5
+  minutes on an M1; an estimated 28 to 39 minutes on GitHub's `macos-26` runner). Drop it once React
+  Native's prebuilt dependencies pass the libc++ check below.
+- The `AsyncFunctionDefinition.swift` hunk in `patches/expo-modules-core@58.0.22.patch`. Building
+  ExpoModulesCore from source crashes Xcode 27's Swift 6.4 compiler on a cast pattern inside a
+  consuming `switch`. The hunk drops the cast; `reject` takes `any Error` either way. When upstream
+  bumps expo-modules-core, carry the hunk to the new patch file if the cast is still there.
 
 Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
 iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs. It then
-runs `.github/scripts/check-ios17-libcxx-imports.sh`, which fails when the app imports a libc++ symbol
-that iOS 17.0 doesn't export. The compiler misses those, as described above.
+runs `.github/scripts/check-ios17-libcxx-imports.sh`, which fails when any Mach-O file in the app
+imports a symbol that the library it is bound to (libc++ or libc++abi) doesn't export on iOS 17.0.
+Lazy binds fail too: they don't stop launch, but they abort on first call. The compiler misses these,
+as described above. To regenerate its export list from an installed iOS 17.0 simulator runtime, run
+`xcrun dyld_info -exports` on that runtime's `usr/lib/libc++.1.dylib` and `libc++abi.dylib`.
 Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
 Features that need iOS 26 or later, such as liquid glass, voice transcription and the native iPad
 workspace columns, stay hidden on iOS 17.
