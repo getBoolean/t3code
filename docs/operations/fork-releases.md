@@ -42,11 +42,12 @@ releases of the fork. Release builds take the fork's repository from `GITHUB_REP
 Upstream-only publishers are skipped on a fork: AUR, the marketing site, and Discord. These run
 only when the fork opts in:
 
-| Variable             | Turns on                                                                                                                                                                  |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `T3CODE_NPM_PUBLISH` | Publishing the `t3` npm package. A fork can't publish that name, so most leave it unset; servers then check GitHub releases.                                              |
-| `T3CODE_WEB_DEPLOY`  | Building and deploying the hosted web app to Vercel (`VERCEL_*` secrets).                                                                                                 |
-| `T3CODE_RELEASE_APP` | The stable-release version bump pushed to `main` by a GitHub App (`RELEASE_APP_ID`, `RELEASE_APP_PRIVATE_KEY`). Without it, bump versions by hand after a stable release. |
+| Variable                | Turns on                                                                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `T3CODE_NPM_PUBLISH`    | Publishing the `t3` npm package. A fork can't publish that name, so most leave it unset; servers then check GitHub releases.                                              |
+| `T3CODE_WEB_DEPLOY`     | Building and deploying the hosted web app to Vercel (`VERCEL_*` secrets).                                                                                                 |
+| `T3CODE_RELEASE_APP`    | The stable-release version bump pushed to `main` by a GitHub App (`RELEASE_APP_ID`, `RELEASE_APP_PRIVATE_KEY`). Without it, bump versions by hand after a stable release. |
+| `T3CODE_MOBILE_RELEASE` | An unsigned iOS IPA on every release (see [iOS sideload build](#ios-sideload-build)). A failed build blocks the release.                                                  |
 
 Builds are unsigned unless the signing secrets in [release](./release.md) are set. Unsigned
 Windows and Linux builds install and update; macOS needs signing and notarization before it can
@@ -95,3 +96,21 @@ that iOS 17.0 doesn't export. The compiler misses those, as described above.
 Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
 Features that need iOS 26 or later, such as liquid glass, voice transcription and the native iPad
 workspace columns, stay hidden on iOS 17.
+
+## iOS sideload build
+
+With `T3CODE_MOBILE_RELEASE` set to `true`, `release.yml` runs `release-mobile-ios.yml` and attaches
+`T3-Code-<version>-ios-unsigned.ipa`. The fork has no Apple signing in CI, so the IPA is unsigned
+and users re-sign it with their own Apple ID (AltStore, SideStore, Sideloadly). That makes it the
+Personal Team build (`T3CODE_IOS_PERSONAL_TEAM=1`): no push notifications, widgets, share extension,
+or native Sign in with Apple.
+
+- The bundle ID is `T3CODE_IOS_SIDELOAD_BUNDLE_ID`, or `io.github.<owner>.t3code` when that is unset.
+  Sideloading tools may change it again.
+- Expo over-the-air updates are off (`T3CODE_MOBILE_UPDATES_ENABLED=0`), so upstream's update channel
+  can't replace the fork's JavaScript. New versions come from new releases.
+- The app version is the release version's numeric part (`0.1.7` for `0.1.7-nightly.20261103.1`),
+  because iOS rejects prerelease suffixes.
+- The build runs the iOS 17 libc++ check above before packaging and fails on missing symbols.
+
+A pull request that edits `release-mobile-ios.yml` builds the IPA as a check without publishing it.

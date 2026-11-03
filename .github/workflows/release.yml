@@ -765,6 +765,19 @@ jobs:
       resource_key: win32-arm64
       cli_archive: true
 
+  # Fork: an unsigned iOS IPA for sideloading, only when the fork sets T3CODE_MOBILE_RELEASE.
+  mobile_ios_unsigned:
+    name: Mobile iOS (unsigned)
+    needs: [preflight, relay_public_config]
+    if: ${{ !cancelled() && vars.T3CODE_MOBILE_RELEASE == 'true' && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' }}
+    uses: ./.github/workflows/release-mobile-ios.yml
+    with:
+      version: ${{ needs.preflight.outputs.version }}
+      ref: ${{ needs.preflight.outputs.ref }}
+      clerk_publishable_key: ${{ needs.relay_public_config.outputs.clerk_publishable_key }}
+      clerk_jwt_template: ${{ needs.relay_public_config.outputs.clerk_jwt_template }}
+      relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
+
   release:
     name: Publish GitHub Release
     needs:
@@ -781,8 +794,9 @@ jobs:
         desktop_linux_arm64,
         desktop_win_x64,
         desktop_win_arm64,
+        mobile_ios_unsigned,
       ]
-    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_mac_x64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' }}
+    if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' && needs.desktop_mac_arm64.result == 'success' && needs.desktop_mac_x64.result == 'success' && needs.desktop_linux_x64.result == 'success' && needs.desktop_linux_arm64.result == 'success' && needs.desktop_win_x64.result == 'success' && needs.desktop_win_arm64.result == 'success' && (vars.T3CODE_MOBILE_RELEASE != 'true' || needs.mobile_ios_unsigned.result == 'success') }}
     runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 30
     permissions:
@@ -818,6 +832,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           pattern: cli-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Download the unsigned iOS IPA
+        if: vars.T3CODE_MOBILE_RELEASE == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: mobile-ios-unsigned
           merge-multiple: true
           path: release-assets
 
@@ -927,6 +949,9 @@ jobs:
               echo 'release-assets/*.yml'
             fi
             echo 'release-assets/*.tar.gz'
+            if [[ "${{ vars.T3CODE_MOBILE_RELEASE }}" == "true" ]]; then
+              echo 'release-assets/*-ios-unsigned.ipa'
+            fi
             # Only list APKs when Play has a processed internal build available.
             for apk in release-assets/*.apk; do
               [[ -f "$apk" ]] && echo "$apk"

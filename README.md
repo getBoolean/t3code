@@ -27,6 +27,8 @@ This fork publishes nightly builds on its own [GitHub Releases](https://github.c
 
   `t3 update` then moves to newer nightlies of this fork.
 
+- **iPhone and iPad (iOS 17 or later):** each release attaches `T3-Code-<version>-ios-unsigned.ipa`. It's unsigned, so install it with a sideloading tool such as AltStore, SideStore or Sideloadly, which signs it with your Apple ID. A free Apple ID has to re-sign it every 7 days. This build has no push notifications, widgets or share extension, and doesn't update itself; install a newer release to update.
+
 The published mobile app works with a server from this fork, and can switch a project's account by asking an agent in a thread. The switch only happens once you confirm it.
 
 ## "Wait, what are you selling me?"
