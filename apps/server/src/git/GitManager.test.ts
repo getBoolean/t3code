@@ -16,6 +16,7 @@ import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
+import * as Redacted from "effect/Redacted";
 import * as PlatformError from "effect/PlatformError";
 import * as Result from "effect/Result";
 import * as Scope from "effect/Scope";
@@ -645,7 +646,15 @@ function makeManager(input?: {
                 : null;
             if (args !== null) gitCommands?.push(args.join(" "));
             if (args !== null && command._tag === "StandardCommand") {
-              gitSpawnEnvs?.push({ args, env: command.options.env ?? {} });
+              gitSpawnEnvs?.push({
+                args,
+                env: Object.fromEntries(
+                  Object.entries(command.options.env ?? {}).map(([key, value]) => [
+                    key,
+                    Redacted.isRedacted(value) ? Redacted.value(value) : value,
+                  ]),
+                ),
+              });
             }
             if (args === null || gitSpawnGate === undefined || !gitSpawnGate.matches(args)) {
               return spawner.spawn(command);
