@@ -59,8 +59,11 @@ jobs:
 
       - name: Assert every target is at most iOS 17.0
         run: |
-          grep -ho 'IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*' ios/*.xcodeproj/project.pbxproj | sort -u | tee /dev/stderr \
-            | awk '{ if ($3 + 0 > 17.0) bad = 1 } END { exit bad }' \
+          set -o pipefail
+          targets=$(grep -ho 'IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*' ios/*.xcodeproj/project.pbxproj | sort -u)
+          echo "$targets"
+          grep -q '= 17.0$' <<<"$targets" || { echo "::error::the app target is not iOS 17.0"; exit 1; }
+          awk '{ if ($3 + 0 > 17.0) bad = 1 } END { exit bad }' <<<"$targets" \
             || { echo "::error::an iOS target is above 17.0"; exit 1; }
 
       # The simulator SDK compiles every pod and Swift module against the 17.0 target,

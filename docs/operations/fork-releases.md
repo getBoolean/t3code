@@ -86,5 +86,5 @@ each marked `Fork:`. Keep all three when merging upstream:
 Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
 iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs.
 Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
-Features that need iOS 18 or later, such as liquid glass and the iPad split inspector, stay hidden
-on iOS 17.
+Features that need iOS 26 or later, such as liquid glass, voice transcription and the native iPad
+workspace columns, stay hidden on iOS 17.
