@@ -1,0 +1,22 @@
+# Fork-only: fails when an upstream merge dropped fork-owned work (see .github/fork-manifest.txt).
+name: Fork manifest
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    name: Fork manifest
+    if: github.repository != 'pingdotgg/t3code'
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+      - run: bash scripts/check-fork-manifest.sh

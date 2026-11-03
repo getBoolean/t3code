@@ -4,6 +4,16 @@ A fork can run CI, publish its own desktop and CLI releases, and have installs u
 Everything is driven by repository variables (**Settings → Secrets and variables → Actions →
 Variables**). With none set, the workflows behave exactly as they do upstream.
 
+## Fork manifest
+
+`.github/fork-manifest.txt` lists the fork's own work that an upstream merge must keep. Each entry is a file, plus a string the file must still contain where that's useful. `scripts/check-fork-manifest.sh` checks the list, and the fork-only `fork-manifest.yml` workflow runs it on every pull request and push to `main`. It fails in three cases:
+
+- a listed file disappeared;
+- a file lost its string;
+- a code comment starting with `Fork:` sits in a file the manifest doesn't list.
+
+When you add a fork override, mark it with a `Fork:` comment and add its file to the manifest. Upstream syncs read the manifest as the list of what to keep.
+
 ## Runners
 
 Upstream runs on Blacksmith. A fork without Blacksmith sets these to GitHub-hosted labels, which
