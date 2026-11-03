@@ -10,6 +10,8 @@ import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
+import { RelayDeviceRegistrationRequest } from "@t3tools/contracts/relay";
 import { Cookies, FetchHttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 import { ManagedRelay } from "@t3tools/client-runtime/relay";
 
@@ -269,6 +271,21 @@ describe("makeRelayDeviceRegistrationRequest", () => {
       liveActivitiesEnabled: false,
       notificationsEnabled: false,
     });
+  });
+
+  it("reports at least the hosted relay's minimum iOS version", () => {
+    const decode = Schema.decodeUnknownSync(RelayDeviceRegistrationRequest);
+    const register = (iosMajorVersion: number) =>
+      makeRelayDeviceRegistrationRequest({
+        deviceId: "device-1",
+        label: "iPhone",
+        iosMajorVersion,
+        notificationsEnabled: true,
+        preferences: {},
+      });
+
+    expect(decode(register(17)).iosMajorVersion).toBe(18);
+    expect(decode(register(26)).iosMajorVersion).toBe(26);
   });
 
   it.effect("registers one push-token listener per Live Activity across wrappers", () => {

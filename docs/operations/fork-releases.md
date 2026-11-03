@@ -70,3 +70,28 @@ point these variables at it.
 
 The release workflow uses a `production` environment for these values; GitHub creates it on the
 first run.
+
+## iOS 17
+
+This fork lowers the mobile app's iOS minimum from upstream's 18.0 to 17.0. These fork changes carry it,
+each marked `Fork:`. Keep them all when merging upstream:
+
+- `deploymentTarget` in `apps/mobile/app.config.ts`
+- `:ios` in `apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec`
+- `HOSTED_RELAY_MIN_IOS_MAJOR` in `apps/mobile/src/features/agent-awareness/registrationPayload.ts`.
+  The hosted relay rejects devices reporting iOS below 18, so iOS 17 devices report 18. They show
+  as iOS 18 in the device list. This gets registration accepted. Push delivery still needs a build
+  signed with the relay's APNs team and bundle ID.
+- `patches/react-native-nitro-modules@0.37.1.patch`. Swift's explicit module builds import libc++
+  headers at the SDK version, not the deployment target. Nitro's Swift-visible `make_exception_ptr`
+  calls then link `std::exception_ptr::__from_native_exception_pointer`, which only iOS 18 exports,
+  and dyld kills the app at launch on iOS 17. The patch mirrors upstream nitro#1824. Drop it once a
+  stable Nitro release includes that fix.
+
+Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
+iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs. It then
+runs `.github/scripts/check-ios17-libcxx-imports.sh`, which fails when the app imports a libc++ symbol
+that iOS 17.0 doesn't export. The compiler misses those, as described above.
+Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
+Features that need iOS 26 or later, such as liquid glass, voice transcription and the native iPad
+workspace columns, stay hidden on iOS 17.
