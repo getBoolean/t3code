@@ -1,0 +1,140 @@
+# Fork-only: builds the mobile app as an unsigned iOS IPA for sideloading. Users re-sign it with
+# their own Apple ID (AltStore, SideStore, Sideloadly), so it is the Personal Team build: no push,
+# widget or share extension, or native Sign in with Apple. release.yml calls this when the fork
+# sets T3CODE_MOBILE_RELEASE=true; a pull request that edits this file builds it as a check.
+# See docs/operations/fork-releases.md.
+name: Release iOS (unsigned)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Release version, such as 0.1.7-nightly.20261103.1
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+      clerk_publishable_key:
+        type: string
+        required: false
+        default: ""
+      clerk_jwt_template:
+        type: string
+        required: false
+        default: ""
+      relay_url:
+        type: string
+        required: false
+        default: ""
+  pull_request:
+    paths:
+      - ".github/workflows/release-mobile-ios.yml"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version for the file name and app (numeric part only reaches the app)
+        type: string
+        default: 0.0.0-check
+
+jobs:
+  ipa:
+    name: iOS unsigned IPA
+    # A PR check only runs while macOS CI is on (T3CODE_MACOS_CI); releases always build.
+    if: vars.T3CODE_MOBILE_RELEASE == 'true' && (github.event_name != 'pull_request' || vars.T3CODE_MACOS_CI != 'false')
+    # One build per PR or branch. A new PR push cancels the stale build so it frees a scarce macOS
+    # runner; a release build waits instead of being cancelled.
+    concurrency:
+      group: release-mobile-ios-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'macos-26' }}
+    timeout-minutes: 120
+    env:
+      RELEASE_VERSION: ${{ inputs.version || '0.0.0-check' }}
+      APP_VARIANT: production
+      T3CODE_IOS_PERSONAL_TEAM: "1"
+      T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID: ${{ vars.T3CODE_IOS_SIDELOAD_BUNDLE_ID || format('io.github.{0}.t3code', github.repository_owner) }}
+      # Upstream's Expo update channel must never replace the fork's JavaScript.
+      T3CODE_MOBILE_UPDATES_ENABLED: "0"
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ inputs.clerk_publishable_key || vars.CLERK_PUBLISHABLE_KEY }}
+      EXPO_PUBLIC_CLERK_JWT_TEMPLATE: ${{ inputs.clerk_jwt_template || vars.CLERK_JWT_TEMPLATE }}
+      T3CODE_RELAY_URL: ${{ inputs.relay_url || (vars.RELAY_DOMAIN && format('https://{0}', vars.RELAY_DOMAIN)) || '' }}
+      EXPO_NO_GIT_STATUS: "1"
+      CI: "1"
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: |
+            args:
+              - --filter=@t3tools/mobile...
+
+      # iOS accepts only up to three dot-separated integers, so drop any prerelease suffix.
+      - name: Resolve the app version
+        run: |
+          app_version="${RELEASE_VERSION%%-*}"
+          [[ "$app_version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]] \
+            || { echo "::error::cannot derive an iOS version from $RELEASE_VERSION"; exit 1; }
+          echo "T3CODE_MOBILE_VERSION=$app_version" >> "$GITHUB_ENV"
+
+      - name: Generate the iOS project
+        run: |
+          vp exec expo prebuild --clean --platform ios --no-install
+          (cd ios && pod install)
+
+      - name: Build the unsigned app
+        run: |
+          set -o pipefail
+          workspace=$(ls -d ios/*.xcworkspace)
+          scheme=$(basename "$workspace" .xcworkspace)
+          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -100
+          app=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          [ -n "$app" ] || { echo "::error::xcodebuild produced no .app"; exit 1; }
+          echo "APP_PATH=$PWD/$app" >> "$GITHUB_ENV"
+
+      - name: Check the app runs on iOS 17
+        run: ../../.github/scripts/check-ios17-libcxx-imports.sh "$APP_PATH"
+
+      - name: Package the IPA
+        run: |
+          set -euo pipefail
+          plist="$APP_PATH/Info.plist"
+          min_os=$(/usr/libexec/PlistBuddy -c 'Print MinimumOSVersion' "$plist")
+          short_version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$plist")
+          bundle_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$plist")
+          echo "bundle $bundle_id, version $short_version, minimum iOS $min_os"
+          [ "$min_os" = "17.0" ] || { echo "::error::MinimumOSVersion is $min_os, expected 17.0"; exit 1; }
+          [ "$short_version" = "$T3CODE_MOBILE_VERSION" ] \
+            || { echo "::error::app version $short_version, expected $T3CODE_MOBILE_VERSION"; exit 1; }
+          stage=$(mktemp -d)
+          mkdir "$stage/Payload"
+          cp -R "$APP_PATH" "$stage/Payload/"
+          ipa="$GITHUB_WORKSPACE/T3-Code-$RELEASE_VERSION-ios-unsigned.ipa"
+          (cd "$stage" && zip -qry "$ipa" Payload)
+          unzip -l "$ipa" | grep -q 'Payload/[^/]*\.app/Info.plist' \
+            || { echo "::error::$ipa has no Payload/*.app/Info.plist"; exit 1; }
+          ls -lh "$ipa"
+
+      - name: Upload the IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-ios-unsigned
+          path: ${{ github.workspace }}/T3-Code-*-ios-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7

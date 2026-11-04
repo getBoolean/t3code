@@ -9,6 +9,12 @@ Works with your subscriptions on Claude Code, Codex, Cursor, Grok Build, OpenCod
 This is a fork of [pingdotgg/t3code](https://github.com/pingdotgg/t3code). It adds:
 
 - **A git account per project.** Add several git accounts (author name and email, plus a saved token or an existing `gh` login, and an optional SSH key), set a default, and pick a different one for any project. Agents, terminals, setup scripts, and T3 Code's own commits, pushes, and pull requests in that project use that account, so you don't have to sign out and back in when you switch projects. If the account can't be used, T3 Code warns first and only falls back to your machine's login for a thread you confirm. Open terminals follow account switches too. Works with GitHub, GitLab, Forgejo/Gitea, Bitbucket, Azure DevOps, and GitCafe. See [Use a different git account per project](./docs/user/source-control.md#use-a-different-git-account-per-project).
+- **The mobile app on iOS 17.0.** Upstream requires iOS 18. This fork's app runs on iOS 17.0 and later, and on iOS 18 and later it behaves exactly like upstream. Nothing was removed or rewritten for the backport, so iOS 17 gets the same features as iOS 18, with these differences:
+  - **iOS 18-only effects.** A few third-party UI components use iOS 18-only system effects and fall back to their simpler iOS 17 behaviour. Liquid glass, voice transcription and the native iPad workspace columns need iOS 26 or later, so iOS 17 and iOS 18 both go without them.
+  - **Device list.** iOS 17 devices appear as "iOS 18" in the T3 Connect device list. The hosted relay rejects anything older, so the app reports 18 to register.
+  - **Testing so far.** Every library and framework in the app is checked against iOS 17.0's system libraries, and none uses a function iOS 17.0 lacks. On iOS 17.0 iPhone and iPad simulators, a build made with Xcode 26.6 (the version CI and releases use) passed an automated walk of 42 screens with native code, with no crash and no JavaScript error: settings (including git accounts), the thread list and threads, the composer and its attachment menu, sheets, the QR scanner, the file viewer, the review diff, the terminal, and the compose button. Pairing with a server and sending messages work on the iPhone, including with the free replay provider; on the iPad, see the known risk below. A shorter walk on iOS 26.5 shows nothing changed for newer iOS. Photo and file pickers, dictation, push notifications, Live Activities and sign-in haven't been checked on iOS 17.
+  - **Known risk.** On iPads without liquid glass (iOS 17 and 18 alike, so upstream has it too), the floating tab bar sits over the left part of the thread composer. Tap the right side of the text field to type.
+  - **React Native built from source.** React Native's prebuilt libraries call two C++ functions that iOS 17.0 doesn't provide where they look for them, which could crash the app the first time that code runs. This fork compiles React Native from source for iOS instead, so those calls find the functions iOS 17.0 has. That makes iOS builds take about 60% longer.
 
 ### Installing this fork
 
@@ -26,6 +32,8 @@ This fork publishes nightly builds on its own [GitHub Releases](https://github.c
   ```
 
   `t3 update` then moves to newer nightlies of this fork.
+
+- **iPhone and iPad (iOS 17 or later):** each release attaches `T3-Code-<version>-ios-unsigned.ipa`. It's unsigned, so install it with a sideloading tool such as AltStore, SideStore or Sideloadly, which signs it with your Apple ID. A free Apple ID has to re-sign it every 7 days. This build has no push notifications, widgets or share extension, and doesn't update itself; install a newer release to update.
 
 The published mobile app works with a server from this fork, and can switch a project's account by asking an agent in a thread. The switch only happens once you confirm it.
 

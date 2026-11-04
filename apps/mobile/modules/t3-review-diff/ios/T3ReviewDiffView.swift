@@ -339,6 +339,10 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
   private var pendingScrollFileId: String?
   private var pendingScrollAnimated = false
   private var isProgrammaticScrollActive = false
+  // Fork: on iOS 17 an unscrolled view can keep the offset of an earlier, smaller top inset, which
+  // hides its first rows under the header. Until something scrolls it, keepPinnedToTop holds it at
+  // the top. iOS 18 and later keep upstream's behaviour.
+  private var pinnedToTop = true
   private var rowsDecodeGeneration = 0
   private var tokensDecodeGeneration = 0
 
@@ -404,6 +408,7 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
   public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
     // A direct gesture takes ownership from any interrupted programmatic jump.
     // Resume visible-file events immediately so the inspector follows the finger.
+    pinnedToTop = false
     isProgrammaticScrollActive = false
     contentView.isVerticalScrollActive = true
   }
@@ -585,6 +590,7 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
     contentView.topContentInset = inset
     scrollView.verticalScrollIndicatorInsets.top = inset
     scrollView.contentOffset.y -= delta
+    keepPinnedToTop()
     updateViewportFrame()
   }
 
@@ -609,6 +615,7 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
     hasAppliedInitialRowIndex = false
     pendingScrollFileId = initialFileId
     isProgrammaticScrollActive = false
+    pinnedToTop = true
     scrollView.setContentOffset(CGPoint(x: 0, y: -scrollView.contentInset.top), animated: false)
     updateContentMetrics()
     updateViewportFrame()
@@ -712,6 +719,7 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
         if isProgrammaticScrollActive { finishVerticalScroll() }
       }
     }
+    keepPinnedToTop()
     contentView.frame = CGRect(
       x: 0,
       y: scrollView.contentOffset.y,
@@ -943,7 +951,17 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
     setVerticalContentOffset(headerOffset, animated: animated)
   }
 
+  private func keepPinnedToTop() {
+    if #available(iOS 18.0, *) { return }
+    guard pinnedToTop else { return }
+    let top = -scrollView.contentInset.top
+    if abs(scrollView.contentOffset.y - top) > 0.5 {
+      scrollView.setContentOffset(CGPoint(x: 0, y: top), animated: false)
+    }
+  }
+
   private func setVerticalContentOffset(_ targetOffset: CGFloat, animated: Bool) {
+    pinnedToTop = false
     let topInset = scrollView.contentInset.top
     let maxOffset = max(
       scrollView.contentSize.height - scrollView.bounds.height + scrollView.contentInset.bottom,
