@@ -19,16 +19,31 @@ When you add a fork override, mark it with a `Fork:` comment and add its file to
 Upstream runs on Blacksmith. A fork without Blacksmith sets these to GitHub-hosted labels, which
 are free for public repositories:
 
-| Variable                  | Example            |
-| ------------------------- | ------------------ |
-| `T3CODE_LINUX_RUNNER`     | `ubuntu-24.04`     |
-| `T3CODE_LINUX_ARM_RUNNER` | `ubuntu-24.04-arm` |
-| `T3CODE_MACOS_RUNNER`     | `macos-26`         |
-| `T3CODE_WINDOWS_RUNNER`   | `windows-2025`     |
+| Variable                    | Example            |
+| --------------------------- | ------------------ |
+| `T3CODE_LINUX_RUNNER`       | `ubuntu-24.04`     |
+| `T3CODE_LINUX_ARM_RUNNER`   | `ubuntu-24.04-arm` |
+| `T3CODE_MACOS_RUNNER`       | `macos-26`         |
+| `T3CODE_MACOS_INTEL_RUNNER` | `macos-26-intel`   |
+| `T3CODE_IOS_RUNNER`         | `macos-26-intel`   |
+| `T3CODE_WINDOWS_RUNNER`     | `windows-2025`     |
 
 One variable covers every size of its platform, so jobs sized for 32 vCPU on Blacksmith run on a
 standard runner and take longer. CI's Test Web job does not fit its 10-minute limit on a 4 vCPU
 runner; set `T3CODE_TEST_WEB_TIMEOUT_MINUTES` (for example `20`) to raise it.
+
+`macos-26` uses Apple Silicon (3 cores, 7 GB RAM). `macos-26-intel` uses Intel (4 cores,
+14 GB RAM). Both are standard hosted runners, free for public repositories; see
+[GitHub's runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+This fork uses GitHub-hosted runners. Set `T3CODE_MACOS_INTEL_RUNNER` for the x64 desktop build
+and `T3CODE_IOS_RUNNER` for the unsigned IPA to use the Intel pool when ARM capacity is constrained.
+Each falls back to `T3CODE_MACOS_RUNNER` when unset; the arm64 desktop build keeps that variable.
+The IPA cross-compiles for arm64 on either host. Its build skips index stores and dSYM bundles,
+and reports elapsed build time in the job log. Hosted runners start with fresh DerivedData,
+but restore Xcode's content-addressed compilation cache for the same Xcode build, host architecture,
+and dependency inputs. A native change can still reuse unchanged dependency compilations. Cold
+builds populate the cache; only a measured warm job can establish the end-to-end build time.
+The `mobile-ios-build-log` artifact includes compilation-cache diagnostics and Xcode task timings.
 
 ## Releases
 
