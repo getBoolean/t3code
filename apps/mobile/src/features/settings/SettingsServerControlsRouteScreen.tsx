@@ -186,7 +186,8 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
   const environmentMenu = useSettingsEnvironmentMenu();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { selectedTargets, projectGroups, selectedProjectKey } = useSettingsEnvironmentFilter();
+  const { selectedTargets, projectGroups, selectedProjectKey, selectProject, selectEnvironment } =
+    useSettingsEnvironmentFilter();
   const selectedProject = projectGroups.find((group) => group.key === selectedProjectKey);
   const writableEnvironments = useEnvironmentsWithScope(selectedTargets, AuthSettingsWriteScope);
   const accountManagers = useEnvironmentsWithScope(selectedTargets, AuthProvidersManageScope);
@@ -194,6 +195,9 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
   const targets = resolveMobileSettingsTargets(
     selectedTargets,
     projectSelected ? (selectedProject?.members.map((member) => member.project) ?? []) : null,
+  );
+  const gitAccountsSupported = targets.every(
+    (target) => target.environment.serverConfig.environment.capabilities.gitAccounts === true,
   );
   const [pendingWrites, setPendingWrites] = useState(0);
   const writeInFlight = useRef(false);
@@ -248,6 +252,28 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
       // These targets may not show this write yet, so send it again with the
       // queued patch; project overrides are replaced whole.
       if (queued?.key === targetsKey) write({ ...patch, ...queued.patch });
+    });
+  };
+  const writeAccounts = (patch: ServerSettingsPatch) => {
+    const environment = selectedTargets[0];
+    if (
+      selectedTargets.length !== 1 ||
+      environment === undefined ||
+      !gitAccountsSupported ||
+      writeInFlight.current ||
+      !readEnvironmentScope(environment.environmentId, AuthSettingsWriteScope) ||
+      !readEnvironmentScope(environment.environmentId, AuthProvidersManageScope)
+    )
+      return;
+    const accountTargets = resolveMobileSettingsTargets([environment], null);
+    writeInFlight.current = true;
+    setPendingWrites((count) => count + 1);
+    void writeSettings(
+      accountTargets,
+      planMobileScopedSettingsPatch(accountTargets, false, patch),
+    ).finally(() => {
+      writeInFlight.current = false;
+      setPendingWrites((count) => count - 1);
     });
   };
   const clearProjectOverrides = () => {
@@ -431,50 +457,94 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
                       onValueChange={(value) => write({ removeAgentCreditsOnMerge: value })}
                     />
                   </SettingsSection>
-                  <SettingsSection
-                    title="Git account"
-                    trailing={
-                      pendingWrites === 0 && isMixed("gitAccountId") ? (
-                        <MixedValuesLabel projectSelected={projectSelected} />
-                      ) : null
-                    }
-                  >
-                    {[
-                      ...(projectSelected ? [] : [{ id: null, label: "None", host: null }]),
-                      ...Object.entries(reference.settings.gitAccounts).map(([id, account]) => ({
-                        id: GitAccountId.make(id),
-                        label: account.label,
-                        host: account.host,
-                      })),
-                    ].map((choice, index) => (
-                      <SettingsChoiceRow
-                        key={choice.id ?? "none"}
-                        label={choice.label}
-                        description={
-                          choice.host === null ? "Use this machine's git login." : choice.host
+                  {gitAccountsSupported ? (
+                    <>
+                      <SettingsSection
+                        title="Git account"
+                        trailing={
+                          pendingWrites === 0 && isMixed("gitAccountId") ? (
+                            <MixedValuesLabel projectSelected={projectSelected} />
+                          ) : null
                         }
-                        selected={!isMixed("gitAccountId") && uniform("gitAccountId") === choice.id}
-                        separated={index > 0}
-                        disabled={disabledFor("gitAccountId")}
-                        onPress={() => write({ gitAccountId: choice.id })}
-                      />
-                    ))}
-                    <SettingsSwitchRow
-                      icon="doc.text"
-                      label="Write to repo git config"
-                      subtitle="Also set user.name and user.email in the repo. Turning it off restores the previous values."
-                      value={uniform("gitAccountWritesRepoConfig")}
-                      disabled={disabledFor("gitAccountWritesRepoConfig")}
-                      onValueChange={(value) => write({ gitAccountWritesRepoConfig: value })}
-                    />
-                  </SettingsSection>
-                  {!projectSelected && selectedTargets.length === 1 ? (
-                    <GitAccountsSection
-                      settings={reference.settings}
-                      disabled={disabled || accountManagers.size === 0}
-                      onChange={write}
-                    />
-                  ) : null}
+                      >
+                        {[
+                          ...(projectSelected ? [] : [{ id: null, label: "None", host: null }]),
+                          ...Object.entries(reference.settings.gitAccounts).map(
+                            ([id, account]) => ({
+                              id: GitAccountId.make(id),
+                              label: account.label,
+                              host: account.host,
+                            }),
+                          ),
+                        ].map((choice, index) => (
+                          <SettingsChoiceRow
+                            key={choice.id ?? "none"}
+                            label={choice.label}
+                            description={
+                              choice.host === null ? "Use this machine's git login." : choice.host
+                            }
+                            selected={
+                              !isMixed("gitAccountId") && uniform("gitAccountId") === choice.id
+                            }
+                            separated={index > 0}
+                            disabled={disabledFor("gitAccountId")}
+                            onPress={() => write({ gitAccountId: choice.id })}
+                          />
+                        ))}
+                        <SettingsSwitchRow
+                          icon="doc.text"
+                          label="Write to repo git config"
+                          subtitle="Also set user.name and user.email in the repo. Turning it off restores the previous values."
+                          value={uniform("gitAccountWritesRepoConfig")}
+                          disabled={disabledFor("gitAccountWritesRepoConfig")}
+                          onValueChange={(value) => write({ gitAccountWritesRepoConfig: value })}
+                        />
+                      </SettingsSection>
+                      {selectedTargets.length === 1 ? (
+                        <GitAccountsSection
+                          key={reference.environment.environmentId}
+                          settings={reference.environment.serverConfig.settings}
+                          disabled={disabled || accountManagers.size === 0}
+                          onChange={writeAccounts}
+                        />
+                      ) : (
+                        <SettingsSection
+                          title="Git accounts"
+                          footer="Accounts are saved on one environment. Select an environment to add or remove accounts, then return to your project to choose its account."
+                        >
+                          {selectedTargets.map((environment) => (
+                            <SettingsRow
+                              key={environment.environmentId}
+                              icon="plus"
+                              label={`Manage accounts on ${environment.label}`}
+                              disabled={pendingWrites > 0}
+                              onPress={() => {
+                                selectEnvironment(environment.environmentId);
+                                selectProject(null);
+                              }}
+                            />
+                          ))}
+                        </SettingsSection>
+                      )}
+                    </>
+                  ) : (
+                    <SettingsSection title="Git accounts">
+                      <Text className="px-4 py-3 text-sm text-foreground-muted">
+                        Git accounts require a server build from the getBoolean/t3code fork. Install
+                        a build with Git accounts support on{" "}
+                        {targets
+                          .filter(
+                            (target) =>
+                              target.environment.serverConfig.environment.capabilities
+                                .gitAccounts !== true,
+                          )
+                          .map((target) => target.environment.label)
+                          .join(", ")}{" "}
+                        to manage accounts and write account details to repo git config. Updating
+                        the iOS app alone does not update the connected server.
+                      </Text>
+                    </SettingsSection>
+                  )}
                   <SettingsSection title="Default branch">
                     <SettingsSwitchRow
                       icon="arrow.down.circle"

@@ -239,6 +239,7 @@ export const make = Effect.gen(function* () {
       threadAutoSettlementScope: true,
       threadRestartContinuation: true,
       projectSettingsOverrides: true,
+      gitAccounts: true,
       projectProviderInstanceOverrides: true,
       threadSnooze: true,
       threadForceStop: true,

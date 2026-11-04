@@ -144,6 +144,7 @@ export function useSettingsEnvironmentFilter() {
       selectProject,
       getSelectedProjectKey,
       selectAll: () => setSelectedIds(null),
+      selectEnvironment: (environmentId: EnvironmentId) => setSelectedIds(new Set([environmentId])),
       toggleEnvironment: (environmentId: EnvironmentId) =>
         setSelectedIds((current) =>
           toggleSettingsEnvironment(current, availableTargets, environmentId),

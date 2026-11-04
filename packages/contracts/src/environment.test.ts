@@ -14,6 +14,17 @@ const descriptor = {
 } as const;
 
 describe("ExecutionEnvironmentDescriptor", () => {
+  it("preserves Git accounts support without assuming older servers support it", () => {
+    expect(decodeDescriptor(descriptor).capabilities.gitAccounts).toBeUndefined();
+    for (const gitAccounts of [false, true]) {
+      expect(
+        decodeDescriptor({
+          ...descriptor,
+          capabilities: { ...descriptor.capabilities, gitAccounts },
+        }).capabilities.gitAccounts,
+      ).toBe(gitAccounts);
+    }
+  });
   it("decodes old, recognized and future manual installation descriptors", () => {
     expect(decodeDescriptor(descriptor).capabilities.serverInstallation).toBeUndefined();
     for (const installation of [{ kind: "npx" }, { kind: "npm-global", prefix: "/opt/node" }]) {
