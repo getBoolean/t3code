@@ -105,7 +105,10 @@ vi.mock("@react-navigation/native", () => ({
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
-vi.mock("../../native/NativeScrollViewMarker", () => ({ NativeScrollView: () => null }));
+vi.mock("../../native/NativeScrollViewMarker", () => ({
+  NativeScrollView: () => null,
+  renderNativeScrollView: () => null,
+}));
 vi.mock("../../native/StackHeader", () => ({ NativeStackScreenOptions: () => null }));
 vi.mock("../../components/ui/Toolbar", () => {
   const Slot = (props: { readonly children?: ReactNode }) => <div>{props.children}</div>;
@@ -125,7 +128,8 @@ vi.mock("../../components/ui/Toolbar", () => {
     }),
   };
 });
-vi.mock("../../components/ui/AndroidScreenHeader", () => ({ AndroidScreenHeader: () => null }));
+vi.mock("../../components/ui/AppBar", () => ({ AppBar: () => null }));
+vi.mock("../../components/ui/AndroidScreenHeader", () => ({ AndroidHeaderIconButton: () => null }));
 vi.mock("../../components/ui/Menu", () => ({ Menu: () => null }));
 vi.mock("../../components/ui/AppSymbol", () => ({ SymbolView: () => null }));
 vi.mock("../../components/ui/Progress", () => ({ Progress: () => null }));
