@@ -111,6 +111,10 @@ each marked `Fork:`. Keep them all when merging upstream:
   ExpoModulesCore from source crashes Xcode 27's Swift 6.4 compiler on a cast pattern inside a
   consuming `switch`. The hunk drops the cast; `reject` takes `any Error` either way. When upstream
   bumps expo-modules-core, carry the hunk to the new patch file if the cast is still there.
+- `pinnedToTop` in `apps/mobile/modules/t3-review-diff/ios/T3ReviewDiffView.swift`. On iOS 17 the
+  native code view (file viewer, review diff) could keep the offset of an earlier, smaller top inset,
+  so a file opened with its first lines under the header. Until the view is scrolled it now stays at
+  the top. iOS 18 and later skip it.
 - `patches/expo-modules-autolinking@58.0.13.patch`. Building Expo's modules from source makes the
   app's `[Expo] Configure project` phase scan their Swift sources, and autolinking gives that scan
   5 seconds. On a busy CI runner it times out and the Release build fails. The patch allows 60.
