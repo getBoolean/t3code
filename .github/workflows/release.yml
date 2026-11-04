@@ -652,7 +652,7 @@ jobs:
       clerk_cli_oauth_client_id: ${{ needs.relay_public_config.outputs.clerk_cli_oauth_client_id }}
       relay_url: ${{ needs.relay_public_config.outputs.relay_url }}
       label: macOS x64
-      runner: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+      runner: ${{ vars.T3CODE_MACOS_INTEL_RUNNER || vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
       platform: mac
       target: dmg
       arch: x64
