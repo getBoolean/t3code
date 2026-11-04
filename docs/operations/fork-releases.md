@@ -30,6 +30,21 @@ One variable covers every size of its platform, so jobs sized for 32 vCPU on Bla
 standard runner and take longer. CI's Test Web job does not fit its 10-minute limit on a 4 vCPU
 runner; set `T3CODE_TEST_WEB_TIMEOUT_MINUTES` (for example `20`) to raise it.
 
+`macos-26` is a 3-core M1 with 7 GB of RAM, and that pool often never assigns a job. GitHub's
+larger labels (`macos-26-xlarge`, `macos-26-large`) are a separate pool, but they exist only for
+organizations on Team or Enterprise Cloud. This fork is a personal account, so those labels would
+queue forever. It runs macOS jobs on a self-hosted runner on the Mac mini instead, labeled
+`t3code-mac`:
+
+```bash
+gh variable set T3CODE_MACOS_RUNNER --repo getBoolean/t3code --body t3code-mac
+```
+
+That machine keeps the unsigned IPA's DerivedData in `~/Library/Caches/t3code/ios-derived`, so a
+later nightly compiles only what changed. Delete that directory to force a clean build. The runner
+needs Xcode 26.6 (`DEVELOPER_DIR`) and Homebrew on `PATH`; the GitHub Actions service does not
+load a login shell.
+
 ## Releases
 
 Set `T3CODE_RELEASES` to `true`. The release workflow then builds nightlies on its schedule and

@@ -61,6 +61,7 @@ jobs:
       T3CODE_RELAY_URL: ${{ inputs.relay_url || (vars.RELAY_DOMAIN && format('https://{0}', vars.RELAY_DOMAIN)) || '' }}
       EXPO_NO_GIT_STATUS: "1"
       CI: "1"
+      COCOAPODS_DISABLE_STATS: "1"
     defaults:
       run:
         working-directory: apps/mobile
@@ -97,16 +98,35 @@ jobs:
           (cd ios && pod install)
 
       - name: Build the unsigned app
+        env:
+          RUNNER_KIND: ${{ runner.environment }}
         run: |
           set -o pipefail
+          # GitHub's macos-26 image is a 3-core M1 with 7 GB. Building React Native
+          # from source there spends most of its time swapping and writing dSYMs.
+          # A self-hosted Mac keeps DerivedData, so the next nightly compiles only
+          # what changed. Hosted runners are wiped after the job, so they stay cold.
+          if [ "$RUNNER_KIND" = "self-hosted" ]; then
+            derived="${HOME}/Library/Caches/t3code/ios-derived"
+            mkdir -p "$derived"
+          else
+            derived="build"
+          fi
           workspace=$(ls -d ios/*.xcworkspace)
           scheme=$(basename "$workspace" .xcworkspace)
           xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release \
-            -destination 'generic/platform=iOS' -derivedDataPath build \
+            -destination 'generic/platform=iOS' -derivedDataPath "$derived" \
+            -parallelizeTargets -jobs "$(sysctl -n hw.ncpu)" \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
+            COMPILER_INDEX_STORE_ENABLE=NO DEBUG_INFORMATION_FORMAT=dwarf \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -100
-          app=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          app=$(find "$derived/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' | head -1)
           [ -n "$app" ] || { echo "::error::xcodebuild produced no .app"; exit 1; }
-          echo "APP_PATH=$PWD/$app" >> "$GITHUB_ENV"
+          case "$app" in
+            /*) ;;
+            *) app="$PWD/$app" ;;
+          esac
+          echo "APP_PATH=$app" >> "$GITHUB_ENV"
 
       - name: Check the app runs on iOS 17
         run: ../../.github/scripts/check-ios17-libcxx-imports.sh "$APP_PATH"
