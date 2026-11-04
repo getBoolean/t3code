@@ -26,6 +26,7 @@ apps/mobile/src/features/threads/useGitAccountGuard.ts
 # Fork CI and releases
 .github/workflows/release.yml	vars.T3CODE_RELEASES
 .github/workflows/release.yml	vars.T3CODE_MOBILE_RELEASE
+.github/workflows/ci.yml	vars.T3CODE_MACOS_CI
 .github/workflows/release-mobile-ios.yml
 packages/shared/src/cliRelease.ts	T3CODE_RELEASE_REPOSITORY
 scripts/lib/public-config.ts	T3CODE_RELEASE_REPOSITORY
