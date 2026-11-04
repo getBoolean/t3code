@@ -39,7 +39,11 @@ This fork uses GitHub-hosted runners. Set `T3CODE_MACOS_INTEL_RUNNER` for the x6
 and `T3CODE_IOS_RUNNER` for the unsigned IPA to use the Intel pool when ARM capacity is constrained.
 Each falls back to `T3CODE_MACOS_RUNNER` when unset; the arm64 desktop build keeps that variable.
 The IPA cross-compiles for arm64 on either host. Its build skips index stores and dSYM bundles,
-and reports elapsed build time in the job log. Hosted runners start with fresh DerivedData.
+and reports elapsed build time in the job log. Hosted runners start with fresh DerivedData,
+but restore Xcode's content-addressed compilation cache for the same Xcode build, host architecture,
+and dependency inputs. A native change can still reuse unchanged dependency compilations. Cold
+builds populate the cache; only a measured warm job can establish the end-to-end build time.
+The `mobile-ios-build-log` artifact includes compilation-cache diagnostics and Xcode task timings.
 
 ## Releases
 
