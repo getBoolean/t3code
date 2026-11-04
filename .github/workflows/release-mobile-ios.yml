@@ -75,14 +75,10 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
 
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-ci-deps
         with:
-          node-version-file: package.json
-          cache: true
-          run-install: |
-            args:
-              - --filter=@t3tools/mobile...
+          install-args: --filter=@t3tools/mobile...
 
       # iOS accepts only up to three dot-separated integers, so drop any prerelease suffix.
       - name: Resolve the app version
