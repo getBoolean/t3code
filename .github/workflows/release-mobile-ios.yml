@@ -40,7 +40,8 @@ on:
 jobs:
   ipa:
     name: iOS unsigned IPA
-    if: vars.T3CODE_MOBILE_RELEASE == 'true'
+    # A PR check only runs while macOS CI is on (T3CODE_MACOS_CI); releases always build.
+    if: vars.T3CODE_MOBILE_RELEASE == 'true' && (github.event_name != 'pull_request' || vars.T3CODE_MACOS_CI != 'false')
     # One build per PR or branch. A new PR push cancels the stale build so it frees a scarce macOS
     # runner; a release build waits instead of being cancelled.
     concurrency:

@@ -156,4 +156,4 @@ or native Sign in with Apple.
   because iOS rejects prerelease suffixes.
 - The build runs the iOS 17 libc++ check above before packaging and fails on missing symbols.
 
-A pull request that edits `release-mobile-ios.yml` builds the IPA as a check without publishing it.
+A pull request that edits `release-mobile-ios.yml` builds the IPA as a check without publishing it, unless macOS CI is off (`T3CODE_MACOS_CI=false`). Release builds always run.
