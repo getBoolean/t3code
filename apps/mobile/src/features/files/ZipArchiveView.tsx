@@ -28,7 +28,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Progress } from "../../components/ui/Progress";
 import { Toolbar } from "../../components/ui/Toolbar";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
-import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
 import { NativeStackScreenOptions } from "../../native/StackHeader";
 import * as Dialog from "../../components/ui/Dialog";
 import { FilePreviewModal } from "../../components/FilePreviewModal";
@@ -428,7 +428,7 @@ function ZipArchiveList(props: {
   return (
     <View className="flex-1 bg-sheet">
       <LegendList
-        renderScrollComponent={Platform.OS === "ios" ? NativeScrollView : undefined}
+        renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
         contentInsetStartAdjustment={props.headerInset}
         className="flex-1"
         data={rows}

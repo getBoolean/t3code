@@ -22,7 +22,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReduceMotionEnabled } from "../../lib/appState";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
-import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { SymbolView } from "../../components/ui/AppSymbol";
@@ -339,7 +339,7 @@ function ReviewFileNavigator({ files, sectionId, onSelectFile, ref }: ReviewFile
       />
       <ScreenContent insetHorizontal>
         <FlatList
-          renderScrollComponent={Platform.OS === "ios" ? NativeScrollView : undefined}
+          renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
           data={files}
           extraData={selectedFileId}
           keyExtractor={(file) => file.id}

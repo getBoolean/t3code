@@ -139,7 +139,10 @@ vi.mock("react-native", () => ({
   ),
 }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0 }) }));
-vi.mock("../../native/NativeScrollViewMarker", () => ({ NativeScrollView: Nothing }));
+vi.mock("../../native/NativeScrollViewMarker", () => ({
+  NativeScrollView: Nothing,
+  renderNativeScrollView: Nothing,
+}));
 vi.mock("../../native/native-layout-metrics", () => ({ useNativeColumnLayoutMetrics: () => null }));
 vi.mock("@legendapp/list/react-native", () => ({
   LegendList: <T,>(props: {

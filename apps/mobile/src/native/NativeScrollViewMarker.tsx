@@ -48,3 +48,11 @@ export function NativeScrollView(props: ComponentProps<typeof ScrollView>) {
     scrollView
   );
 }
+
+/**
+ * For `renderScrollComponent`. VirtualizedList calls that prop as a function, and the React
+ * Compiler's cache hook throws when a compiled component is called that way.
+ */
+export function renderNativeScrollView(props: ComponentProps<typeof ScrollView>) {
+  return <NativeScrollView {...props} />;
+}

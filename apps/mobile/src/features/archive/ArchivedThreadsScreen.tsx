@@ -1,4 +1,4 @@
-import { NativeScrollView } from "../../native/NativeScrollViewMarker";
+import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
 import { Button } from "../../components/ui/Button";
 import type {
   EnvironmentProject,
@@ -418,7 +418,7 @@ export function ArchivedThreadsScreen(props: {
       <SettingsScreenContent>
         <GestureDetector gesture={archiveScrollGesture}>
           <LegendList
-            renderScrollComponent={Platform.OS === "ios" ? NativeScrollView : undefined}
+            renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
             className="flex-1"
             contentContainerStyle={{
               paddingBottom: 32,
