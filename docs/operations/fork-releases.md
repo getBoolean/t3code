@@ -104,8 +104,9 @@ each marked `Fork:`. Keep them all when merging upstream:
   exports them only from libc++abi, so dyld binds them to its missing-symbol abort and folly crashes
   the first time it creates an exception through `make_exception_ptr_with`. Built from source at 17.0,
   the linker binds them to libc++abi. The prebuilt React core links that framework, so both build
-  from source, and so do Expo's modules. That makes builds slower: a Release build takes 11.5
-  instead of 8.2 minutes on an M1, and about 45 instead of 28 minutes on GitHub's `macos-26` runner.
+  from source, and so do Expo's modules. That makes builds slower: a Release simulator build takes
+  11.5 to 13 minutes instead of 8.2 on an M1 (13 with Xcode 26.6), and about 45 instead of 28
+  minutes on GitHub's `macos-26` runner.
   Drop it once React Native's prebuilt dependencies pass the libc++ check below.
 - The `AsyncFunctionDefinition.swift` hunk in `patches/expo-modules-core@58.0.22.patch`. Building
   ExpoModulesCore from source crashes Xcode 27's Swift 6.4 compiler on a cast pattern inside a
@@ -115,6 +116,10 @@ each marked `Fork:`. Keep them all when merging upstream:
   native code view (file viewer, review diff) could keep the offset of an earlier, smaller top inset,
   so a file opened with its first lines under the header. Until the view is scrolled it now stays at
   the top. iOS 18 and later skip it.
+- `contentInsetAdjustmentBehavior` in `apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx`.
+  On iPads without liquid glass (iOS 17 and 18) the sidebar's thread list turned automatic insets
+  off, so its first rows sat under the header and couldn't be tapped. This is an upstream bug that
+  also affects iOS 18; drop the override once upstream fixes it.
 - `patches/expo-modules-autolinking@58.0.13.patch`. Building Expo's modules from source makes the
   app's `[Expo] Configure project` phase scan their Swift sources, and autolinking gives that scan
   5 seconds. On a busy CI runner it times out and the Release build fails. The patch allows 60.
@@ -127,6 +132,11 @@ Lazy binds fail too: they don't stop launch, but they abort on first call. The c
 as described above. To regenerate its export list from an installed iOS 17.0 simulator runtime, run
 `xcrun dyld_info -exports` on that runtime's `usr/lib/libc++.1.dylib` and `libc++abi.dylib`.
 Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
+While `T3CODE_MACOS_CI` and `T3CODE_IOS17_CHECK` are `false`, pull request CI builds no iOS app at
+all, so check iOS changes on a Mac with Xcode 26.6 (the version the release build uses): build the
+Release simulator app, run both libc++ checks, and run the `native-surfaces-open` walk from
+[`scripts/mobile-behavior`](../../scripts/mobile-behavior/README.md) on iOS 17.0 iPhone and iPad
+simulators.
 Features that need iOS 26 or later, such as liquid glass, voice transcription and the native iPad
 workspace columns, stay hidden on iOS 17.
 
