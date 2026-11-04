@@ -3,7 +3,7 @@ import {
   NAVIGATION_TAB_ICONS,
   useEnabledNavigationTabs,
 } from "./navigation-tabs";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { use, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { View, useWindowDimensions, type NativeSyntheticEvent } from "react-native";
 import { Tabs, type TabSelectedEvent, type TabSelectionRejectedEvent } from "react-native-screens";
 
@@ -27,6 +27,7 @@ import { useControlTheme } from "../../components/ui/useControlTheme";
 import { useDeviceType } from "../../native/native-layout-metrics";
 import { WorkspaceSidebarTabs } from "./WorkspaceSidebarTabs";
 import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
+import { WorkspaceSidebarFooterContext } from "../layout/workspace-sidebar-footer";
 import { useSelectWorkspaceTab } from "./useSelectWorkspaceTab";
 
 const PULL_REQUEST_ICON = require("../../../assets/icons/pull-request.png");
@@ -101,6 +102,46 @@ export function WorkspaceNativeTabs(props: {
     selectedScreenKey: selectedSlot === -1 ? "settings" : NATIVE_WORKSPACE_TAB_SLOTS[selectedSlot]!,
     baseProvenance: provenance,
   };
+  // Fork: before iOS 26 this navigator sits beside a JS sidebar, so left: 0 here is past the
+  // sidebar's edge, over the thread composer. Draw the bar at the sidebar's foot instead.
+  const sidebarFooter = use(WorkspaceSidebarFooterContext);
+  const showSidebarTabs =
+    (deviceType === "pad" ||
+      compactTabs ||
+      (layout.variant === "medium" &&
+        !workspaceUsesColumns(selectedTab, workspace.settingsOpen))) &&
+    !props.hidden &&
+    !props.tabsInSidebarColumn &&
+    !hiddenWithSidebar;
+  const sidebarTabs = showSidebarTabs ? (
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: "absolute",
+        left: 0,
+        bottom: 0,
+        // UIKit can shrink the sidebar to 280pt independently of its preferred width.
+        // In the sidebar slot the bar spans the column instead of that capped overlay.
+        width:
+          deviceType === "pad" && (floatingTabs || layout.usesSplitView) && !sidebarFooter
+            ? Math.min(280, layout.listPaneWidth ?? width, width)
+            : (layout.listPaneWidth ?? width),
+        height: 128,
+      }}
+    >
+      <WorkspaceSidebarTabsFooter />
+    </View>
+  ) : null;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- projects the tab bar into the sidebar column's slot, which renders outside this tree
+  useEffect(() => {
+    sidebarFooter?.set(
+      sidebarTabs ? (
+        <WorkspaceTabsContext value={workspace}>{sidebarTabs}</WorkspaceTabsContext>
+      ) : null,
+    );
+  });
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- clears the sidebar slot when this navigator unmounts or the sidebar column goes away
+  useEffect(() => () => sidebarFooter?.set(null), [sidebarFooter]);
   return (
     <View style={{ flex: 1 }}>
       <Tabs.Host
@@ -157,30 +198,7 @@ export function WorkspaceNativeTabs(props: {
           );
         })}
       </Tabs.Host>
-      {(deviceType === "pad" ||
-        compactTabs ||
-        (layout.variant === "medium" &&
-          !workspaceUsesColumns(selectedTab, workspace.settingsOpen))) &&
-      !props.hidden &&
-      !props.tabsInSidebarColumn &&
-      !hiddenWithSidebar ? (
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: "absolute",
-            left: 0,
-            bottom: 0,
-            // UIKit can shrink the sidebar to 280pt independently of its preferred width.
-            width:
-              deviceType === "pad" && (floatingTabs || layout.usesSplitView)
-                ? Math.min(280, layout.listPaneWidth ?? width, width)
-                : (layout.listPaneWidth ?? width),
-            height: 128,
-          }}
-        >
-          <WorkspaceSidebarTabsFooter />
-        </View>
-      ) : null}
+      {sidebarFooter ? null : sidebarTabs}
     </View>
   );
 }

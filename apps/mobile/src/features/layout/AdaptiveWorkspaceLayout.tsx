@@ -7,6 +7,11 @@ import { useSoftKeyboardShowing } from "../keyboard/useSoftKeyboardShowing";
 import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdaptiveWorkspaceContext, useAdaptiveWorkspaceLayout } from "./adaptive-workspace-context";
 import { threadSelectionDeferral } from "./deferred-navigation";
+import {
+  WorkspaceSidebarFooterContext,
+  WorkspaceSidebarFooterHost,
+  useSidebarFooterSlot,
+} from "./workspace-sidebar-footer";
 import { uuidv4 } from "../../lib/uuid";
 import { useToolbarLayout } from "../../components/ui/useToolbarLayout";
 import { EnvironmentId, ThreadId, type SidebarProjectGroupingMode } from "@t3tools/contracts";
@@ -253,6 +258,7 @@ function AdaptiveWorkspaceLayoutContent(
   );
   const [primarySidebarSearchQuery, setPrimarySidebarSearchQuery] = useState("");
   const [railOverlay, setRailOverlay] = useState(false);
+  const sidebarFooter = useSidebarFooterSlot();
   // The compiler can't memoize these derivations: they stay live across later hook calls. Fresh
   // objects here change the workspace context on every render, so every workspace screen
   // re-renders on any layout state change, and the inspector registration then loops: each
@@ -363,6 +369,9 @@ function AdaptiveWorkspaceLayoutContent(
   const width = viewportWidth - (sidebarFloats ? 0 : navigationRailWidth);
   // The sidebar stays mounted under a workspace page, so its list is ready on the way back.
   const shouldRenderPrimarySidebar = layout.usesSplitView;
+  // Fork: hosts the workspace tab bar at the sidebar's foot before iOS 26 (see workspace-sidebar-footer).
+  const rendersSidebarFooter =
+    Platform.OS === "ios" && shouldRenderPrimarySidebar && layout.listPaneWidth !== null;
   const fileInspector = useMemo(
     () =>
       deriveFileInspectorPaneLayout({
@@ -1097,6 +1106,7 @@ function AdaptiveWorkspaceLayoutContent(
               />
             ) : null}
           </Animated.View>
+          {rendersSidebarFooter ? <WorkspaceSidebarFooterHost slot={sidebarFooter} /> : null}
         </Animated.View>
       ) : null}
       <Animated.View
@@ -1151,9 +1161,13 @@ function AdaptiveWorkspaceLayoutContent(
                 }
               >
                 <View className="flex-1">
-                  <PaneContext value="content">
-                    <SettingsWorkspaceLayout>{children}</SettingsWorkspaceLayout>
-                  </PaneContext>
+                  <WorkspaceSidebarFooterContext
+                    value={rendersSidebarFooter ? sidebarFooter : null}
+                  >
+                    <PaneContext value="content">
+                      <SettingsWorkspaceLayout>{children}</SettingsWorkspaceLayout>
+                    </PaneContext>
+                  </WorkspaceSidebarFooterContext>
                 </View>
               </SafeAreaInsetsContext>
               {floatingTabsEnabled &&
