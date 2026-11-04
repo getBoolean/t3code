@@ -6,6 +6,11 @@ import { useAndroidFloatingTabs } from "../settings/appearance/AppearancePrefere
 import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdaptiveWorkspaceContext, useAdaptiveWorkspaceLayout } from "./adaptive-workspace-context";
 import { threadSelectionDeferral } from "./deferred-navigation";
+import {
+  WorkspaceSidebarFooterContext,
+  WorkspaceSidebarFooterHost,
+  useSidebarFooterSlot,
+} from "./workspace-sidebar-footer";
 import { uuidv4 } from "../../lib/uuid";
 import type {
   EnvironmentProject,
@@ -249,6 +254,7 @@ function AdaptiveWorkspaceLayoutContent(
   );
   const [primarySidebarSearchQuery, setPrimarySidebarSearchQuery] = useState("");
   const [railOverlay, setRailOverlay] = useState(false);
+  const sidebarFooter = useSidebarFooterSlot();
   const [focusedAuxiliaryPaneRole, setFocusedAuxiliaryPaneRole] =
     useState<WorkspaceAuxiliaryPaneRole | null>(null);
   // The compiler can't memoize these derivations: they stay live across later hook calls. Fresh
@@ -343,6 +349,9 @@ function AdaptiveWorkspaceLayoutContent(
   const width = viewportWidth - navigationRailWidth;
   // The sidebar stays mounted under a workspace page, so its list is ready on the way back.
   const shouldRenderPrimarySidebar = layout.usesSplitView;
+  // Fork: hosts the workspace tab bar at the sidebar's foot before iOS 26 (see workspace-sidebar-footer).
+  const rendersSidebarFooter =
+    Platform.OS === "ios" && shouldRenderPrimarySidebar && layout.listPaneWidth !== null;
   const fileInspector = useMemo(
     () =>
       deriveFileInspectorPaneLayout({
@@ -965,6 +974,7 @@ function AdaptiveWorkspaceLayoutContent(
               />
             ) : null}
           </Animated.View>
+          {rendersSidebarFooter ? <WorkspaceSidebarFooterHost slot={sidebarFooter} /> : null}
         </Animated.View>
       ) : null}
       <View
@@ -1014,7 +1024,11 @@ function AdaptiveWorkspaceLayoutContent(
                 }
               >
                 <View className="flex-1">
-                  <SettingsWorkspaceLayout>{children}</SettingsWorkspaceLayout>
+                  <WorkspaceSidebarFooterContext
+                    value={rendersSidebarFooter ? sidebarFooter : null}
+                  >
+                    <SettingsWorkspaceLayout>{children}</SettingsWorkspaceLayout>
+                  </WorkspaceSidebarFooterContext>
                 </View>
               </SafeAreaInsetsContext>
               {floatingTabsEnabled &&
