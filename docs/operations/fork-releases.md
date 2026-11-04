@@ -4,6 +4,16 @@ A fork can run CI, publish its own desktop and CLI releases, and have installs u
 Everything is driven by repository variables (**Settings → Secrets and variables → Actions →
 Variables**). With none set, the workflows behave exactly as they do upstream.
 
+## Fork manifest
+
+`.github/fork-manifest.txt` lists the fork's own work that an upstream merge must keep. Each entry is a file, plus a string the file must still contain where that's useful. `scripts/check-fork-manifest.sh` checks the list, and the fork-only `fork-manifest.yml` workflow runs it on every pull request and push to `main`. It fails in three cases:
+
+- a listed file disappeared;
+- a file lost its string;
+- a code comment starting with `Fork:` sits in a file the manifest doesn't list.
+
+When you add a fork override, mark it with a `Fork:` comment and add its file to the manifest. Upstream syncs read the manifest as the list of what to keep.
+
 ## Runners
 
 Upstream runs on Blacksmith. A fork without Blacksmith sets these to GitHub-hosted labels, which
@@ -42,11 +52,12 @@ releases of the fork. Release builds take the fork's repository from `GITHUB_REP
 Upstream-only publishers are skipped on a fork: AUR, the marketing site, and Discord. These run
 only when the fork opts in:
 
-| Variable             | Turns on                                                                                                                                                                  |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `T3CODE_NPM_PUBLISH` | Publishing the `t3` npm package. A fork can't publish that name, so most leave it unset; servers then check GitHub releases.                                              |
-| `T3CODE_WEB_DEPLOY`  | Building and deploying the hosted web app to Vercel (`VERCEL_*` secrets).                                                                                                 |
-| `T3CODE_RELEASE_APP` | The stable-release version bump pushed to `main` by a GitHub App (`RELEASE_APP_ID`, `RELEASE_APP_PRIVATE_KEY`). Without it, bump versions by hand after a stable release. |
+| Variable                | Turns on                                                                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `T3CODE_NPM_PUBLISH`    | Publishing the `t3` npm package. A fork can't publish that name, so most leave it unset; servers then check GitHub releases.                                              |
+| `T3CODE_WEB_DEPLOY`     | Building and deploying the hosted web app to Vercel (`VERCEL_*` secrets).                                                                                                 |
+| `T3CODE_RELEASE_APP`    | The stable-release version bump pushed to `main` by a GitHub App (`RELEASE_APP_ID`, `RELEASE_APP_PRIVATE_KEY`). Without it, bump versions by hand after a stable release. |
+| `T3CODE_MOBILE_RELEASE` | An unsigned iOS IPA on every release (see [iOS sideload build](#ios-sideload-build)). A failed build blocks the release.                                                  |
 
 Builds are unsigned unless the signing secrets in [release](./release.md) are set. Unsigned
 Windows and Linux builds install and update; macOS needs signing and notarization before it can
@@ -87,11 +98,62 @@ each marked `Fork:`. Keep them all when merging upstream:
   calls then link `std::exception_ptr::__from_native_exception_pointer`, which only iOS 18 exports,
   and dyld kills the app at launch on iOS 17. The patch mirrors upstream nitro#1824. Drop it once a
   stable Nitro release includes that fix.
+- `buildReactNativeFromSource` in `apps/mobile/app.config.ts`. React Native's prebuilt
+  `ReactNativeDependencies.framework` was linked with the iOS 18.5 SDK and binds folly's
+  `__cxa_increment_exception_refcount` and `__cxa_decrement_exception_refcount` to libc++. iOS 17.0
+  exports them only from libc++abi, so dyld binds them to its missing-symbol abort and folly crashes
+  the first time it creates an exception through `make_exception_ptr_with`. Built from source at 17.0,
+  the linker binds them to libc++abi. The prebuilt React core links that framework, so both build
+  from source, and so do Expo's modules. That makes builds slower: a Release simulator build takes
+  11.5 to 13 minutes instead of 8.2 on an M1 (13 with Xcode 26.6), and about 45 instead of 28
+  minutes on GitHub's `macos-26` runner.
+  Drop it once React Native's prebuilt dependencies pass the libc++ check below.
+- The `AsyncFunctionDefinition.swift` hunk in `patches/expo-modules-core@58.0.22.patch`. Building
+  ExpoModulesCore from source crashes Xcode 27's Swift 6.4 compiler on a cast pattern inside a
+  consuming `switch`. The hunk drops the cast; `reject` takes `any Error` either way. When upstream
+  bumps expo-modules-core, carry the hunk to the new patch file if the cast is still there.
+- `pinnedToTop` in `apps/mobile/modules/t3-review-diff/ios/T3ReviewDiffView.swift`. On iOS 17 the
+  native code view (file viewer, review diff) could keep the offset of an earlier, smaller top inset,
+  so a file opened with its first lines under the header. Until the view is scrolled it now stays at
+  the top. iOS 18 and later skip it.
+- `contentInsetAdjustmentBehavior` in `apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx`.
+  On iPads without liquid glass (iOS 17 and 18) the sidebar's thread list turned automatic insets
+  off, so its first rows sat under the header and couldn't be tapped. This is an upstream bug that
+  also affects iOS 18; drop the override once upstream fixes it.
+- `patches/expo-modules-autolinking@58.0.13.patch`. Building Expo's modules from source makes the
+  app's `[Expo] Configure project` phase scan their Swift sources, and autolinking gives that scan
+  5 seconds. On a busy CI runner it times out and the Release build fails. The patch allows 60.
 
 Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
 iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs. It then
-runs `.github/scripts/check-ios17-libcxx-imports.sh`, which fails when the app imports a libc++ symbol
-that iOS 17.0 doesn't export. The compiler misses those, as described above.
+runs `.github/scripts/check-ios17-libcxx-imports.sh`, which fails when any Mach-O file in the app
+imports a symbol that the library it is bound to (libc++ or libc++abi) doesn't export on iOS 17.0.
+Lazy binds fail too: they don't stop launch, but they abort on first call. The compiler misses these,
+as described above. To regenerate its export list from an installed iOS 17.0 simulator runtime, run
+`xcrun dyld_info -exports` on that runtime's `usr/lib/libc++.1.dylib` and `libc++abi.dylib`.
 Dispatch it with `simulator` checked to also launch a Release build on an iOS 17 simulator.
+While `T3CODE_MACOS_CI` and `T3CODE_IOS17_CHECK` are `false`, pull request CI builds no iOS app at
+all, so check iOS changes on a Mac with Xcode 26.6 (the version the release build uses): build the
+Release simulator app, run both libc++ checks, and run the `native-surfaces-open` walk from
+[`scripts/mobile-behavior`](../../scripts/mobile-behavior/README.md) on iOS 17.0 iPhone and iPad
+simulators.
 Features that need iOS 26 or later, such as liquid glass, voice transcription and the native iPad
 workspace columns, stay hidden on iOS 17.
+
+## iOS sideload build
+
+With `T3CODE_MOBILE_RELEASE` set to `true`, `release.yml` runs `release-mobile-ios.yml` and attaches
+`T3-Code-<version>-ios-unsigned.ipa`. The fork has no Apple signing in CI, so the IPA is unsigned
+and users re-sign it with their own Apple ID (AltStore, SideStore, Sideloadly). That makes it the
+Personal Team build (`T3CODE_IOS_PERSONAL_TEAM=1`): no push notifications, widgets, share extension,
+or native Sign in with Apple.
+
+- The bundle ID is `T3CODE_IOS_SIDELOAD_BUNDLE_ID`, or `io.github.<owner>.t3code` when that is unset.
+  Sideloading tools may change it again.
+- Expo over-the-air updates are off (`T3CODE_MOBILE_UPDATES_ENABLED=0`), so upstream's update channel
+  can't replace the fork's JavaScript. New versions come from new releases.
+- The app version is the release version's numeric part (`0.1.7` for `0.1.7-nightly.20261103.1`),
+  because iOS rejects prerelease suffixes.
+- The build runs the iOS 17 libc++ check above before packaging and fails on missing symbols.
+
+A pull request that edits `release-mobile-ios.yml` builds the IPA as a check without publishing it, unless macOS CI is off (`T3CODE_MACOS_CI=false`). Release builds always run.

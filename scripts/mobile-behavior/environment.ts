@@ -393,6 +393,8 @@ export const startEnvironment = Effect.fn("environment.start")(function* (input:
     shell,
     release: (key: string) =>
       Effect.sync(() => NodeFS.writeFileSync(NodePath.join(control, `release-${key}`), "")),
+    /** The project's git checkout on this machine. */
+    workspace,
     pairingUrl: () =>
       runCli([
         "auth",

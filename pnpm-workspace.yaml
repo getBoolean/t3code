@@ -269,6 +269,7 @@ overrides:
   "@expo/fingerprint": 0.21.5
   app-builder-lib: 26.16.1
   expo-modules-core: 58.0.22
+  expo-modules-autolinking: 58.0.13
   # Keep jsdom's optional peer consistent so Vite+ has one test-runner instance.
   "@exodus/bytes>@noble/hashes": "1.8.0"
   # Earlier React Navigation declarations create a circular type alias in TypeScript 7.
@@ -403,6 +404,8 @@ patchedDependencies:
   # Android: a Compose host that requests layout in a mount (a new screen's app bar) is laid out
   # before that frame is drawn, instead of a frame later.
   expo-modules-core@58.0.22: patches/expo-modules-core@58.0.22.patch
+  # Fork: the from-source iOS build (iOS 17) runs Expo's module scan, which times out on CI.
+  expo-modules-autolinking@58.0.13: patches/expo-modules-autolinking@58.0.13.patch
   # Android: Maven-resolved gradle plugins (expo-widgets) have no sourceDir; without this
   # skip, the fingerprint silently drops every Expo native module and OTAs reach stale binaries.
   "@expo/fingerprint@0.21.5": patches/@expo__fingerprint@0.21.5.patch

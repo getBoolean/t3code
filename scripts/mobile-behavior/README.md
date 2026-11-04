@@ -18,6 +18,20 @@ Output lands in `artifacts/mobile-behavior/<run>/`: `summary.md` is the scoreboa
 
 A case fails when half or more of its graded samples fail, and is `incomplete` when errors outnumber graded samples. The run fails on a `guard` or `control` case that fails or is incomplete. `bad` cases reproduce known bugs and fail until those are fixed.
 
+## Native walk
+
+The `native-surfaces-open` case runs [`native-walk.ts`](native-walk.ts): it opens every screen that mounts a native module or native view (settings pages, SwiftUI pickers and charts, the QR camera, menus, the composer, git sheets, the review diff, the terminal, the source viewer), one deep link at a time from Home. A step fails when its route never opens, a redbox or crash text is on screen, the probe caught an uncaught error or unhandled rejection, or the app stops answering. `console.error` calls are counted but don't fail it. Screenshots and a per-step `report.json` land in `native-walk/`.
+
+Run it on the oldest iOS the app supports to catch APIs the deployment target lacks. It works on a local simulator without Simlock: open it with `device_open`, install the dev client with `vp run mobile:install ios <udid>`, then pass what `device_open` returned:
+
+```sh
+node scripts/mobile-behavior/run.ts --out <dir> --device <udid> --host 127.0.0.1 \
+  --agent-device <command> --device-config <config> --device-session <session> \
+  --case native-surfaces-open --samples 1 --forget-other-environments
+```
+
+Use `--pose ipad` on an iPad. Not covered: the browser and device previews (they close without a preview session, which the fake provider doesn't start), photo and file pickers, and dictation.
+
 ## Metrics
 
 - **Scroll.** The probe reads the thread list's state on every JS frame and records each visible row's y on screen. `backwardPx` is the largest move against the drag. `teleports` counts one-frame moves over 400 pt, faster than a real fling. `maxFromEndPx` is the distance from the latest message.

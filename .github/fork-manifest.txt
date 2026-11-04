@@ -1,0 +1,52 @@
+# Fork-owned work that an upstream merge must keep. scripts/check-fork-manifest.sh checks it.
+# One entry per line: a repo path, then optionally a TAB and text that file must still contain.
+# A directory path must exist. Every code comment that starts with "Fork:" must sit in a listed
+# file, so add new fork overrides here. See docs/operations/fork-releases.md.
+
+# Per-project git accounts
+apps/server/src/gitAccounts/GitAccounts.ts
+apps/server/src/gitAccounts/launchIdentity.ts
+apps/server/src/gitAccounts/terminalShims.ts
+apps/server/src/gitAccounts/GitAccountSwitch.ts
+apps/server/src/orchestration-v2/ProviderSessionManager.ts	GitAccounts
+apps/server/src/orchestration-v2/ProviderTurnStartService.ts	ProviderSessionAccountChangedError
+apps/server/src/git/GitManager.ts	GitAccounts
+apps/server/src/terminal/Manager.ts	gitAccountShimsDir
+apps/server/src/pullRequest/PullRequestService.ts	GitAccounts
+apps/server/src/mcp/toolkits/project/tools.ts	t3_project_git_account
+packages/contracts/src/gitAccountId.ts
+packages/client-runtime/src/gitAccounts.ts
+apps/web/src/components/settings/GitAccountsSettings.tsx
+apps/web/src/components/chat/useGitAccountGuard.ts
+apps/web/src/components/chat/GitAccountBypassBadge.tsx
+apps/mobile/src/features/settings/components/GitAccountsSection.tsx
+apps/mobile/src/features/threads/useGitAccountGuard.ts
+.github/workflows/git-account-tests.yml
+
+# Fork CI and releases
+.github/workflows/release.yml	vars.T3CODE_RELEASES
+.github/workflows/release.yml	vars.T3CODE_MOBILE_RELEASE
+.github/workflows/ci.yml	vars.T3CODE_MACOS_CI
+.github/workflows/release-mobile-ios.yml
+packages/shared/src/cliRelease.ts	T3CODE_RELEASE_REPOSITORY
+scripts/lib/public-config.ts	T3CODE_RELEASE_REPOSITORY
+apps/server/src/cloud/npmRelease.ts	GitHubReleases
+docs/operations/fork-releases.md
+.github/workflows/fork-manifest.yml
+scripts/check-fork-manifest.sh
+
+# iOS 17.0 support
+apps/mobile/app.config.ts	deploymentTarget: "17.0"
+apps/mobile/app.config.ts	buildReactNativeFromSource: true
+apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec	:ios => '17.0'
+apps/mobile/modules/t3-review-diff/ios/T3ReviewDiffView.swift	pinnedToTop
+apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx	contentInsetAdjustmentBehavior="automatic"
+apps/mobile/src/features/agent-awareness/registrationPayload.ts	HOSTED_RELAY_MIN_IOS_MAJOR
+patches/react-native-nitro-modules@0.37.1.patch
+patches/expo-modules-core@58.0.22.patch	case .failure(let error):
+patches/expo-modules-autolinking@58.0.13.patch	timeout: 60000
+pnpm-workspace.yaml	expo-modules-autolinking@58.0.13: patches/expo-modules-autolinking@58.0.13.patch
+pnpm-workspace.yaml	react-native-nitro-modules@0.37.1
+.github/workflows/mobile-ios17-compile.yml
+.github/scripts/check-ios17-libcxx-imports.sh
+.github/scripts/ios17-libcxx-exports.txt

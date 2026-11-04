@@ -184,35 +184,48 @@ const command = Command.make(
     // agent-device answers iOS's "Open in" prompt; the flags keep dev-menu chrome off the app.
     const metroUrl = new URL(metro);
     const launchUrl = `${SCHEME}://expo-development-client/?url=${encodeURIComponent(metro)}&disableOnboarding=1&__expo_disable_fab=1&__expo_disable_auto_launch=1`;
-    yield* device
-      .run(
-        [
-          "open",
-          APP_ID,
-          "--relaunch",
-          "--metro-host",
-          metroUrl.hostname,
-          "--metro-port",
-          metroUrl.port,
-          "--launch-url",
-          launchUrl,
-        ],
-        240_000,
-      )
-      .pipe(Effect.retry({ times: 2 }));
-    for (let attempt = 0; ; attempt++) {
-      const loaded = yield* device
-        .evaluate("typeof __t3Behavior")
-        .pipe(Effect.orElseSucceed(() => ""));
-      if (loaded === "object") break;
-      // iOS asks before a URL opens another app; busy hosts can miss the first accept.
-      if (attempt % 5 === 0) yield* device.acceptOpenPrompt.pipe(Effect.ignore);
-      if (attempt > 120)
-        return yield* new DeviceError({
-          message:
-            "The probe never loaded. Is this a dev client built from this checkout's native fingerprint?",
-        });
-      yield* Effect.sleep("2 seconds");
+    const metroArgs = ["--metro-host", metroUrl.hostname, "--metro-port", metroUrl.port];
+    const launched = yield* device
+      .run(["open", APP_ID, "--relaunch", ...metroArgs, "--launch-url", launchUrl], 240_000)
+      .pipe(
+        Effect.as(true),
+        // `simctl openurl` waits on iOS's "Open in" prompt; waitForProbe answers it.
+        Effect.catchIf(
+          (error) => /did not answer|"Open in" prompt/.test(error.message),
+          () => Effect.succeed(false),
+        ),
+        Effect.retry({ times: 2 }),
+      );
+    const waitForProbe = Effect.gen(function* () {
+      for (let attempt = 0; ; attempt++) {
+        const loaded = yield* device
+          .evaluate("typeof __t3Behavior")
+          .pipe(Effect.orElseSucceed(() => ""));
+        if (loaded === "object") return;
+        // iOS asks before a URL opens another app; busy hosts can miss the first accept.
+        if (attempt % 5 === 0) yield* device.acceptOpenPrompt.pipe(Effect.ignore);
+        if (attempt > 120)
+          return yield* new DeviceError({
+            message:
+              "The probe never loaded. Is this a dev client built from this checkout's native fingerprint?",
+          });
+        yield* Effect.sleep("2 seconds");
+      }
+    });
+    yield* waitForProbe;
+    if (!launched) {
+      // A launch that stalled on the prompt never started agent-device's app session. Opening the
+      // app again starts it and may reload the bundle, so wait for a runtime without this mark.
+      yield* device.evaluate("globalThis.__t3LaunchMark = true").pipe(Effect.ignore);
+      yield* device.run(["open", APP_ID, ...metroArgs], 240_000).pipe(Effect.retry({ times: 2 }));
+      for (let attempt = 0; attempt < 15; attempt++) {
+        const marked = yield* device
+          .evaluate("globalThis.__t3LaunchMark === true")
+          .pipe(Effect.orElseSucceed(() => false));
+        if (marked !== true) break;
+        yield* Effect.sleep("2 seconds");
+      }
+      yield* waitForProbe;
     }
     if (flags.pose === "duo-closed" || flags.pose === "duo-open")
       yield* device.fold(flags.pose === "duo-closed" ? "closed" : "open");
@@ -241,6 +254,7 @@ const command = Command.make(
       device,
       pose: flags.pose,
       fixtures: { longThread },
+      out,
     };
     const scenarios = [...new Set(selected.map((testCase) => testCase.scenario))];
     const rows: SampleRow[] = [];

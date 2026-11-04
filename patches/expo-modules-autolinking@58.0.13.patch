@@ -1,0 +1,13 @@
+diff --git a/build/platforms/apple/moduleScanner.js b/build/platforms/apple/moduleScanner.js
+--- a/build/platforms/apple/moduleScanner.js
++++ b/build/platforms/apple/moduleScanner.js
+@@ -137,7 +137,8 @@
+     let output;
+     try {
+         output = await scanner.scanModules(roots, {
+-            timeout: 5000
++            // Fork: 5 s is too short on a busy CI runner building React Native from source.
++            timeout: 60000
+         });
+     } catch (error) {
+         console.warn(`warning: Scanning for Expo modules failed, only modules declared in expo-module.config.json will be linked: ${error.message ?? error}`);

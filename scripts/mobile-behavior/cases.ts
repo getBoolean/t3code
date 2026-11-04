@@ -4,11 +4,12 @@
  * `control` is ordinary use that must keep passing. Each names the scenario that produces its metrics and the checks on them.
  */
 import type { Check } from "./grade.ts";
+import { NATIVE_WALK_STEPS } from "./native-walk.ts";
 import type { Pose, ScenarioName } from "./scenarios.ts";
 
 export interface MobileBehaviorCase {
   readonly id: string;
-  readonly area: "scroll" | "jank" | "composer" | "status" | "wrong-thread";
+  readonly area: "scroll" | "jank" | "composer" | "status" | "wrong-thread" | "native";
   readonly kind: "bad" | "guard" | "control";
   /** The issue or PR it came from. */
   readonly source: string;
@@ -334,5 +335,22 @@ export const CASES: ReadonlyArray<MobileBehaviorCase> = [
     scenario: "streamInView",
     key: "contentGrewPx",
     checks: [{ metric: "contentGrewPx", min: 500 }],
+  },
+  {
+    id: "native-surfaces-open",
+    area: "native",
+    kind: "guard",
+    source: "getBoolean/t3code#6",
+    experience:
+      "A screen with native code fails to open, shows a redbox, throws, or takes the app down, often on an older iOS than the one it was built for.",
+    scenario: "nativeWalk",
+    key: "failedSteps",
+    checks: [
+      { metric: "visited", equals: NATIVE_WALK_STEPS.length },
+      { metric: "crashedAt", equals: null },
+      { metric: "failedSteps", equals: 0 },
+      { metric: "uncaught", equals: 0 },
+      { metric: "rejections", equals: 0 },
+    ],
   },
 ];

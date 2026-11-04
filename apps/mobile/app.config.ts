@@ -433,6 +433,8 @@ const config: ExpoConfig = {
         ios: {
           // Fork: supports iOS 17 (upstream requires 18.0).
           deploymentTarget: "17.0",
+          // Fork: RN's prebuilt folly binds C++ ABI symbols to libc++ that iOS 17.0 only has in libc++abi.
+          buildReactNativeFromSource: true,
           // AppCheckCore 11.3+ includes Swift and needs module maps for these Objective-C dependencies.
           extraPods: [
             { name: "GoogleUtilities", modular_headers: true },
