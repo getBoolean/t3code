@@ -273,6 +273,55 @@ function visibleFeed(feeds: ReadonlyArray<Feed>) {
 
 installCommitHook();
 
+interface CapturedError {
+  readonly kind: "uncaught" | "fatal" | "rejection" | "console";
+  readonly message: string;
+}
+
+// Errors since the last `errors()` call; capped so a crash loop can't grow it without bound.
+let capturedErrors: CapturedError[] = [];
+
+function captureError(kind: CapturedError["kind"], parts: ReadonlyArray<unknown>) {
+  if (capturedErrors.length >= 200) return;
+  const message = parts
+    .map((part) => (part instanceof Error ? `${part.name}: ${part.message}` : String(part)))
+    .join(" ")
+    .slice(0, 500);
+  capturedErrors.push({ kind, message });
+}
+
+function installErrorCapture() {
+  // Uncaught errors and unhandled promise rejections both end in ExceptionsManager.handleException,
+  // which reads its own property at call time, so wrapping it catches both.
+  const { default: exceptions } = require("react-native/Libraries/Core/ExceptionsManager") as {
+    default: { handleException: (error: unknown, isFatal: boolean) => void };
+  };
+  const handleException = exceptions.handleException;
+  let handling = false;
+  exceptions.handleException = (error, isFatal) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const kind = isFatal
+      ? "fatal"
+      : message.startsWith("Uncaught (in promise")
+        ? "rejection"
+        : "uncaught";
+    captureError(kind, [error]);
+    handling = true;
+    try {
+      handleException(error, isFatal);
+    } finally {
+      handling = false;
+    }
+  };
+  const consoleError = console.error.bind(console);
+  console.error = (...args: unknown[]) => {
+    if (!handling) captureError("console", args);
+    consoleError(...args);
+  };
+}
+
+installErrorCapture();
+
 Object.assign(globalThis, {
   __t3Behavior: {
     open(url: string) {
@@ -287,6 +336,31 @@ Object.assign(globalThis, {
       return true;
     },
     state: () => JSON.stringify(snapshot()),
+    /** Returns the errors captured since the last call, and clears them. */
+    errors() {
+      const drained = capturedErrors;
+      capturedErrors = [];
+      return JSON.stringify(drained);
+    },
+    /** Navigates the way the app's own taps do, for screens whose params a URL can't carry. */
+    navigate(name: string, params: Record<string, unknown>) {
+      const { rootNavigationRef } =
+        require("../../lib/rootNavigation") as typeof import("../../lib/rootNavigation");
+      const { CommonActions } =
+        require("@react-navigation/native") as typeof import("@react-navigation/native");
+      rootNavigationRef.dispatch(CommonActions.navigate({ name, params }));
+      return true;
+    },
+    /** Closes every pushed screen and sheet, back to the root route. */
+    popToTop() {
+      const { rootNavigationRef } =
+        require("../../lib/rootNavigation") as typeof import("../../lib/rootNavigation");
+      const { StackActions } =
+        require("@react-navigation/native") as typeof import("@react-navigation/native");
+      if (rootNavigationRef.isReady() && rootNavigationRef.canGoBack())
+        rootNavigationRef.dispatch(StackActions.popToTop());
+      return true;
+    },
     /** Removes these saved environments (and their cached threads) through the app's own command. */
     async forgetEnvironments(ids: ReadonlyArray<string>) {
       const { runAtomCommand } = require("@t3tools/client-runtime/state/runtime") as {

@@ -18,6 +18,7 @@ import {
 } from "./device.ts";
 import { uuid, type EvalEnvironment } from "./environment.ts";
 import { feedMotion, frameStats, type Metrics } from "./grade.ts";
+import { nativeWalk } from "./native-walk.ts";
 
 export type Pose = "phone" | "duo-closed" | "duo-open" | "ipad";
 
@@ -26,6 +27,8 @@ export interface ScenarioContext {
   readonly device: Device;
   readonly pose: Pose;
   readonly fixtures: { readonly longThread: ThreadId };
+  /** The run's output directory, for scenarios that save screenshots or reports. */
+  readonly out: string;
 }
 
 // Child thread ids carry `:`, so each segment is encoded.
@@ -541,6 +544,9 @@ export const SCENARIOS = {
         title.x + title.width <= screen.x + screen.width,
     } satisfies Metrics;
   }, failure),
+
+  /** Opens every screen with native code and records crashes, JS errors and screens that failed to open. */
+  nativeWalk: Effect.fn("scenario.nativeWalk")(nativeWalk, failure),
 } satisfies Record<string, Scenario>;
 
 export type ScenarioName = keyof typeof SCENARIOS;
