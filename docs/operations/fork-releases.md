@@ -120,6 +120,13 @@ each marked `Fork:`. Keep them all when merging upstream:
   On iPads without liquid glass (iOS 17 and 18) the sidebar's thread list turned automatic insets
   off, so its first rows sat under the header and couldn't be tapped. This is an upstream bug that
   also affects iOS 18; drop the override once upstream fixes it.
+- `apps/mobile/src/features/layout/workspace-sidebar-footer.tsx`, used by `AdaptiveWorkspaceLayout.tsx`
+  and `WorkspaceNativeTabs.ios.tsx`. On iPads without liquid glass (iOS 17 and 18) the workspace is
+  a JS sidebar column beside the navigator, and the navigator drew the workspace tab bar at its own
+  left edge, one sidebar-width to the right, over the left part of the thread composer. The navigator
+  now projects the bar into a slot at the foot of the sidebar column. iOS 26 lays the workspace out
+  in native columns, provides no slot and is unchanged. This is an upstream bug that also affects
+  iOS 18; drop the slot once upstream fixes it.
 - `patches/expo-modules-autolinking@58.0.13.patch`. Building Expo's modules from source makes the
   app's `[Expo] Configure project` phase scan their Swift sources, and autolinking gives that scan
   5 seconds. On a busy CI runner it times out and the Release build fails. The patch allows 60.
