@@ -19,13 +19,15 @@ export interface NativeWalkStep {
   readonly path?: string;
   /** Params for an in-app navigation to `route` instead, merged with the seeded thread's ids. */
   readonly params?: Record<string, unknown>;
-  /** The route that must open. */
-  readonly route: string;
+  /** The route that must open; a list when phone and iPad layouts open different ones. A trailing
+   * `*` matches any route with that prefix. */
+  readonly route: string | ReadonlyArray<string>;
   /** What native code the screen runs, for the report. */
   readonly native: string;
   /** A control to tap once the screen is up, then how to clear what it presented. */
   readonly press?: {
-    readonly label: string;
+    /** Its label; a list when phone and iPad label the control differently. */
+    readonly label: string | ReadonlyArray<string>;
     readonly afterwards?: "accept-alert" | "tap-outside";
     /** The control is only shown in some states, so a missing one is not a failure. */
     readonly optional?: boolean;
@@ -39,9 +41,15 @@ export const NATIVE_WALK_STEPS: ReadonlyArray<NativeWalkStep> = [
     id: "compose",
     route: "Home",
     native: "native tab bar, compose button",
-    press: { label: "New chat", expect: "navigates" },
+    press: { label: ["New chat", "New thread"], expect: "navigates" },
   },
-  { id: "settings", path: "settings", route: "Settings", native: "settings list, SF Symbols" },
+  {
+    id: "settings",
+    path: "settings",
+    // The iPad split view reopens the Settings page last shown.
+    route: "Settings*",
+    native: "settings list, SF Symbols",
+  },
   {
     id: "appearance",
     path: "settings/appearance",
@@ -243,29 +251,36 @@ const runStep = Effect.fn("nativeWalk.step")(function* (
   directory: string,
 ) {
   const thread = `threads/${encodeURIComponent(ctx.env.environmentId)}/${encodeURIComponent(ctx.fixtures.longThread)}`;
+  const routes = typeof step.route === "string" ? [step.route] : step.route;
+  const matches = (name: string | null | undefined) =>
+    name != null &&
+    routes.some((route) =>
+      route.endsWith("*") ? name.startsWith(route.slice(0, -1)) : name === route,
+    );
   yield* ctx.device.evaluate("__t3Behavior.popToTop()");
   yield* Effect.sleep("1 second");
   yield* drainErrors(ctx);
   if (step.path !== undefined) yield* ctx.device.open(step.path.replace("{thread}", thread));
   else if (step.params !== undefined)
     yield* ctx.device.evaluate(
-      `__t3Behavior.navigate(${JSON.stringify(step.route)}, ${JSON.stringify({
+      `__t3Behavior.navigate(${JSON.stringify(routes[0])}, ${JSON.stringify({
         environmentId: ctx.env.environmentId,
         threadId: ctx.fixtures.longThread,
         ...step.params,
       })})`,
     );
   const reached = yield* ctx.device
-    .waitFor(`route ${step.route}`, (state) => state.route?.name === step.route, 30_000)
+    .waitFor(`route ${routes.join(" or ")}`, (state) => matches(state.route?.name), 30_000)
     .pipe(Effect.option);
   // Native views mount after the route commits.
   yield* Effect.sleep("2 seconds");
   let note: string | undefined;
   if (reached._tag === "Some" && step.press) {
     // A control's label repeats on its containers, so tap the smallest node that carries it.
-    const label = step.press.label;
+    const labels = typeof step.press.label === "string" ? [step.press.label] : step.press.label;
+    const label = labels.join(" or ");
     const target = (yield* ctx.device.nodes.pipe(Effect.orElseSucceed(() => [])))
-      .filter((node) => node.label === label && node.rect && node.rect.width > 0)
+      .filter((node) => labels.includes(node.label ?? "") && node.rect && node.rect.width > 0)
       .sort((a, b) => a.rect!.width * a.rect!.height - b.rect!.width * b.rect!.height)[0];
     const tapped = target
       ? yield* ctx.device
@@ -277,7 +292,7 @@ const runStep = Effect.fn("nativeWalk.step")(function* (
     const expected = step.press.expect;
     if (tapped?._tag === "Success" && expected === "navigates") {
       const moved = yield* ctx.device
-        .waitFor("a new route", (state) => state.route?.name !== step.route, 15_000)
+        .waitFor("a new route", (state) => !matches(state.route?.name), 15_000)
         .pipe(Effect.option);
       if (moved._tag === "None") note = `"${label}" did not open a screen`;
     }
@@ -290,8 +305,14 @@ const runStep = Effect.fn("nativeWalk.step")(function* (
     yield* Effect.sleep("2 seconds");
     if (step.press.afterwards === "accept-alert")
       yield* ctx.device.run(["alert", "accept"], 15_000).pipe(Effect.ignore);
-    if (step.press.afterwards === "tap-outside")
-      yield* ctx.device.pressAt(8, 120).pipe(Effect.ignore);
+    if (step.press.afterwards === "tap-outside") {
+      // Mid-screen content, clear of headers, the iPad sidebar, and the composer.
+      const screen = (yield* ctx.device.nodes.pipe(Effect.orElseSucceed(() => [])))[0]?.rect;
+      const { width, height } = screen ?? { width: 390, height: 844 };
+      yield* ctx.device
+        .pressAt(Math.round(width * 0.6), Math.round(height * 0.3))
+        .pipe(Effect.ignore);
+    }
     yield* Effect.sleep("1 second");
   }
   const screenshot = NodePath.join(
