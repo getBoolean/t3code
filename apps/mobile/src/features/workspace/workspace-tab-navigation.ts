@@ -3,7 +3,8 @@ import {
   SETTINGS_PAGE_TARGETS,
   type SettingsPageTarget,
 } from "../settings/components/settings-page-targets";
-import { settingsNavigationState } from "../settings/settings-navigation";
+import { settingsNavigationState, settingsOpenIn } from "../settings/settings-navigation";
+import { workspaceRoutesOf } from "../layout/workspace-overlay-routes";
 import type { WorkspaceTab } from "./workspace-tabs-state";
 
 type RouteLike = {
@@ -11,6 +12,17 @@ type RouteLike = {
   readonly key?: string;
   readonly params?: object | undefined;
 };
+
+export function workspaceSidebarDestination(routes: readonly RouteLike[]) {
+  const { workspace } = workspaceRoutesOf(routes);
+  if (settingsOpenIn(workspace)) return "settings";
+  const destination = workspace.findLast((route) =>
+    ["Thread", "PullRequests", "PullRequest", "SettingsUsage"].includes(route.name),
+  )?.name;
+  if (destination === "PullRequests" || destination === "PullRequest") return "pullRequests";
+  if (destination === "SettingsUsage") return "usage";
+  return null;
+}
 type ThreadSelection = NonNullable<WorkspaceSelections["threads"]>;
 type PullRequestSelection = NonNullable<WorkspaceSelections["pullRequests"]>;
 
@@ -202,13 +214,17 @@ export function workspaceTabNavigationState<
   selections: WorkspaceSelections,
   options: {
     readonly columns: boolean;
+    readonly sidebarNavigation?: boolean;
     readonly check: WorkspaceSelectionCheck;
     readonly overlays?: readonly RouteLike[];
   },
 ) {
   const overlays = options.overlays ?? [];
   if (tab === "settings") {
-    const page = options.columns ? rememberedSettingsPage(selections) : undefined;
+    const page =
+      options.columns && !options.sidebarNavigation
+        ? rememberedSettingsPage(selections)
+        : undefined;
     const settings = settingsNavigationState(
       state,
       page,
@@ -219,6 +235,12 @@ export function workspaceTabNavigationState<
     return { ...settings, index: routes.length - 1, routes };
   }
   const home = state.routes.find((route) => route.name === "Home") ?? { name: "Home" };
+  if (options.sidebarNavigation && tab !== "threads") {
+    const name = tab === "pullRequests" ? "PullRequests" : "SettingsUsage";
+    const page = state.routes.find((route) => route.name === name) ?? { name };
+    const routes = [keyed(home), keyed(page), ...overlays];
+    return { ...state, index: routes.length - 1, routes };
+  }
   const detail =
     options.columns && tab !== "usage"
       ? detailRoute(state, tab, selections, options.check)

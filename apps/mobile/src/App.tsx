@@ -4,7 +4,7 @@ import { installThreadOutboxDelivery } from "./state/threadOutboxDelivery";
 import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { StatusBar } from "react-native";
+import { Platform, StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -113,7 +113,8 @@ function getAppStateFromPath(path: string, options: Parameters<typeof getStateFr
   return pipe(
     getStateFromPath(path, options),
     (state) => restoreDraftLinkState(state, path),
-    (state) => restoreSettingsLinkState(state, settingsLinkPage()),
+    (state) =>
+      restoreSettingsLinkState(state, settingsLinkPage(), Platform.OS === "ios" && Platform.isPad),
     takeThreadPromptLink,
     takeNewTaskPromptLink,
     withoutPairingTarget,

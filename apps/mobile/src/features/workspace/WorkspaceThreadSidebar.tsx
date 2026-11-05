@@ -1,3 +1,6 @@
+import { IpadSidebarActions } from "./IpadSidebarActions";
+import { useDeviceType } from "../../native/native-layout-metrics";
+import { Platform } from "react-native";
 import type {
   EnvironmentProject,
   EnvironmentThreadShell,
@@ -13,6 +16,7 @@ import { openSettings } from "../settings/settings-navigation";
 import { ThreadNavigationSidebar } from "../threads/ThreadNavigationSidebar";
 import { useOpenThreadPullRequests } from "../threads/use-open-thread-pull-requests";
 import { useSelectWorkspaceDetail } from "./useSelectWorkspaceDetail";
+import { workspaceSidebarDestination } from "./workspace-tab-navigation";
 
 type Route = { readonly name: string; readonly params?: object };
 
@@ -42,6 +46,10 @@ function selectedThreadKey(state: { readonly index: number; readonly routes: rea
 /** The thread list in the workspace's sidebar column. */
 export function WorkspaceThreadSidebar() {
   const navigation = useNavigation();
+  const deviceType = useDeviceType();
+  const selectedDestination = useNavigationState((state) => {
+    return workspaceSidebarDestination(state.routes.slice(0, state.index + 1));
+  });
   const {
     layout,
     panes,
@@ -58,6 +66,14 @@ export function WorkspaceThreadSidebar() {
   const { openPendingTask } = usePendingTaskListActions(selectThreadRoute);
   return (
     <ThreadNavigationSidebar
+      footer={
+        Platform.OS === "ios" && deviceType === "pad" ? (
+          <IpadSidebarActions
+            onSelect={openWorkspaceTab}
+            selectedDestination={selectedDestination}
+          />
+        ) : undefined
+      }
       width={layout.listPaneWidth ?? 0}
       visible={panes.primarySidebarVisible}
       onRequestVisibility={revealPrimarySidebar}

@@ -8,6 +8,7 @@ import {
   markdownForNativeRendering,
   markdownWithInlineFileLinks,
   markdownWithHtml,
+  markdownWithSubagentLinks,
 } from "./markdownDocument";
 
 const rewrite = (markdown: string) =>
@@ -191,3 +192,23 @@ function previousTableBreaks(markdown: string): string {
   }
   return markdown;
 }
+
+it("opens known subagent task paths as thread links without rewriting files or code", () => {
+  const environmentId = "env" as import("@t3tools/contracts").EnvironmentId;
+  const childThreadId = "child" as import("@t3tools/contracts").ThreadId;
+  const subagents = [
+    { title: "/root/mk8dx_all_files_research", childThreadId, origin: "provider_native" as const },
+  ];
+  const source =
+    "[Research](/root/mk8dx_all_files_research) and [File](/root/report.md)\n\n`[Research](/root/mk8dx_all_files_research)`";
+  expect(markdownWithSubagentLinks(source, environmentId, subagents)).toBe(
+    "[Research](t3-thread://v2/env/child) and [File](/root/report.md)\n\n`[Research](/root/mk8dx_all_files_research)`",
+  );
+  expect(markdownWithSubagentLinks(source, environmentId, [])).toBe(source);
+  expect(
+    markdownWithSubagentLinks(source, environmentId, [
+      ...subagents,
+      { ...subagents[0]!, childThreadId: "other" as typeof childThreadId },
+    ]),
+  ).toBe(source);
+});

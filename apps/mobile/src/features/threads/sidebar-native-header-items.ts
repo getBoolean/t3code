@@ -34,7 +34,7 @@ function toNativeHeaderMenuItems(items: HomeListFilterMenu["items"]): NativeHead
 export function createSidebarHeaderItems(input: {
   readonly filterIcon: string;
   readonly filterMenu: HomeListFilterMenu;
-  readonly onOpenSettings: () => void;
+  readonly onOpenSettings?: () => void;
 }): NativeStackHeaderItem[] {
   return [
     withNativeGlassHeaderItem({
@@ -48,13 +48,17 @@ export function createSidebarHeaderItems(input: {
         items: toNativeHeaderMenuItems(input.filterMenu.items),
       },
     }),
-    withNativeGlassHeaderItem({
-      type: "button",
-      axisBehavior: "horizontalOnly",
-      label: "Settings",
-      accessibilityLabel: "Open settings",
-      icon: sfSymbolIcon("gearshape"),
-      onPress: input.onOpenSettings,
-    }),
+    ...(input.onOpenSettings
+      ? [
+          withNativeGlassHeaderItem({
+            type: "button",
+            axisBehavior: "horizontalOnly",
+            label: "Settings",
+            accessibilityLabel: "Open settings",
+            icon: sfSymbolIcon("gearshape"),
+            onPress: input.onOpenSettings,
+          }),
+        ]
+      : []),
   ];
 }

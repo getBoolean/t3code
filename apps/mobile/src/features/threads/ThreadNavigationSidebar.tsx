@@ -18,7 +18,7 @@ import { AnimatedLegendList } from "@legendapp/list/reanimated";
 import { THREAD_SIDEBAR_ROW_LAYOUT } from "./threadListAnimations";
 import type { MenuAction } from "@react-native-menu/menu";
 import { useAtomValue } from "@effect/atom-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { LayoutChangeEvent, TextInputInstance } from "react-native";
 import { Platform, StyleSheet, TextInput, View } from "react-native";
 import { GestureDetector, useNativeGesture } from "react-native-gesture-handler";
@@ -113,6 +113,7 @@ interface ThreadNavigationSidebarProps {
   ) => void;
   readonly onRequestVisibility: () => void;
   readonly searchQuery: string;
+  readonly footer?: ReactNode;
 }
 
 export function ThreadNavigationSidebar(props: ThreadNavigationSidebarProps) {
@@ -411,6 +412,7 @@ function ThreadNavigationSidebarPane(
     }
   };
 
+  const [footerHeight, setFooterHeight] = useState(0);
   const [measuredHeaderHeight, setMeasuredHeaderHeight] = useState<number | null>(null);
   const stickyHeaderHeight = measuredHeaderHeight ?? insets.top + SIDEBAR_STICKY_HEADER_HEIGHT;
   const topListInset = stickyHeaderHeight + 6;
@@ -671,7 +673,7 @@ function ThreadNavigationSidebarPane(
   const nativeHeaderItems = createSidebarHeaderItems({
     filterIcon,
     filterMenu,
-    onOpenSettings: props.onOpenSettings,
+    onOpenSettings: props.footer ? undefined : props.onOpenSettings,
   });
   const listEmpty = (
     <Text
@@ -747,7 +749,9 @@ function ThreadNavigationSidebarPane(
                   styles.threadListContent,
                   Platform.OS === "android" ? { paddingHorizontal: 0 } : null,
                   {
-                    paddingBottom: Math.max(insets.bottom, 16) + 16,
+                    paddingBottom: props.footer
+                      ? footerHeight + 16
+                      : Math.max(insets.bottom, 16) + 16,
                     paddingTop: 6,
                   },
                 ]}
@@ -762,6 +766,18 @@ function ThreadNavigationSidebarPane(
               />
             </GestureDetector>
           </SwipeableScrollGateProvider>
+          {props.footer ? (
+            <View
+              pointerEvents="box-none"
+              className="absolute inset-x-0 bottom-0"
+              onLayout={(event) => {
+                const height = event.nativeEvent.layout.height;
+                setFooterHeight((current) => (current === height ? current : height));
+              }}
+            >
+              {props.footer}
+            </View>
+          ) : null}
           <ThreadUndoNotice visible={props.visible} />
         </View>
       </>
@@ -868,7 +884,7 @@ function ThreadNavigationSidebarPane(
               <Menu actions={listMenuActions} onPressAction={handleListMenuAction}>
                 <SidebarFilterButton accessibilityLabel="Filter threads" icon={filterIcon} />
               </Menu>
-              <SidebarHeaderActions onOpenSettings={props.onOpenSettings} />
+              {props.footer ? null : <SidebarHeaderActions onOpenSettings={props.onOpenSettings} />}
             </View>
           </View>
 

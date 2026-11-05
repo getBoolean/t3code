@@ -746,6 +746,9 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
   const recede = shouldRecedeThreadRow({ status, selected });
   const isRegeneratingTitle = thread.titleRegeneration != null;
   const rowAccessibilityLabel = `${thread.title}${props.hasQueuedMessages ? ", messages queued to send" : ""}${isRegeneratingTitle ? ", regenerating title" : ""}`;
+  const rowAccessibilityValue = [showsWoke ? "Woke" : statusLabel?.label, props.environmentLabel]
+    .filter(Boolean)
+    .join(", ");
   const timeLabel = props.timeLabel;
 
   const visitThread = useAtomCommand(threadEnvironment.visit, { reportFailure: false });
@@ -1158,7 +1161,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
               accessibilityLabel="Dismiss Woke notification"
               onPress={handleAcknowledgeWoke}
               onLongPress={() => undefined}
-              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              style={({ pressed }) => ({ minWidth: 44, minHeight: 44, opacity: pressed ? 0.6 : 1 })}
             >
               <SymbolView
                 name="bell.badge"
@@ -1285,7 +1288,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
             onPress={handleOpenPullRequests}
             // Handle long-press so opening the iOS row menu cannot also open the PR on release.
             onLongPress={() => undefined}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            style={({ pressed }) => ({ minWidth: 44, minHeight: 44, opacity: pressed ? 0.6 : 1 })}
           >
             <SymbolView
               name={
@@ -1342,12 +1345,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
     </>
   );
 
-  const fadedCardContent = recede ? (
-    <View style={{ opacity: 0.55 }}>{cardContent}</View>
-  ) : (
-    cardContent
-  );
-
   const rowContent = (close: () => void) =>
     variant === "card" ? (
       <RowPressable
@@ -1357,6 +1354,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         className={rowAppearance.className}
         accessibilityHint={swipeAccessibilityHint}
         accessibilityLabel={rowAccessibilityLabel}
+        accessibilityValue={{ text: rowAccessibilityValue }}
         accessibilityRole="button"
         accessibilityState={{ selected }}
         accessibilityActions={rowAccessibilityActions}
@@ -1371,10 +1369,10 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         style={rowAppearance.cardStyle}
       >
         {sidebarPane ? (
-          fadedCardContent
+          cardContent
         ) : (
           <View>
-            <View className={THREAD_LIST_V2_ROW_CONTENT_CLASS_NAME}>{fadedCardContent}</View>
+            <View className={THREAD_LIST_V2_ROW_CONTENT_CLASS_NAME}>{cardContent}</View>
             {THREAD_LIST_V2_ROW_DIVIDERS && props.showTrailingDivider !== false ? (
               <View className="ml-5 h-px bg-border-subtle" />
             ) : null}
@@ -1388,6 +1386,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         interactionOpacity={rowAppearance.interactionOpacity}
         accessibilityHint={swipeAccessibilityHint}
         accessibilityLabel={rowAccessibilityLabel}
+        accessibilityValue={{ text: rowAccessibilityValue }}
         accessibilityRole="button"
         accessibilityState={{ selected }}
         className={rowAppearance.className}
@@ -1486,6 +1485,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
       >
         {(close) => (
           <Menu
+            accessible={false}
             actions={[
               ...(thread.branch
                 ? [

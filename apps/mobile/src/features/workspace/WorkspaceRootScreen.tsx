@@ -1,3 +1,4 @@
+import { IpadSidebarActions } from "./IpadSidebarActions";
 import { WorkspaceNoTabs } from "./WorkspaceNoTabs";
 import { WORKSPACE_TAB_LABELS, useEnabledNavigationTabs } from "./navigation-tabs";
 import { WorkspaceExtraTab } from "./WorkspaceExtraTab";
@@ -144,6 +145,7 @@ function WorkspaceRootContent() {
                   ? TAB_TITLES[state.selectedTab]
                   : "Navigation",
               headerShown: true,
+              headerBackVisible: deviceType === "pad" ? false : undefined,
               headerTransparent: NATIVE_LIQUID_GLASS_SUPPORTED,
               headerStyle: NATIVE_LIQUID_GLASS_SUPPORTED
                 ? { backgroundColor: "transparent" }
@@ -156,7 +158,8 @@ function WorkspaceRootContent() {
               // Beside a detail column the tab bar names the tab and the detail header the page,
               // so the sidebar keeps the brand.
               headerTitle:
-                sidebarNavigation || (!settingsOpen && state.selectedTab !== "usage")
+                deviceType !== "pad" &&
+                (sidebarNavigation || (!settingsOpen && state.selectedTab !== "usage"))
                   ? renderHeaderTitle
                   : undefined,
             }}
@@ -213,6 +216,7 @@ function WorkspaceRootContent() {
         ) : (
           <WorkspaceSectionToolbar onNewTask={startNewTask} showCompose={false} />
         )}
+        {deviceType === "pad" && !layout.usesSplitView ? <IpadSidebarActions /> : null}
       </View>
     </WorkspaceTabsContext>
   );
@@ -221,6 +225,9 @@ function WorkspaceRootContent() {
 export function WorkspaceRootScreen() {
   const { layout } = useAdaptiveWorkspaceLayout();
   const workspace = useWorkspaceTabs();
+  const deviceType = useDeviceType();
+  const primaryColumn = use(NativePrimaryColumnContext);
+  if (deviceType === "pad" && primaryColumn) return <HomeRouteScreen />;
   return Platform.OS === "android" && layout.usesSplitView ? (
     <HomeRouteScreen />
   ) : workspace ? (
@@ -229,5 +236,21 @@ export function WorkspaceRootScreen() {
     <WorkspaceTabsProvider>
       <WorkspaceRootContent />
     </WorkspaceTabsProvider>
+  );
+}
+
+export function PullRequestListRouteScreen() {
+  const workspace = useWorkspaceTabs()!;
+  return (
+    <WorkspaceTabsContext
+      value={{
+        ...workspace,
+        state: { ...workspace.state, selectedTab: "pullRequests" },
+        settingsOpen: false,
+        isTabActive: (tab) => tab === "pullRequests",
+      }}
+    >
+      <WorkspaceRootContent />
+    </WorkspaceTabsContext>
   );
 }

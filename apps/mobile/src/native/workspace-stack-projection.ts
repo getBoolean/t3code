@@ -22,12 +22,13 @@ export function projectStackPresentation(
 export function projectWorkspaceStack(
   state: StackNavigationState<ParamListBase>,
   isOverlay: (route: Route) => boolean,
+  settingsAsDetail = false,
 ) {
   const { workspace: workspaceRoutes, overlays } = projectStackPresentation(state, isOverlay);
   const primary = workspaceRoutes.find((route) => route.name === "Home");
-  // The Settings tab's route only selects what Home shows; its pages are the detail.
+  // Phone tabs use Settings as a marker; sidebar navigation opens its list as a page.
   const detail = workspaceRoutes.filter(
-    (route) => route.name !== "Home" && route.name !== "Settings",
+    (route) => route.name !== "Home" && (settingsAsDetail || route.name !== "Settings"),
   );
   return { primary, detail, overlays };
 }
@@ -62,6 +63,7 @@ export function nativeStackPopAction(
   state: Pick<NavigationState, "key" | "index" | "routes">,
   dismissedKey: string,
   destinationKey?: string,
+  settingsAsDetail = false,
 ) {
   const sourceIndex = state.routes.findIndex((route) => route.key === dismissedKey);
   let destinationIndex =
@@ -69,7 +71,11 @@ export function nativeStackPopAction(
       ? sourceIndex - 1
       : state.routes.findIndex((route) => route.key === destinationKey);
   // Home's screen draws the Settings list, so going back to it from a Settings page stops there.
-  if (destinationIndex >= 0 && state.routes[destinationIndex + 1]?.name === "Settings")
+  if (
+    !settingsAsDetail &&
+    destinationIndex >= 0 &&
+    state.routes[destinationIndex + 1]?.name === "Settings"
+  )
     destinationIndex += 1;
   if (
     sourceIndex <= 0 ||
@@ -103,6 +109,7 @@ export function collapsedSplitTransition(
   event: { readonly type: "willAppear" | "didAppear" | "willDisappear"; readonly key: string },
   state: Pick<NavigationState, "key" | "index" | "routes">,
   primaryKey: string,
+  settingsAsDetail = false,
 ): {
   readonly column: CollapsedSplitColumn;
   readonly pop: ReturnType<typeof nativeStackPopAction>;
@@ -128,7 +135,7 @@ export function collapsedSplitTransition(
         column: { visible: event.key === primaryKey ? "primary" : "secondary", leaving: null },
         pop:
           event.key === primaryKey && column.leaving
-            ? nativeStackPopAction(state, column.leaving, primaryKey)
+            ? nativeStackPopAction(state, column.leaving, primaryKey, settingsAsDetail)
             : null,
       };
   }

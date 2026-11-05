@@ -12,6 +12,7 @@ export const THREAD_LIST_V2_SIDEBAR_ROW_STYLE = {
 export const THREAD_LIST_V2_SIDEBAR_ROW_CONTAINER_STYLE = {
   borderRadius: 12,
   overflow: "hidden",
+  marginVertical: 4,
 } satisfies ViewStyle;
 
 export const selectedThreadRowColors = {

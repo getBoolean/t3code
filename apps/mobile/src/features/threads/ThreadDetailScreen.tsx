@@ -1477,7 +1477,11 @@ function ThreadDetailBody(
                 keyboardOffset={composerKeyboardOffset}
                 sendingWithKeyboard={sendingWithKeyboard}
                 fitShortFeedToViewport={questionInFlow && !isKeyboardVisible}
-                contentTopInset={0}
+                contentTopInset={
+                  Platform.OS === "ios" && !props.usesAutomaticContentInsets
+                    ? navigationHeaderHeight
+                    : 0
+                }
                 contentBottomInset={
                   questionInFlow
                     ? 0

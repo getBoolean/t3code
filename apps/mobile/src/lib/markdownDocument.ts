@@ -1,3 +1,5 @@
+import type { EnvironmentId, OrchestrationV2Subagent } from "@t3tools/contracts";
+import { formatThreadLink } from "@t3tools/shared/threadLinks";
 import type { Root, RootContent } from "mdast";
 import { unified, type Processor } from "unified";
 import remarkParse from "remark-parse";
@@ -495,4 +497,49 @@ export function markdownWithFileEmbeds(
   }
   parts.push(markdown.slice(offset));
   return { markdown: parts.join(""), fileHrefs };
+}
+
+export function markdownWithSubagentLinks(
+  markdown: string,
+  environmentId: EnvironmentId,
+  subagents: ReadonlyArray<Pick<OrchestrationV2Subagent, "title" | "childThreadId" | "origin">>,
+): string {
+  if (!markdown.includes("/root/") || subagents.length === 0) return markdown;
+  const targets = new Map<string, OrchestrationV2Subagent["childThreadId"]>();
+  for (const subagent of subagents) {
+    const path = subagent.title?.replace(/^Subagent: /, "");
+    if (
+      subagent.origin !== "provider_native" ||
+      !path?.startsWith("/root/") ||
+      !subagent.childThreadId
+    )
+      continue;
+    targets.set(
+      path,
+      targets.has(path) && targets.get(path) !== subagent.childThreadId
+        ? null
+        : subagent.childThreadId,
+    );
+  }
+  const edits: MarkdownEdit[] = [];
+  const visit = (node: MarkdownNode) => {
+    if (node.type === "link") {
+      const threadId = targets.get(node.url);
+      const start = node.position?.start.offset;
+      const end = node.position?.end.offset;
+      if (threadId && start !== undefined && end !== undefined) {
+        const labelStart = node.children[0]?.position?.start.offset;
+        const labelEnd = node.children.at(-1)?.position?.end.offset;
+        const label =
+          labelStart !== undefined && labelEnd !== undefined
+            ? markdown.slice(labelStart, labelEnd)
+            : "";
+        edits.push({ start, end, content: formatThreadLink({ environmentId, threadId }, label) });
+      }
+      return;
+    }
+    if ("children" in node) node.children.forEach(visit);
+  };
+  visit(parser.parse(markdown));
+  return applyMarkdownEdits(markdown, edits);
 }

@@ -75,15 +75,17 @@ function createWorkspaceTabsModel() {
 export function WorkspaceTabsProvider(props: {
   readonly children: ReactNode;
   readonly settingsOpen?: boolean;
+  readonly selectedTab?: WorkspaceTab;
 }) {
   const registry = use(RegistryContext);
   const [model] = useState(createWorkspaceTabsModel);
   const state = useAtomValue(model.resolved);
   const context = {
-    state,
+    state: props.selectedTab ? { ...state, selectedTab: props.selectedTab } : state,
     dispatch: (action: WorkspaceTabsAction) =>
       registry.set(model.stored, workspaceTabsReducer(registry.get(model.resolved), action)),
-    isTabActive: (tab: WorkspaceTab) => registry.get(model.resolved).selectedTab === tab,
+    isTabActive: (tab: WorkspaceTab) =>
+      (props.selectedTab ?? registry.get(model.resolved).selectedTab) === tab,
     bottomClearance: 0,
     settingsOpen: props.settingsOpen ?? false,
     getScrollOffset: model.getScrollOffset,

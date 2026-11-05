@@ -244,6 +244,7 @@ function UsageScreen(props: {
   return (
     <SettingsScreen
       title="Usage"
+      options={Platform.OS === "ios" && Platform.isPad ? { headerBackVisible: false } : undefined}
       menus={showEnvironmentFilter ? [environmentMenu] : undefined}
       workspaceRoot={props.workspace}
     >

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { restoreSettingsLinkState } from "../settings/settings-navigation";
 import {
   workspaceSelectionsIn,
+  workspaceSidebarDestination,
   workspaceTabColumns,
   workspaceTabNavigationState,
 } from "./workspace-tab-navigation";
@@ -24,6 +25,26 @@ const names = (state: { routes: readonly { name: string }[] }) =>
   state.routes.map((route) => route.name);
 
 describe("workspace tab selections", () => {
+  it("highlights the open destination through drill-in pages and sheets", () => {
+    const usage = { name: "SettingsUsage" };
+    const archive = { name: "SettingsArchive" };
+    expect(workspaceSidebarDestination([home, settings, archive])).toBe("settings");
+    expect(workspaceSidebarDestination([home, settings, archive, thread])).toBeNull();
+    expect(
+      workspaceSidebarDestination([home, settings, archive, thread, { name: "ThreadFile" }]),
+    ).toBeNull();
+    expect(workspaceSidebarDestination([home, pullRequest, thread])).toBeNull();
+    expect(workspaceSidebarDestination([home, pullRequest, { name: "PullRequestFiles" }])).toBe(
+      "pullRequests",
+    );
+    expect(workspaceSidebarDestination([home, usage, { name: "SettingsUsageAccount" }])).toBe(
+      "usage",
+    );
+    expect(workspaceSidebarDestination([home, settings, usage])).toBe("settings");
+    expect(workspaceSidebarDestination([home, settings, { name: "SettingsLegal" }])).toBe(
+      "settings",
+    );
+  });
   it("remembers the chat, pull request and Settings page each tab showed", () => {
     const afterThread = workspaceSelectionsIn([home, thread], {});
     const afterPullRequest = workspaceSelectionsIn([home, pullRequest], afterThread);
@@ -101,6 +122,32 @@ describe("opening a workspace tab", () => {
       "Settings",
       "SettingsEnvironments",
     ]);
+    expect(
+      names(
+        workspaceTabNavigationState(
+          state,
+          "settings",
+          { settings: "SettingsAppearance" },
+          {
+            ...columns,
+            sidebarNavigation: true,
+          },
+        ),
+      ),
+    ).toEqual(["Home", "Settings"]);
+    for (const [tab, page] of [
+      ["pullRequests", "PullRequests"],
+      ["usage", "SettingsUsage"],
+    ] as const) {
+      expect(
+        names(
+          workspaceTabNavigationState(state, tab, selections, {
+            ...columns,
+            sidebarNavigation: true,
+          }),
+        ),
+      ).toEqual(["Home", page]);
+    }
   });
 
   it("keeps the route that is already open, so re-selecting a tab doesn't rebuild it", () => {
@@ -204,6 +251,15 @@ describe("Settings links", () => {
       undefined,
     );
     expect(names(linked!)).toEqual(["Home", "Settings", "SettingsKeyboard"]);
+    expect(
+      names(
+        restoreSettingsLinkState(
+          { routes: [{ name: "Home" }, { name: "SettingsKeyboard" }] },
+          "SettingsAppearance",
+          true,
+        )!,
+      ),
+    ).toEqual(["Home", "Settings", "SettingsKeyboard"]);
     const bare = { routes: [{ name: "Home" }, { name: "Settings" }] };
     expect(names(restoreSettingsLinkState(bare, "SettingsAppearance")!)).toEqual([
       "Home",
@@ -211,6 +267,7 @@ describe("Settings links", () => {
       "SettingsAppearance",
     ]);
     expect(restoreSettingsLinkState(bare, undefined)).toBe(bare);
+    expect(restoreSettingsLinkState(bare, "SettingsAppearance", true)).toBe(bare);
   });
 
   it("opens the sign-in link as a modal over the workspace", () => {

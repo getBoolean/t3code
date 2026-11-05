@@ -44,6 +44,7 @@ export function settingsOpenIn(workspaceRoutes: readonly { readonly name: string
 export function restoreSettingsLinkState(
   state: PartialState<NavigationState> | undefined,
   page: SettingsPageName | undefined,
+  sidebarNavigation = false,
 ) {
   if (!state) return state;
   const routes = [...state.routes];
@@ -52,7 +53,7 @@ export function restoreSettingsLinkState(
   if (first < 0) return state;
   if (list < 0) routes.splice(first, 0, { name: "Settings" });
   const top = routes.at(-1);
-  if (page && top?.name === "Settings") routes.push({ name: page });
+  if (page && top?.name === "Settings" && !sidebarNavigation) routes.push({ name: page });
   return routes.length === state.routes.length
     ? state
     : { ...state, index: routes.length - 1, routes };

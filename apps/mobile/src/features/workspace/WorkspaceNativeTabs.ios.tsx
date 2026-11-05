@@ -1,3 +1,4 @@
+import { IpadSidebarActions } from "./IpadSidebarActions";
 import {
   WORKSPACE_TAB_LABELS,
   NAVIGATION_TAB_ICONS,
@@ -93,7 +94,6 @@ export function WorkspaceNativeTabs(props: {
     layout.usesSplitView &&
     workspaceUsesColumns(workspace.state.selectedTab, workspace.settingsOpen) &&
     !panes.primarySidebarVisible;
-  const floatingTabs = useFloatingWorkspaceTabs();
   const { width } = useWindowDimensions();
   const { colors } = useControlTheme();
   const selectedTab = workspace.state.selectedTab;
@@ -110,6 +110,7 @@ export function WorkspaceNativeTabs(props: {
       compactTabs ||
       (layout.variant === "medium" &&
         !workspaceUsesColumns(selectedTab, workspace.settingsOpen))) &&
+    deviceType !== "pad" &&
     !props.hidden &&
     !props.tabsInSidebarColumn &&
     !hiddenWithSidebar;
@@ -122,10 +123,7 @@ export function WorkspaceNativeTabs(props: {
         bottom: 0,
         // UIKit can shrink the sidebar to 280pt independently of its preferred width.
         // In the sidebar slot the bar spans the column instead of that capped overlay.
-        width:
-          deviceType === "pad" && (floatingTabs || layout.usesSplitView) && !sidebarFooter
-            ? Math.min(280, layout.listPaneWidth ?? width, width)
-            : (layout.listPaneWidth ?? width),
+        width: layout.listPaneWidth ?? width,
         height: 128,
       }}
     >
@@ -142,6 +140,7 @@ export function WorkspaceNativeTabs(props: {
   });
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- clears the sidebar slot when this navigator unmounts or the sidebar column goes away
   useEffect(() => () => sidebarFooter?.set(null), [sidebarFooter]);
+  if (deviceType === "pad") return <View style={{ flex: 1 }}>{props.children}</View>;
   return (
     <View style={{ flex: 1 }}>
       <Tabs.Host
@@ -208,6 +207,8 @@ export function WorkspaceSidebarTabsFooter() {
   const workspace = useWorkspaceTabs()!;
   const { startNewTask } = useAdaptiveWorkspaceLayout();
   const compact = useFloatingWorkspaceTabs();
+  const deviceType = useDeviceType();
+  if (deviceType === "pad") return <IpadSidebarActions />;
   return (
     <WorkspaceSidebarTabs
       compact={compact}
