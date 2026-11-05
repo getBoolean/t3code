@@ -1,3 +1,4 @@
+// Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
 // @effect-diagnostics nodeBuiltinImport:off
 
 import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";

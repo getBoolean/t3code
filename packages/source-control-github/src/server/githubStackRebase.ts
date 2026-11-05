@@ -1,3 +1,4 @@
+// Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Redacted from "effect/Redacted";

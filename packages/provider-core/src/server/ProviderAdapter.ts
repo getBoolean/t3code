@@ -1,3 +1,4 @@
+// Fork: Require adapters to declare account-environment support and carry the account overlay at session launch.
 import type { OrchestrationV2HistoricalMessage } from "@t3tools/contracts";
 import {
   ChatAttachment,

@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for run each project as its own git account (#1).
 // @effect-diagnostics nodeBuiltinImport:off - realpathSync.native resolves Windows 8.3 short names, which the Effect realPath does not.
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";

@@ -1,3 +1,4 @@
+// Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";

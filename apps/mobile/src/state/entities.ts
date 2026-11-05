@@ -1,3 +1,7 @@
+// Fork: recorded subagent targets can be absent from the visible sidebar thread shells.
+import * as Option from "effect/Option";
+import { resolveThreadLinkRef } from "../lib/threadLinkNavigation";
+import { markdownWithSubagentLinks } from "../lib/markdownDocument";
 import { useAtomValue } from "@effect/atom-react";
 import { deriveReportedModelSelection } from "@t3tools/client-runtime/state/thread-execution";
 
@@ -11,17 +15,16 @@ import {
   EnvironmentId,
   ThreadId,
   type ComposerContextRecord,
+  type OrchestrationV2Subagent,
   type ScopedProjectRef,
   type ScopedThreadRef,
   type ServerConfig,
 } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
-  guessThreadLinkRef,
   hasThreadLinks,
   parseThreadLinkHref,
   relabelThreadLinks,
-  threadLinkCandidates,
   threadLinkRefs,
   type ThreadLink,
 } from "@t3tools/shared/threadLinks";
@@ -207,13 +210,42 @@ export function useSideChats(ref: ScopedThreadRef) {
   return useAtomValue(environmentThreadShells.sideChatsAtom(ref));
 }
 
-export function useLiveThreadLinkLabels(markdown: string, environmentId: EnvironmentId): string {
+const EMPTY_SUBAGENTS: ReadonlyArray<OrchestrationV2Subagent> = [];
+const EMPTY_SUBAGENTS_ATOM = Atom.make(EMPTY_SUBAGENTS);
+const threadLinkSubagentsAtom = Atom.family((key: string) => {
+  const ref = scopeThreadRef(...decodeThreadKey(JSON.parse(key)));
+  return Atom.make((get) => {
+    const projection = Option.getOrNull(get(environmentThreadDetails.stateAtom(ref)).data);
+    return projection?.subagents ?? EMPTY_SUBAGENTS;
+  });
+});
+
+export function useLiveThreadLinkLabels(
+  markdown: string,
+  environmentId: EnvironmentId,
+  parent?: ScopedThreadRef | null,
+): string {
+  const subagents = useAtomValue(
+    parent && markdown.includes("/root/")
+      ? threadLinkSubagentsAtom(threadKey(parent))
+      : EMPTY_SUBAGENTS_ATOM,
+  );
+  markdown = markdownWithSubagentLinks(markdown, environmentId, subagents);
   const titles = useAtomValue(
     hasThreadLinks(markdown)
       ? threadLinkTitlesAtom(JSON.stringify(threadLinkRefs(markdown, environmentId).map(threadKey)))
       : EMPTY_THREAD_LINK_TITLES_ATOM,
   );
-  return relabelThreadLinks(markdown, environmentId, (ref) => titles.get(threadKey(ref)));
+  return relabelThreadLinks(
+    markdown,
+    environmentId,
+    (ref) =>
+      titles.get(threadKey(ref)) ??
+      (ref.environmentId === environmentId
+        ? (subagents.find((subagent) => subagent.childThreadId === ref.threadId)?.title ??
+          undefined)
+        : undefined),
+  );
 }
 
 /** Keyed reads; every thread is read only to place a v1 link its message's environment lacks. */
@@ -221,14 +253,15 @@ export function resolveThreadLink(
   read: <A>(atom: Atom.Atom<A>) => A,
   link: ThreadLink,
   messageEnvironmentId: EnvironmentId,
+  parent?: ScopedThreadRef | null,
 ): ScopedThreadRef | null {
-  const known = threadLinkCandidates(link, messageEnvironmentId).find(
-    (ref) => read(threadTitleAtom(threadKey(ref))) !== null,
+  return resolveThreadLinkRef(
+    link,
+    messageEnvironmentId,
+    (ref) => read(threadTitleAtom(threadKey(ref))),
+    () => read(environmentThreadShells.threadRefsAtom),
+    parent ? read(threadLinkSubagentsAtom(threadKey(parent))) : EMPTY_SUBAGENTS,
   );
-  if (known) return known;
-  return link.environmentId === null
-    ? guessThreadLinkRef(link, read(environmentThreadShells.threadRefsAtom))
-    : null;
 }
 
 export function useThreadChipIcons(

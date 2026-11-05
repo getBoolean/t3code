@@ -1,3 +1,4 @@
+// Fork: Usage is an iPad sidebar destination with no landing-page Back arrow.
 import { Button } from "../../components/ui/Button";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { ChatGptUsageSummary } from "./ChatGptUsageSummary";
@@ -244,6 +245,7 @@ function UsageScreen(props: {
   return (
     <SettingsScreen
       title="Usage"
+      options={Platform.OS === "ios" && Platform.isPad ? { headerBackVisible: false } : undefined}
       menus={showEnvironmentFilter ? [environmentMenu] : undefined}
       workspaceRoot={props.workspace}
     >

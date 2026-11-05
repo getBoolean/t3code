@@ -1,3 +1,4 @@
+// Fork: legacy iPad headers need an explicit feed inset so earlier activity stays tappable.
 import { useGitAccountGuard } from "./useGitAccountGuard";
 import { ChildThreadApprovals } from "./ChildThreadApprovals";
 import { useOpenThreadInspector } from "./thread-inspector-navigation";
@@ -1276,6 +1277,7 @@ function ThreadDetailBody(
             );
           }
         : undefined;
+    // Fork: Account fallback needs the user's decision before a turn can launch under the machine identity.
     if (!(await gitAccountGuard.ensureGitAccount())) return null;
     let dismissingKeyboard = false;
     const messageId = await props.onSendMessage(followUp, declineBeforeDispatch, () => {
@@ -1477,7 +1479,11 @@ function ThreadDetailBody(
                 keyboardOffset={composerKeyboardOffset}
                 sendingWithKeyboard={sendingWithKeyboard}
                 fitShortFeedToViewport={questionInFlow && !isKeyboardVisible}
-                contentTopInset={0}
+                contentTopInset={
+                  Platform.OS === "ios" && !props.usesAutomaticContentInsets
+                    ? navigationHeaderHeight
+                    : 0
+                }
                 contentBottomInset={
                   questionInFlow
                     ? 0

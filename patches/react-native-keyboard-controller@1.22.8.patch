@@ -537,7 +537,7 @@ index ec73f70..45b3874 100644
      scroll: SharedValue<number>;
      /** Visible viewport dimensions. */
 diff --git a/src/components/KeyboardChatScrollView/index.tsx b/src/components/KeyboardChatScrollView/index.tsx
-index 935bc71..d411dc4 100644
+index 935bc71..8196283 100644
 --- a/src/components/KeyboardChatScrollView/index.tsx
 +++ b/src/components/KeyboardChatScrollView/index.tsx
 @@ -1,9 +1,13 @@
@@ -588,7 +588,16 @@ index 935bc71..d411dc4 100644
        scroll,
        layout,
        size,
-@@ -109,13 +120,40 @@ const KeyboardChatScrollView: React.ForwardRefExoticComponent<
+@@ -102,18 +113,48 @@ const KeyboardChatScrollView: React.ForwardRefExoticComponent<
+     // larger values only allow scrolling to a fully blank screen which is not
+     // the use case for this library. If you found this comment and it causes
+     // a bug for you, please open an issue.
++    // Fork: iOS thread switches must not synchronously read UI values during JS initialization.
+     const totalPadding = useDerivedValue(() =>
+-      Math.min(
++      Platform.OS === "ios" && !global._WORKLET ? 0 : Math.min(
+         layout.value.height,
+         Math.max(blankSpace.value, padding.value + extraContentPadding.value),
        ),
      );
  
@@ -602,7 +611,7 @@ index 935bc71..d411dc4 100644
 +    // the presentation height so virtualized-list layout follows the keyboard.
 +    const reportedPadding = useDerivedValue(() =>
 +      Platform.OS === "ios"
-+        ? Math.min(
++        ? !global._WORKLET ? 0 : Math.min(
 +            layout.value.height,
 +            Math.max(
 +              blankSpace.value,
@@ -610,8 +619,8 @@ index 935bc71..d411dc4 100644
 +            ),
 +          )
 +        : totalPadding.value,
-     );
- 
++    );
++
 +    // Mirror the effective bottom padding (keyboard + composer + blank floor)
 +    // to the consumer — a virtualized list needs it in its own scroll math or
 +    // its end/maintain targets point at the under-the-keyboard resting offset.
@@ -629,11 +638,22 @@ index 935bc71..d411dc4 100644
 +    // blankSpace): with a floating composer the indicator track should run the
 +    // full height of the scroll view, behind the composer, like iOS Messages.
 +    // The keyboard still lifts it so it never disappears under the keyboard.
-+    const indicatorPadding = useDerivedValue(() => padding.value);
-+
++    const indicatorPadding = useDerivedValue(() =>
++      Platform.OS === "ios" && !global._WORKLET ? 0 : padding.value,
+     );
+ 
      const onLayout = useCallback(
-       (e: LayoutChangeEvent) => {
-         onLayoutInternal(e);
+@@ -138,7 +179,9 @@ const KeyboardChatScrollView: React.ForwardRefExoticComponent<
+     // see https://github.com/software-mansion/react-native-reanimated/issues/9000
+     const commitStyle = useAnimatedStyle(
+       () => ({
+-        transform: [{ translateY: -currentHeight.value }],
++        transform: [{
++          translateY: Platform.OS === "ios" && !global._WORKLET ? 0 : -currentHeight.value,
++        }],
+       }),
+       [],
+     );
 diff --git a/src/components/KeyboardChatScrollView/types.ts b/src/components/KeyboardChatScrollView/types.ts
 index b7c98c8..e1012a8 100644
 --- a/src/components/KeyboardChatScrollView/types.ts
@@ -908,3 +928,47 @@ index 99cc6c6..d883e76 100644
    );
  }
  
+diff --git a/src/components/ScrollViewWithBottomPadding/index.tsx b/src/components/ScrollViewWithBottomPadding/index.tsx
+index 6902a73..b0f055a 100644
+--- a/src/components/ScrollViewWithBottomPadding/index.tsx
++++ b/src/components/ScrollViewWithBottomPadding/index.tsx
+@@ -84,8 +84,9 @@ const ScrollViewWithBottomPadding = forwardRef<
+     }, [contentOffsetY, contentOffset?.y]);
+ 
+     const insets = useDerivedValue(() => {
+-      const dynamicTop = inverted ? bottomPadding.value : 0;
+-      const dynamicBottom = !inverted ? bottomPadding.value : 0;
++      const initial = Platform.OS === "ios" && !global._WORKLET;
++      const dynamicTop = inverted && !initial ? bottomPadding.value : 0;
++      const dynamicBottom = !inverted && !initial ? bottomPadding.value : 0;
+ 
+       return {
+         dynamic: {
+@@ -128,6 +129,27 @@ const ScrollViewWithBottomPadding = forwardRef<
+     );
+ 
+     const animatedProps = useAnimatedProps(() => {
++      if (Platform.OS === "ios" && !global._WORKLET) {
++        return {
++          contentInset: {
++            top: contentInset?.top || 0,
++            bottom: contentInset?.bottom || 0,
++            left: contentInset?.left || 0,
++            right: contentInset?.right || 0,
++          },
++          scrollIndicatorInsets: {
++            top: scrollIndicatorInsets?.top || 0,
++            bottom: scrollIndicatorInsets?.bottom || 0,
++            left: scrollIndicatorInsets?.left,
++            right: scrollIndicatorInsets?.right,
++          },
++          contentInsetTop: 0,
++          contentInsetBottom: 0,
++          ...(contentOffsetY ? {
++            contentOffset: { x: contentOffset?.x ?? 0, y: contentOffset?.y ?? 0 },
++          } : {}),
++        };
++      }
+       const { dynamic, effective } = insets.value;
+ 
+       const indicatorPadding = scrollIndicatorPadding ?? bottomPadding;

@@ -1,3 +1,4 @@
+// Fork: Keep boot recovery links and triage commands on the built fork; avoid npx selecting upstream when the fork does not publish npm.
 import type { DesktopBridge, DesktopUpdateState } from "@t3tools/contracts";
 
 // The boot bundle can't import packages, so it reads the repository the web build injected.

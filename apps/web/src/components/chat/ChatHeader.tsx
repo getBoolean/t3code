@@ -1,3 +1,4 @@
+// Fork: Keep the bypass badge next to the thread title so the current git identity is visible.
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,

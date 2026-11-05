@@ -1,4 +1,13 @@
+// Fork: native file links must round-trip nested paths as segment arrays.
 import type { NavigationState, PartialState } from "@react-navigation/native";
+
+export function workspaceFileLinking(prefix: string) {
+  return {
+    path: `${prefix}/files/:path(.+)`,
+    parse: { path: (value: string) => value.split("/") },
+    stringify: { path: (value: string[]) => value.join("/") },
+  };
+}
 
 /**
  * The Expo dev client launches the app via

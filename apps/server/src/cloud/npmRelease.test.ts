@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for install and update from the repository that built the release.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
 import { ServerNpmReleaseError } from "@t3tools/contracts";

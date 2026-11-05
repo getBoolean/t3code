@@ -1,3 +1,4 @@
+// Fork: Guard mobile commit/push/PR entry points with the account warning before starting the mutation.
 import { useGitAccountGuard } from "../features/threads/useGitAccountGuard";
 import { useAtomMount } from "@effect/atom-react";
 

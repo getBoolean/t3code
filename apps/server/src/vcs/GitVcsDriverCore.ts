@@ -1,3 +1,4 @@
+// Fork: Pass the account environment to commits/pushes and recognize Git 2.56 invalid-gitfile diagnostics as a missing repository.
 import { isNonRepositoryGitStderr } from "./gitNonRepository.ts";
 import * as Cache from "effect/Cache";
 import * as Cause from "effect/Cause";

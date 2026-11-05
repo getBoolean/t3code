@@ -1,3 +1,4 @@
+// Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 import { requireNativeView, requireOptionalNativeModule } from "expo";
 import { createContext, use, type ComponentProps } from "react";
 import { Platform, ScrollView, type ViewProps } from "react-native";

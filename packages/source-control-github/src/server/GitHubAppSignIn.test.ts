@@ -1,3 +1,4 @@
+// Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";

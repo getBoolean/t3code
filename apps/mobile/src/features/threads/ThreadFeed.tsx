@@ -1,3 +1,4 @@
+// Fork: provider-native subagent links resolve within the parent thread environment.
 import { Button } from "../../components/ui/Button";
 import * as Dialog from "../../components/ui/Dialog";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";
@@ -102,6 +103,7 @@ import { useDeviceType } from "../../native/native-layout-metrics";
 import { isDuoDevice } from "../../lib/device-type";
 import {
   memo,
+  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -1183,6 +1185,8 @@ function ArtifactTemplateCard(props: {
   );
 }
 
+const ThreadMarkdownScopeContext = createContext<ScopedThreadRef | null>(null);
+
 const AssistantMarkdownContent = memo(function AssistantMarkdownContent(props: {
   readonly markdown: string;
   readonly environmentId: EnvironmentId;
@@ -1192,7 +1196,11 @@ const AssistantMarkdownContent = memo(function AssistantMarkdownContent(props: {
   readonly renderImage: MarkdownImageRenderer;
   readonly skills?: ReadonlyArray<SelectableMarkdownSkill> | undefined;
 }) {
-  const liveMarkdown = useLiveThreadLinkLabels(props.markdown, props.environmentId);
+  const liveMarkdown = useLiveThreadLinkLabels(
+    props.markdown,
+    props.environmentId,
+    useContext(ThreadMarkdownScopeContext),
+  );
   const threadIcons = useThreadChipIcons(props.environmentId, liveMarkdown);
   const linkHandlers: MarkdownLinkHandlers = {
     ...props.linkHandlers,
@@ -2375,7 +2383,11 @@ function UserMessageContent(props: UserMessageContentProps) {
   const navigation = useNavigation();
   const openLinkedThread = useOpenLinkedThread();
   const { selectedThread } = useThreadSelection();
-  const liveText = useLiveThreadLinkLabels(props.text, props.environmentId);
+  const liveText = useLiveThreadLinkLabels(
+    props.text,
+    props.environmentId,
+    useContext(ThreadMarkdownScopeContext),
+  );
   const threadIcons = useThreadChipIcons(props.environmentId, liveText, props.context?.records);
   const text = replaceComposerContextReferences(liveText, (ref) => {
     const available = props.context?.records.some((record) => record.contextId === ref.contextId);
@@ -2853,6 +2865,7 @@ export const ThreadFeed = memo(function ThreadFeed({
       (atom) => appAtomRegistry.get(atom),
       link,
       props.environmentId,
+      props.detailRef,
     );
     if (resolved !== null || link.environmentId !== null) return resolved;
     // A v1 link names no environment, so it falls back to this message's.
@@ -3805,7 +3818,7 @@ export const ThreadFeed = memo(function ThreadFeed({
     );
   }
 
-  return (
+  const content = (
     <PresentationSource identifier={fileShareSourceIdentifier} style={{ flex: 1 }}>
       {/* While the pane tracks a sliding sidebar, rows keep its settled width and re-wrap once. */}
       <View
@@ -3975,6 +3988,7 @@ export const ThreadFeed = memo(function ThreadFeed({
       </View>
     </PresentationSource>
   );
+  return <ThreadMarkdownScopeContext value={props.detailRef}>{content}</ThreadMarkdownScopeContext>;
 });
 
 function ThreadFeedLoadEarlierControl(props: ThreadFeedHistoryControls) {

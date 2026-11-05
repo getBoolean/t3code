@@ -1,3 +1,4 @@
+// Fork: Store and redact git-account credentials through the existing secret lifecycle, including redacted-token edits and deletion.
 import {
   AntigravitySettings,
   ClaudeSettings,

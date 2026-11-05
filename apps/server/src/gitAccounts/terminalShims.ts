@@ -1,3 +1,4 @@
+// Fork: Keep owner-only environment files and git/gh shims so already-open terminals follow account changes and explicit bypass.
 /**
  * `git` and `gh` shims for T3 terminals. Each call sources the terminal's env file before running
  * the real tool, so an account switch or bypass reaches terminals that are already open.

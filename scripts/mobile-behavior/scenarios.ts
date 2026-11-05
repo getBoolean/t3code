@@ -1,3 +1,4 @@
+// Fork: Keep the native-surface walk scenario selectable alongside the existing mobile behaviors.
 // @effect-diagnostics globalDate:off - scenario windows are wall-clock by nature.
 /**
  * Scenarios drive one flow on the device and return metrics. Cases in `cases.ts` name a

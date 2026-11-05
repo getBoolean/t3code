@@ -1,3 +1,4 @@
+// Fork: Persist redacted git-account configurations, environment defaults, project overrides, and optional repository-config writes.
 import { EasDeviceHostConfigs, SimlockDeviceHostConfigs, SshDeviceHostConfigs } from "./device.ts";
 import {
   AuthOrchestrationOperateScope,

@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for run each project as its own git account (#1).
 // @effect-diagnostics nodeBuiltinImport:off - runs the generated shims as real processes.
 import * as NodeChildProcess from "node:child_process";
 import * as NodeFS from "node:fs";

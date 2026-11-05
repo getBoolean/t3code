@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for run each project as its own git account (#1).
 import { GitAccountId, ProjectId, type UnifiedSettings } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 

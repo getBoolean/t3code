@@ -1,3 +1,4 @@
+// Fork: Inject release identity into the standalone boot bundle without importing packages or coupling test builds to the CI repository.
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- Vite config runs before any Effect runtime.
 import * as NodeFSP from "node:fs/promises";
 import * as NodeZlib from "node:zlib";

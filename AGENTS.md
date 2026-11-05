@@ -1,3 +1,5 @@
+<!-- Fork: Require Fork: explanations and manifest coverage for every fork override, including explicit exceptions for comment-free and generated formats. -->
+
 # T3 Code
 
 T3 Code is a minimal GUI for coding agents. A Node WebSocket server wraps provider CLIs and agents (Codex, Claude Code, Cursor, Grok, OpenCode, Antigravity, Kiro) and serves web, desktop, and mobile clients.
@@ -29,6 +31,16 @@ T3 Code has 3 key app surfaces: **web**, **desktop**, and **mobile**.
 **Desktop** is the main surface most users install first. It's a full Electron app that bundles the server runner as well. The desktop app can also be used as the host server, allowing remote connections from app.t3.codes or the mobile app.
 
 **Mobile** is a React Native app for both iOS and Android, available on the App Store and Google Play. The mobile app allows for connecting to any T3 Code server to control work remotely.
+
+## Preserving this fork during upstream syncs
+
+<!-- Fork: Keep the fork provenance rule in the repository instructions so later agents preserve local overrides during upstream syncs. -->
+
+- Every fork-owned change must have a `Fork:` comment explaining what differs, why it is needed, and any known condition for removing it. Put the comment beside the override; a file-level comment is appropriate for a fork-only module or related changes with one preservation constraint. Explain separate overrides separately.
+- Add every affected file to `.github/fork-manifest.txt`, with a `# Fork:` explanation immediately above its entries and meaningful required anchors. Include supporting contracts, adapters, tests, build configuration, patches, and docs, not just the main implementation.
+- Keep JSON/NDJSON, generated lockfiles, and machine-consumed symbol lists valid. Record their explanation and stable anchors in the manifest instead of inserting unsupported comments. Keep the checker's explicit exception list limited to those formats.
+- During an upstream sync, inspect the manifest and fork-owned commit history before resolving conflicts. Preserve each documented behavior or reconcile it with an equivalent upstream implementation; do not blindly retain obsolete code or mark incoming upstream changes as fork-owned. Remove a marker or entry only after verifying and explaining why its preservation constraint no longer applies.
+- Run `bash scripts/check-fork-manifest.sh` after fork changes and upstream syncs. Its anchors detect lost text, not behavioral equivalence; run the focused checks relevant to any reconciled implementation too. See [fork operations](docs/operations/fork-releases.md#fork-manifest).
 
 ## A note from Theo
 

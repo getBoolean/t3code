@@ -1,3 +1,4 @@
+// Fork: iPad Settings stays beside the thread sidebar in native split columns.
 import {
   createNavigatorFactory,
   NavigationContext,
@@ -40,6 +41,7 @@ import {
   WorkspaceSidebarTabsFooter,
 } from "../workspace/WorkspaceNativeTabs.ios";
 import { workspaceUsesColumns } from "../workspace/workspace-tabs-state";
+import { workspaceSidebarDestination } from "../workspace/workspace-tab-navigation";
 import { isSettingsRoute, settingsOpenIn } from "../settings/settings-navigation";
 import { workspaceRoutesOf } from "./workspace-overlay-routes";
 import { setNativelyPoppingWorkspaceRoute } from "../workspace/workspace-detail-selection";
@@ -216,7 +218,9 @@ function WorkspaceColumns(
   const inspectorWidth = nativeInspectorWidth;
   const resizeStartWidth = useRef(inspectorWidth);
   const settingsDetailIn = (detail: readonly Route[]) =>
-    layout.usesSplitView && detail[0] && isSettingsRoute(detail[0].name) ? detail[0] : undefined;
+    deviceType !== "pad" && layout.usesSplitView && detail[0] && isSettingsRoute(detail[0].name)
+      ? detail[0]
+      : undefined;
   // Split screens must remain mounted while UIKit animates a detached route away.
   const [screens, setScreens] = useState({
     routes: props.detail,
@@ -315,6 +319,7 @@ function WorkspaceColumns(
       { type, key },
       props.navigation.getState(),
       props.primary.key,
+      deviceType === "pad",
     );
     collapsedColumn.current = transition.column;
     setNativelyPoppingWorkspaceRoute(transition.column.leaving);
@@ -401,16 +406,7 @@ function WorkspaceColumns(
           <ColumnScreen
             descriptor={primary}
             primary
-            footer={
-              deviceType === "pad" ? (
-                <View
-                  pointerEvents="box-none"
-                  style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 128 }}
-                >
-                  <WorkspaceSidebarTabsFooter />
-                </View>
-              ) : undefined
-            }
+            footer={deviceType === "pad" ? <WorkspaceSidebarTabsFooter /> : undefined}
             selectedThreadKey={selectedThreadKey}
             selectedPullRequestKey={selectedPullRequestKey}
             onDismiss={handleNativeDismiss}
@@ -503,10 +499,14 @@ function WorkspaceStackView(props: ViewProps & { readonly nativeColumns: boolean
   // when the primary screen starts appearing, including interactive back gestures.
   const [primaryVisible, setPrimaryVisible] = useState(false);
   const metrics = useNativeLayoutMetrics();
-  const projection = projectWorkspaceStack(props.state, (route) => {
-    const presentation = props.descriptors[route.key]?.options.presentation;
-    return presentation !== undefined && presentation !== "card";
-  });
+  const projection = projectWorkspaceStack(
+    props.state,
+    (route) => {
+      const presentation = props.descriptors[route.key]?.options.presentation;
+      return presentation !== undefined && presentation !== "card";
+    },
+    deviceType === "pad",
+  );
   // The root's willDisappear reaches JS frames into the push, so hide the dock in the commit that
   // pushes; the native events still own every later change, including back gestures.
   const topDetailKey = projection.detail.at(-1)?.key;
@@ -522,7 +522,9 @@ function WorkspaceStackView(props: ViewProps & { readonly nativeColumns: boolean
   const descriptors = props.descriptors;
   const baseRoute = { key: `${props.state.key}:workspace`, name: "Workspace" };
   const visibleRoute = projection.detail.at(-1) ?? primaryRoute;
-  const workspacePage = !workspaceUsesColumns(workspace.state.selectedTab, workspace.settingsOpen);
+  const workspacePage =
+    deviceType !== "pad" &&
+    !workspaceUsesColumns(workspace.state.selectedTab, workspace.settingsOpen);
   const baseDescriptor: Descriptor = {
     ...primaryDescriptor,
     navigation: props.descriptors[visibleRoute.key]!.navigation,
@@ -624,6 +626,7 @@ function WorkspaceStackNavigator({
   ...rest
 }: NativeStackNavigatorProps) {
   const usesNativeWorkspaceColumns = useNativeWorkspaceColumnsSupported();
+  const deviceType = useDeviceType();
   const nativeWorkspaceColumnsReady = useNativeWorkspaceColumnsReady();
   const { state, describe, descriptors, navigation, NavigationContent } = useNavigationBuilder<
     StackNavigationState<ParamListBase>,
@@ -649,10 +652,20 @@ function WorkspaceStackNavigator({
       return presentation === undefined || presentation === "card";
     }),
   );
+  const sidebarDestination = workspaceSidebarDestination(state.routes.slice(0, state.index + 1));
   return (
     <NativeWorkspaceModeContext value={usesNativeWorkspaceColumns}>
       <NavigationContent>
-        <WorkspaceTabsProvider settingsOpen={settingsOpen}>
+        <WorkspaceTabsProvider
+          settingsOpen={settingsOpen}
+          selectedTab={
+            deviceType === "pad"
+              ? sidebarDestination === "settings"
+                ? "threads"
+                : (sidebarDestination ?? "threads")
+              : undefined
+          }
+        >
           <WorkspaceStackView
             nativeColumns={usesNativeWorkspaceColumns}
             {...rest}

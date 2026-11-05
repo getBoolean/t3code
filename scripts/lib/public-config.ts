@@ -1,3 +1,4 @@
+// Fork: Inject release repository and npm-publishing identity without binding ordinary test/dev builds to the CI repository.
 // @effect-diagnostics nodeBuiltinImport:off - Build bootstrap reads optional root env files before an Effect runtime exists.
 import * as NodeFS from "node:fs";
 import * as NodePath from "node:path";

@@ -1,3 +1,4 @@
+// Fork: preserve iPad Settings detail projection and native Back reconciliation.
 import * as NodeModule from "node:module";
 import type { ParamListBase, StackNavigationState } from "@react-navigation/native";
 import { describe, expect, it } from "vite-plus/test";
@@ -125,12 +126,22 @@ describe("workspace router projection", () => {
       detail: [environments],
       overlays: [],
     });
+    expect(
+      projectWorkspaceStack(history([home, settings, environments]), () => false, true),
+    ).toEqual({
+      primary: home,
+      detail: [settings, environments],
+      overlays: [],
+    });
   });
 
   it("returns from a Settings page to the Settings list that Home is showing", () => {
     const environments = { key: "environments", name: "SettingsEnvironments" };
     expect(
       nativeStackPopAction(history([home, settings, environments]), environments.key, home.key),
+    ).toMatchObject({ payload: { count: 1 } });
+    expect(
+      nativeStackPopAction(history([home, settings]), settings.key, home.key, true),
     ).toMatchObject({ payload: { count: 1 } });
   });
 

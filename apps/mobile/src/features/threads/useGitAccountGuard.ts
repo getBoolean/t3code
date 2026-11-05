@@ -1,3 +1,4 @@
+// Fork: Ask before enabling machine-login bypass for an unusable project account, naming the reason and fallback identity.
 import type { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
 import { gitAccountBypassPrompt } from "@t3tools/client-runtime/git-accounts";
 

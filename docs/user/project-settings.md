@@ -1,3 +1,5 @@
+<!-- Fork: Keep guidance for project git-account overrides and optional repository identity configuration. -->
+
 # Settings and project overrides
 
 On web and desktop, the "Applying settings for …" sentence at the top of Settings pages picks

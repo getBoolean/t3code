@@ -1,3 +1,4 @@
+// Fork: Warn before terminal account bypass; open terminals pick up the explicit decision through live shims.
 import { useGitAccountGuard } from "../threads/useGitAccountGuard";
 import * as Dialog from "../../components/ui/Dialog";
 import {

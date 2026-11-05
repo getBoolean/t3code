@@ -1,3 +1,5 @@
+// Fork: returning from a file must pop to the existing thread instead of replacing it.
+import { returnToFileThreadAction } from "./file-navigation";
 import { formatFilePathForClipboard } from "@t3tools/client-runtime/media-actions";
 import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
 import { resolveFilesystemReadAccess } from "@t3tools/client-runtime/state/filesystem";
@@ -458,7 +460,7 @@ export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
     }
     if (environmentId !== null && threadId !== null) {
       navigation.dispatch(
-        StackActions.replace("Thread", {
+        returnToFileThreadAction({
           environmentId: String(environmentId),
           threadId: String(threadId),
         }),
@@ -884,7 +886,7 @@ export function ThreadFileScreen(props: ThreadFileRouteScreenProps) {
   const handleReturnToThread = () => {
     if (environmentId !== null && threadId !== null) {
       navigation.dispatch(
-        StackActions.replace("Thread", {
+        returnToFileThreadAction({
           environmentId: String(environmentId),
           threadId: String(threadId),
         }),

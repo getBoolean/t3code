@@ -1,3 +1,4 @@
+// Fork: Export the fork account identity/status contracts so server, web, and mobile share the same wire types.
 export * from "./baseSchemas.ts";
 export * from "./assistantCitations.ts";
 export * from "./composerContext.ts";

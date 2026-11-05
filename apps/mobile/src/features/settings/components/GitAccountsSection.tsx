@@ -1,3 +1,4 @@
+// Fork: Manage mobile git accounts through secret-aware settings writes without exposing saved credentials.
 import {
   GIT_ACCOUNT_FORGES,
   gitAccountIdFromLabel,

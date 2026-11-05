@@ -1,3 +1,4 @@
+// Fork: The native folder control reflects file-pane visibility and invokes the shared open/close action.
 import { Toolbar } from "../../components/ui/Toolbar";
 import * as Dialog from "../../components/ui/Dialog";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";
@@ -108,6 +109,7 @@ type ThreadGitControlsProps = ThreadGitMenuProps & {
   readonly canOpenTerminal: boolean;
   readonly canOperateTerminal: boolean;
   readonly canOpenFiles: boolean;
+  readonly filesVisible?: boolean;
   readonly projectScripts: ReadonlyArray<ProjectScript>;
   readonly terminalSessions: ReadonlyArray<TerminalMenuSession>;
   readonly showActionControls?: boolean;
@@ -338,11 +340,11 @@ function useThreadGitHeaderActionItems(props: ThreadGitControlsProps): ThreadGit
       variant: "plain",
     },
     files: {
-      accessibilityLabel: "Open files",
-      disabled: !props.canOpenFiles,
-      icon: { name: "folder", type: "sfSymbol" },
+      accessibilityLabel: props.filesVisible ? "Close files" : "Open files",
+      disabled: !props.canOpenFiles && !props.filesVisible,
+      icon: { name: props.filesVisible ? "folder.fill" : "folder", type: "sfSymbol" },
       identifier: "thread-right-files",
-      label: "Files",
+      label: props.filesVisible ? "Close files" : "Files",
       onPress: model.openFiles,
       sharesBackground: true,
       type: "button",
@@ -504,9 +506,9 @@ export function ThreadGitControls(props: ThreadGitControlsProps) {
       ) : null}
       {showActionControls && props.showDirectFileControl ? (
         <Toolbar.Button
-          accessibilityLabel="Open files"
-          disabled={!props.canOpenFiles}
-          icon="folder"
+          accessibilityLabel={props.filesVisible ? "Close files" : "Open files"}
+          disabled={!props.canOpenFiles && !props.filesVisible}
+          icon={props.filesVisible ? "folder.fill" : "folder"}
           onPress={model.openFiles}
           separateBackground
         />

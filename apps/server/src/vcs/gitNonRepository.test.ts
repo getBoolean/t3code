@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for treat Git 2.56's invalid gitfile message as no repository.
 import { expect, it } from "vite-plus/test";
 
 import { isNonRepositoryGitStderr } from "./gitNonRepository.ts";

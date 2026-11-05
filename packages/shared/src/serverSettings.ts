@@ -1,3 +1,4 @@
+// Fork: Include git-account selection and repository-config opt-in in project-scoped server settings.
 import type { ModelPreferences } from "@t3tools/contracts/settings";
 import {
   DEFAULT_MODEL_BY_PROVIDER,

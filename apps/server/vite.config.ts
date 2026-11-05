@@ -1,3 +1,4 @@
+// Fork: Inject fork release identity into server builds so update discovery uses this repository.
 import "vite-plus/test/config";
 import { defineConfig, mergeConfig } from "vite-plus";
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Fork: Dispatch the native walk with its selected device pose and fixture environment.
 // @effect-diagnostics nodeBuiltinImport:off preferSchemaOverJson:off - owns Metro and writes result files.
 /**
  * Drives the T3 Code iOS dev client on one simulator against an isolated server with scripted

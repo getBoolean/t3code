@@ -1,3 +1,4 @@
+// Fork: Supply account-aware session dependencies in turn-start fixtures so account-mismatch regressions remain testable.
 import { SourceControlProviderError, SourceControlProviderKind } from "@t3tools/contracts";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";

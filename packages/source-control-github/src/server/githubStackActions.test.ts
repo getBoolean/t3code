@@ -1,3 +1,4 @@
+// Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
 import { expect, it } from "@effect/vitest";
 import * as Layer from "effect/Layer";
 import * as Effect from "effect/Effect";

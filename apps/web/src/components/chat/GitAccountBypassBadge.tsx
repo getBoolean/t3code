@@ -1,3 +1,4 @@
+// Fork: Make a thread machine-login bypass visible and reversible from the chat header.
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { type GitAccountGuardTarget, useGitAccountGuard } from "./useGitAccountGuard";

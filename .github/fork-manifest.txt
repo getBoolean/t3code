@@ -1,55 +1,907 @@
-# Fork-owned work that an upstream merge must keep. scripts/check-fork-manifest.sh checks it.
-# One entry per line: a repo path, then optionally a TAB and text that file must still contain.
-# A directory path must exist. Every code comment that starts with "Fork:" must sit in a listed
-# file, so add new fork overrides here. See docs/operations/fork-releases.md.
+# Fork-owned changes that upstream syncs must preserve or explicitly reconcile.
+# Fork: Normalize native BigInt upload counters before progress arithmetic so attaching images does not throw.
+apps/mobile/src/lib/attachmentUpload.ts	Fork:
+apps/mobile/src/lib/attachmentUpload.ts	if (total > 0) onProgress(Number(bytesSent) / total);
+apps/mobile/src/lib/attachmentUpload.test.ts	Fork:
+apps/mobile/src/lib/attachmentUpload.test.ts	{ bytesSent: 1n, totalBytes: 4n }
 
-# Per-project git accounts
-apps/server/src/gitAccounts/GitAccounts.ts
-apps/server/src/gitAccounts/launchIdentity.ts
-apps/server/src/gitAccounts/terminalShims.ts
-apps/server/src/gitAccounts/GitAccountSwitch.ts
-apps/server/src/orchestration-v2/ProviderSessionManager.ts	GitAccounts
-apps/server/src/orchestration-v2/ProviderTurnStartService.ts	ProviderSessionAccountChangedError
-apps/server/src/git/GitManager.ts	GitAccounts
-apps/server/src/terminal/Manager.ts	gitAccountShimsDir
-apps/server/src/pullRequest/PullRequestService.ts	GitAccounts
-apps/server/src/mcp/toolkits/project/tools.ts	t3_project_git_account
-packages/contracts/src/gitAccountId.ts
-packages/client-runtime/src/gitAccounts.ts
-apps/web/src/components/settings/GitAccountsSettings.tsx
-apps/web/src/components/chat/useGitAccountGuard.ts
-apps/web/src/components/chat/GitAccountBypassBadge.tsx
-apps/mobile/src/features/settings/components/GitAccountsSection.tsx
-apps/mobile/src/features/threads/useGitAccountGuard.ts
-.github/workflows/git-account-tests.yml
+# Fork: Decorative tiny empty-alt review icons must not expand into blank full-size media blocks on mobile.
+apps/mobile/src/lib/markdownDocument.ts	width <= 24 && height > 0 && height <= 24
+apps/mobile/src/lib/markdownHtml.test.ts	Fork:
+apps/mobile/src/lib/markdownHtml.test.ts	major.svg
 
-# Fork CI and releases
+# Fork: Docked Files uses the parent folder toggle; modal file sheets still need an accessible close control.
+apps/mobile/src/features/files/thread-file-navigator-pane.tsx	Fork:
+apps/mobile/src/features/files/thread-file-navigator-pane.tsx	closeSheet ? closeInspector : null
+
+# Fork: Keep the folder button as one open/close control with a visible active state on iOS and Android.
+apps/mobile/src/features/threads/ThreadHeader.tsx	Fork:
+apps/mobile/src/features/threads/ThreadHeader.tsx	onOpenFilesInspector: onToggleFiles
+apps/mobile/src/features/threads/ThreadGitControls.tsx	Fork:
+apps/mobile/src/features/threads/ThreadGitControls.tsx	props.filesVisible ? "folder.fill" : "folder"
+
+# Each path has a Fork: explanation followed by one or more required literal anchors.
+# Comment-free/generated formats keep their explanation here; see AGENTS.md.
+
+# Fork: Keep the complete fork preservation inventory and semantic anchors when merging upstream.
+.github/fork-manifest.txt	Fork:
+.github/fork-manifest.txt	# Fork-owned changes that upstream syncs must preserve or explicitly reconcile.
+
+# Fork: Check every app Mach-O import against the exports of its bound iOS 17 library, including lazy binds the compiler cannot catch.
+.github/scripts/check-ios17-libcxx-imports.sh	Fork:
+.github/scripts/check-ios17-libcxx-imports.sh	libc++abi
+
+# Fork: Keep the generated iOS 17 libc++/libc++abi export baseline paired with the import checker; regenerate from the same runtime, never add comment lines.
+.github/scripts/ios17-libcxx-exports.txt
+.github/scripts/ios17-libcxx-exports.txt	libc++ __ZTIDi
+
+# Fork: Keep configurable hosted runner labels, the fork web-test timeout, and the explicit macOS CI opt-out.
+.github/workflows/ci.yml	vars.T3CODE_MACOS_CI
+.github/workflows/ci.yml	Fork:
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/deploy-relay.yml	Fork:
+.github/workflows/deploy-relay.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/desktop-macos-preview-publish.yml	Fork:
+.github/workflows/desktop-macos-preview-publish.yml	runner: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/desktop-macos-preview.yml	Fork:
+.github/workflows/desktop-macos-preview.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-32vcpu-ubuntu-2404' }}
+
+# Fork: Check the fork preservation manifest on pull requests and main pushes so upstream syncs cannot silently drop registered overrides.
+.github/workflows/fork-manifest.yml	Fork:
+.github/workflows/fork-manifest.yml	name: Fork manifest
+
+# Fork: Run account-focused Linux/macOS regressions without broadening the macOS lane to unrelated pre-existing path failures.
+.github/workflows/git-account-tests.yml	Fork:
+.github/workflows/git-account-tests.yml	src/gitAccounts
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/mobile-android-apk.yml	Fork:
+.github/workflows/mobile-android-apk.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-2vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/mobile-eas-preview-fork.yml	Fork:
+.github/workflows/mobile-eas-preview-fork.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/mobile-eas-preview.yml	Fork:
+.github/workflows/mobile-eas-preview.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/mobile-eas-production.yml	Fork:
+.github/workflows/mobile-eas-production.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/mobile-fingerprint-check.yml	Fork:
+.github/workflows/mobile-fingerprint-check.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Compile against the 17.0 deployment target, verify target settings and libc++ imports, and optionally launch the simulator build.
+.github/workflows/mobile-ios17-compile.yml	Fork:
+.github/workflows/mobile-ios17-compile.yml	T3CODE_IOS_PERSONAL_TEAM: "0"
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/mobile-showcase-screenshots.yml	Fork:
+.github/workflows/mobile-showcase-screenshots.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/publish-aur.yml	Fork:
+.github/workflows/publish-aur.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/relay-preview-cleanup.yml	Fork:
+.github/workflows/relay-preview-cleanup.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/relay-preview.yml	Fork:
+.github/workflows/relay-preview.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Keep unsigned Personal Team IPA packaging, fork OTA isolation, iOS 17 checks, concurrency, and hosted compilation/dependency caches.
+.github/workflows/release-mobile-ios.yml	Fork:
+.github/workflows/release-mobile-ios.yml	T3CODE_IOS_PERSONAL_TEAM: "1"
+
+# Fork: Keep fork opt-in releases, repository identity, hosted runner overrides, Intel macOS builds, and the unsigned iOS release dependency.
 .github/workflows/release.yml	vars.T3CODE_RELEASES
 .github/workflows/release.yml	vars.T3CODE_MOBILE_RELEASE
-.github/workflows/ci.yml	vars.T3CODE_MACOS_CI
-.github/workflows/release-mobile-ios.yml
-packages/shared/src/cliRelease.ts	T3CODE_RELEASE_REPOSITORY
-scripts/lib/public-config.ts	T3CODE_RELEASE_REPOSITORY
-apps/server/src/cloud/npmRelease.ts	GitHubReleases
-docs/operations/fork-releases.md
-.github/workflows/fork-manifest.yml
-scripts/check-fork-manifest.sh
+.github/workflows/release.yml	Fork:
 
-# iOS 17.0 support
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/web-preview.yml	Fork:
+.github/workflows/web-preview.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/windows-tests.yml	Fork:
+.github/workflows/windows-tests.yml	runs-on: ${{ vars.T3CODE_WINDOWS_RUNNER || 'blacksmith-8vcpu-windows-2025' }}
+
+# Fork: Require Fork: explanations and manifest coverage for every fork override, including explicit exceptions for comment-free and generated formats.
+AGENTS.md	Fork:
+AGENTS.md	## Preserving this fork during upstream syncs
+
+# Fork: Keep the fork feature summary, fork release installation URLs, unsigned IPA guidance, and iOS 17 support/build limitations visible.
+README.md	Fork:
+README.md	## What this fork adds
+
+# Fork: Point recovery downloads at the repository that built this fork rather than upstream releases.
+apps/desktop/src/app/DesktopStartupRecovery.ts	Fork:
+apps/desktop/src/app/DesktopStartupRecovery.ts	const RELEASES_URL = CLI_RELEASES_PAGE_URL;
+
+# Fork: Inject fork release identity into desktop builds so update and recovery paths use this repository.
+apps/desktop/vite.config.ts	Fork:
+apps/desktop/vite.config.ts	...releaseIdentityDefine(),
+
+# Fork: Keep the 17.0 deployment target and from-source React Native/Expo dependencies until prebuilt frameworks pass the iOS 17 ABI check.
 apps/mobile/app.config.ts	deploymentTarget: "17.0"
 apps/mobile/app.config.ts	buildReactNativeFromSource: true
+apps/mobile/app.config.ts	Fork:
+
+# Fork: Keep native controls deployable to iOS 17.0 in step with the app deployment target.
 apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec	:ios => '17.0'
+apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec	Fork:
+
+# Fork: Pin untouched code views to the adjusted top inset on iOS 17 so initial file/review lines are visible; newer iOS skips the override.
 apps/mobile/modules/t3-review-diff/ios/T3ReviewDiffView.swift	pinnedToTop
-apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx	contentInsetAdjustmentBehavior="automatic"
+apps/mobile/modules/t3-review-diff/ios/T3ReviewDiffView.swift	Fork:
+
+# Fork: iPad Settings links open the sidebar landing page instead of a remembered subpage.
+apps/mobile/src/App.tsx	Fork:
+apps/mobile/src/App.tsx	restoreSettingsLinkState(state, settingsLinkPage(), Platform.OS === "ios" && Platform.isPad),
+
+# Fork: iPad utility destinations and nested file links share the workspace stack.
+apps/mobile/src/Stack.tsx	Fork:
+apps/mobile/src/Stack.tsx	headerBackVisible: false
+
+# Fork: Report the hosted relay minimum version for iOS 17 registration; this does not add APNs signing entitlement support.
 apps/mobile/src/features/agent-awareness/registrationPayload.ts	HOSTED_RELAY_MIN_IOS_MAJOR
-apps/mobile/src/features/layout/workspace-sidebar-footer.tsx	WorkspaceSidebarFooterHost
+apps/mobile/src/features/agent-awareness/registrationPayload.ts	Fork:
+
+# Fork: Keep regression coverage for register iOS 17 devices with the hosted relay.
+apps/mobile/src/features/agent-awareness/remoteRegistration.test.ts	Fork:
+apps/mobile/src/features/agent-awareness/remoteRegistration.test.ts	it("reports at least the hosted relay's minimum iOS version", () => {
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx	Fork:
+apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+
+# Fork: Report native route and scroll-surface details to the mobile behavior harness so iOS 17 screens can be verified.
+apps/mobile/src/features/development/behavior-probe.ts	Fork:
+apps/mobile/src/features/development/behavior-probe.ts	navigate(name: string, params: Record<string, unknown>) {
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/files/FileTreeBrowser.tsx	Fork:
+apps/mobile/src/features/files/FileTreeBrowser.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+
+# Fork: returning from a file must pop to the existing thread instead of replacing it.
+apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	Fork:
+apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	returnToFileThreadAction({
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/files/ZipArchiveView.test.tsx	Fork:
+apps/mobile/src/features/files/ZipArchiveView.test.tsx	vi.mock("../../native/NativeScrollViewMarker", () => ({
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/files/ZipArchiveView.tsx	Fork:
+apps/mobile/src/features/files/ZipArchiveView.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+
+# Fork: preserve native pop behavior and direct-file recovery across upstream merges.
+apps/mobile/src/features/files/file-navigation.test.ts	Fork:
+apps/mobile/src/features/files/file-navigation.test.ts	it("returns from a file to the existing thread and handles a file opened without thread history", () => {
+
+# Fork: returning from a file preserves the existing thread route and its state.
+apps/mobile/src/features/files/file-navigation.ts	Fork:
+apps/mobile/src/features/files/file-navigation.ts	return { type: "POP_TO" as const, payload: { name: "Thread", params } };
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/files/useFileTreeEntries.test.tsx	Fork:
+apps/mobile/src/features/files/useFileTreeEntries.test.tsx	vi.mock("../../native/NativeScrollViewMarker", () => ({
+
+# Fork: iPad utility selection uses persistent sidebar destinations on every iOS version.
 apps/mobile/src/features/layout/AdaptiveWorkspaceLayout.tsx	<WorkspaceSidebarFooterHost slot={sidebarFooter} />
+apps/mobile/src/features/layout/AdaptiveWorkspaceLayout.tsx	Fork:
+
+# Fork: iPad Settings stays beside the thread sidebar in native split columns.
+apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	Fork:
+apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	footer={deviceType === "pad" ? <WorkspaceSidebarTabsFooter /> : undefined}
+
+# Fork: before iOS 26 the iPad sidebar is a JS column beside the navigator, outside the
+apps/mobile/src/features/layout/workspace-sidebar-footer.tsx	WorkspaceSidebarFooterHost
+apps/mobile/src/features/layout/workspace-sidebar-footer.tsx	Fork:
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/pull-requests/PullRequestFiles.tsx	Fork:
+apps/mobile/src/features/pull-requests/PullRequestFiles.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/review/ReviewSheet.tsx	Fork:
+apps/mobile/src/features/review/ReviewSheet.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx	Fork:
+apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.test.tsx	Fork:
+apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.test.tsx	vi.mock("./components/GitAccountsSection", () => ({ GitAccountsSection: () => null }));
+
+# Fork: Keep project/default account choices, repository-config opt-in, and providers:manage-gated account management on mobile.
+apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx	Fork:
+apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx	"gitAccountId",
+
+# Fork: Manage mobile git accounts through secret-aware settings writes without exposing saved credentials.
+apps/mobile/src/features/settings/components/GitAccountsSection.tsx	Fork:
+apps/mobile/src/features/settings/components/GitAccountsSection.tsx	gitAccounts: {
+
+# Fork: bare iPad Settings links must not restore a remembered drill-in page.
+apps/mobile/src/features/settings/settings-navigation.ts	Fork:
+apps/mobile/src/features/settings/settings-navigation.ts	sidebarNavigation = false,
+
+# Fork: Warn before terminal account bypass; open terminals pick up the explicit decision through live shims.
+apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx	Fork:
+apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx	void ensureGitAccount();
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx	Fork:
+apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+
+# Fork: Guard sends with the project git-account warning and inset legacy-iOS thread history below the native app bar so Load earlier remains tappable.
+apps/mobile/src/features/threads/ThreadDetailScreen.tsx	Fork:
+apps/mobile/src/features/threads/ThreadDetailScreen.tsx	const gitAccountGuard = useGitAccountGuard({
+
+# Fork: provider-native subagent links resolve within the parent thread environment.
+apps/mobile/src/features/threads/ThreadFeed.tsx	Fork:
+apps/mobile/src/features/threads/ThreadFeed.tsx	createContext,
+
+# Fork: the floating iPad utility group reserves list space without a footer backdrop.
+apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx	contentInsetAdjustmentBehavior="automatic"
+apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx	Fork:
+
+# Fork: Show account bypass in the mobile git panel and let the user restore the selected account.
+apps/mobile/src/features/threads/git/GitOverviewSheet.tsx	Fork:
+apps/mobile/src/features/threads/git/GitOverviewSheet.tsx	{gitAccountStatus?.state === "bypassed" ? (
+
+# Fork: iPad Settings lives in the pinned utility group, avoiding a duplicate header target.
+apps/mobile/src/features/threads/sidebar-native-header-items.ts	Fork:
+apps/mobile/src/features/threads/sidebar-native-header-items.ts	type: "button",
+
+# Fork: active iPad rows retain readable contrast and expose their status to accessibility.
+apps/mobile/src/features/threads/thread-list-v2-items.tsx	Fork:
+apps/mobile/src/features/threads/thread-list-v2-items.tsx	rowAccessibilityLabel
+
+# Fork: colored iPad thread cards keep visible separation at the sidebar scale.
+apps/mobile/src/features/threads/thread-list-v2-row-appearance.ts	Fork:
+apps/mobile/src/features/threads/thread-list-v2-row-appearance.ts	marginVertical: 4,
+
+# Fork: Ask before enabling machine-login bypass for an unusable project account, naming the reason and fallback identity.
+apps/mobile/src/features/threads/useGitAccountGuard.ts	Fork:
+apps/mobile/src/features/threads/useGitAccountGuard.ts	const ensureGitAccount = async () => {
+
+# Fork: Usage is an iPad sidebar destination with no landing-page Back arrow.
+apps/mobile/src/features/usage/UsageRouteScreen.tsx	Fork:
+apps/mobile/src/features/usage/UsageRouteScreen.tsx	options={Platform.OS === "ios" && Platform.isPad ? { headerBackVisible: false } : undefined}
+
+# Fork: iPad utilities expand upward above pinned Settings, with orientation-specific defaults.
+apps/mobile/src/features/workspace/IpadSidebarActions.tsx	Fork:
+apps/mobile/src/features/workspace/IpadSidebarActions.tsx	<IpadSidebarActionRows
+
+# Fork: iPad uses sidebar utilities instead of the native bottom tab bar.
 apps/mobile/src/features/workspace/WorkspaceNativeTabs.ios.tsx	use(WorkspaceSidebarFooterContext)
-patches/react-native-nitro-modules@0.37.1.patch
-patches/expo-modules-core@58.0.22.patch	case .failure(let error):
+apps/mobile/src/features/workspace/WorkspaceNativeTabs.ios.tsx	Fork:
+
+# Fork: iPad utility pages use plain titles and preserve a single selected destination.
+apps/mobile/src/features/workspace/WorkspaceRootScreen.tsx	Fork:
+apps/mobile/src/features/workspace/WorkspaceRootScreen.tsx	(sidebarNavigation || (!settingsOpen && state.selectedTab !== "usage"))
+
+# Fork: iPad sidebar selection follows the visible destination rather than remembered tabs.
+apps/mobile/src/features/workspace/WorkspaceTabsContext.tsx	Fork:
+apps/mobile/src/features/workspace/WorkspaceTabsContext.tsx	isTabActive: (tab: WorkspaceTab) =>
+
+# Fork: selecting an iPad thread clears the utility destination selection.
+apps/mobile/src/features/workspace/WorkspaceThreadSidebar.tsx	Fork:
+apps/mobile/src/features/workspace/WorkspaceThreadSidebar.tsx	<IpadSidebarActions
+
+# Fork: keep iPad sidebar destinations independent from phone tab history.
+apps/mobile/src/features/workspace/workspace-tab-navigation.test.ts	Fork:
+apps/mobile/src/features/workspace/workspace-tab-navigation.test.ts	sidebarNavigation: true,
+
+# Fork: iPad utility destinations replace each other without a nested tab history.
+apps/mobile/src/features/workspace/workspace-tab-navigation.ts	Fork:
+apps/mobile/src/features/workspace/workspace-tab-navigation.ts	readonly sidebarNavigation?: boolean;
+
+# Fork: retain real navigator coverage for nested native file-link paths.
+apps/mobile/src/lib/appLinking.test.ts	Fork:
+apps/mobile/src/lib/appLinking.test.ts	path: path.split("/"),
+
+# Fork: native file links must round-trip nested paths as segment arrays.
+apps/mobile/src/lib/appLinking.ts	Fork:
+apps/mobile/src/lib/appLinking.ts	parse: { path: (value: string) => value.split("/") },
+
+# Fork: recorded provider-native /root links identify subagent threads, not files.
+apps/mobile/src/lib/markdownDocument.ts	Fork:
+apps/mobile/src/lib/markdownDocument.ts	visit(parser.parse(markdown));
+
+# Fork: retain subagent-link coverage without changing real file or code links.
+apps/mobile/src/lib/markdownInlineFileLinks.test.ts	Fork:
+apps/mobile/src/lib/markdownInlineFileLinks.test.ts	it("opens known subagent task paths as thread links without rewriting files or code", () => {
+
+# Fork: recorded child navigation remains restricted to the parent environment.
+apps/mobile/src/lib/threadLinkNavigation.test.ts	Fork:
+apps/mobile/src/lib/threadLinkNavigation.test.ts	it("opens a recorded child outside the loaded sidebar without guessing another environment", () => {
+
+# Fork: recorded subagent links may target a child not present in the sidebar.
+apps/mobile/src/lib/threadLinkNavigation.ts	Fork:
+apps/mobile/src/lib/threadLinkNavigation.ts	export function resolveThreadLinkRef(
+
+# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
+apps/mobile/src/native/NativeScrollViewMarker.tsx	Fork:
+apps/mobile/src/native/NativeScrollViewMarker.tsx	export function renderNativeScrollView(props: ComponentProps<typeof ScrollView>) {
+
+# Fork: legacy iPad navigation preserves sidebar destinations and native pop state.
+apps/mobile/src/native/createV5StackNavigator.ios.tsx	Fork:
+apps/mobile/src/native/createV5StackNavigator.ios.tsx	deviceType === "pad",
+
+# Fork: preserve iPad Settings detail projection and native Back reconciliation.
+apps/mobile/src/native/workspace-stack-projection.test.ts	Fork:
+apps/mobile/src/native/workspace-stack-projection.test.ts	primary: home,
+
+# Fork: iPad Settings projects into detail while the thread sidebar remains primary.
+apps/mobile/src/native/workspace-stack-projection.ts	Fork:
+apps/mobile/src/native/workspace-stack-projection.ts	!settingsAsDetail &&
+
+# Fork: recorded subagent targets can be absent from the visible sidebar thread shells.
+apps/mobile/src/state/entities.ts	Fork:
+apps/mobile/src/state/entities.ts	export function useLiveThreadLinkLabels(
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/mobile/src/state/use-selected-thread-git-actions.test.ts	Fork:
+apps/mobile/src/state/use-selected-thread-git-actions.test.ts	vi.mock("../features/threads/useGitAccountGuard", () => ({
+
+# Fork: Guard mobile commit/push/PR entry points with the account warning before starting the mutation.
+apps/mobile/src/state/use-selected-thread-git-actions.ts	Fork:
+apps/mobile/src/state/use-selected-thread-git-actions.ts	const gitAccountGuard = useGitAccountGuard(
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/auth/RpcAuthorization.test.ts	Fork:
+apps/server/src/auth/RpcAuthorization.test.ts	patch: { gitAccounts: { [GitAccountId.make("work")]: null } },
+
+# Fork: Require orchestration-read permission for account status; preserve source-control write protection for changing bypass.
+apps/server/src/auth/RpcAuthorization.ts	Fork:
+apps/server/src/auth/RpcAuthorization.ts	[WS_METHODS.gitAccountsThreadStatus]: AuthOrchestrationReadScope,
+
+# Fork: Keep regression coverage for install and update from the repository that built the release.
+apps/server/src/cloud/npmRelease.test.ts	Fork:
+apps/server/src/cloud/npmRelease.test.ts	tag_name: tag,
+
+# Fork: Read fork GitHub release migration metadata when npm publishing is disabled instead of checking the upstream npm package.
+apps/server/src/cloud/npmRelease.ts	GitHubReleases
+apps/server/src/cloud/npmRelease.ts	Fork:
+
+# Fork: Keep account-aware commit/push regressions; unwrap Effect Redacted env values when capturing child-process identity.
+apps/server/src/git/GitManager.test.ts	Fork:
+apps/server/src/git/GitManager.test.ts	gitAccounts: workAccounts(),
+
+# Fork: Resolve and validate the project account before commit/push/PR operations; also tolerate Git 2.56 invalid-gitfile diagnostics for missing repositories.
+apps/server/src/git/GitManager.ts	GitAccounts
+apps/server/src/git/GitManager.ts	Fork:
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/gitAccounts/GitAccountSwitch.test.ts	Fork:
+apps/server/src/gitAccounts/GitAccountSwitch.test.ts	gitAccounts: {
+
+# Fork: Require a user-authored confirmation phrase before an agent switches an account or enables bypass; ending bypass restores the account.
+apps/server/src/gitAccounts/GitAccountSwitch.ts	Fork:
+apps/server/src/gitAccounts/GitAccountSwitch.ts	GitAccountSwitch,
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/gitAccounts/GitAccounts.test.ts	Fork:
+apps/server/src/gitAccounts/GitAccounts.test.ts	gitAccounts: {
+
+# Fork: Resolve project/default accounts, isolate credentials and SSH aliases, fail closed on unusable identities, and permit only explicit per-thread bypass.
+apps/server/src/gitAccounts/GitAccounts.ts	Fork:
+apps/server/src/gitAccounts/GitAccounts.ts	type GitAccountConfig,
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/gitAccounts/RepoConfigSync.test.ts	Fork:
+apps/server/src/gitAccounts/RepoConfigSync.test.ts	gitAccountId: work,
+
+# Fork: Apply repository-local author identity only when opted in, and restore previous values when the account is unbound or the option is disabled.
+apps/server/src/gitAccounts/RepoConfigSync.ts	Fork:
+apps/server/src/gitAccounts/RepoConfigSync.ts	>()("t3/gitAccounts/RepoConfigSync") {}
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/gitAccounts/launchIdentity.test.ts	Fork:
+apps/server/src/gitAccounts/launchIdentity.test.ts	["bitbucket", "bitbucket.org", "T3CODE_BITBUCKET_ACCESS_TOKEN"],
+
+# Fork: Overlay author, forge, SSH, and credential-helper identity while removing inherited credentials; blocked accounts must not silently use the machine login.
+apps/server/src/gitAccounts/launchIdentity.ts	Fork:
+apps/server/src/gitAccounts/launchIdentity.ts	"T3CODE_BITBUCKET_EMAIL",
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/gitAccounts/terminalShims.test.ts	Fork:
+apps/server/src/gitAccounts/terminalShims.test.ts	describe("terminal git shims", () => {
+
+# Fork: Keep owner-only environment files and git/gh shims so already-open terminals follow account changes and explicit bypass.
+apps/server/src/gitAccounts/terminalShims.ts	Fork:
+apps/server/src/gitAccounts/terminalShims.ts	`"%T3CODE_REAL%" %*`,
+
+# Fork: Provide GitAccountSwitch to project MCP handlers so agent account changes use the confirmed service path.
+apps/server/src/mcp/McpHttpServer.ts	Fork:
+apps/server/src/mcp/McpHttpServer.ts	).pipe(Layer.provide(GitAccountSwitch.layer));
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/mcp/toolkits/project/handlers.test.ts	Fork:
+apps/server/src/mcp/toolkits/project/handlers.test.ts	gitAccounts: {
+
+# Fork: Expose effective account metadata and require user-confirmed project switches/bypasses through the shared account service.
+apps/server/src/mcp/toolkits/project/handlers.ts	Fork:
+apps/server/src/mcp/toolkits/project/handlers.ts	id: GitAccountId.make(id),
+
+# Fork: Keep t3_project_git_account and project-read account metadata, including the user-confirmation requirement and credential redaction.
+apps/server/src/mcp/toolkits/project/tools.ts	t3_project_git_account
+apps/server/src/mcp/toolkits/project/tools.ts	Fork:
+
+# Fork: Attribute the fork account-status and bypass RPCs to the gitAccounts aggregate.
+apps/server/src/observability/RpcInstrumentation.ts	Fork:
+apps/server/src/observability/RpcInstrumentation.ts	[WS_METHODS.gitAccountsThreadStatus]: "gitAccounts",
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+apps/server/src/orchestration-v2/Adapters/AntigravityAdapterV2.ts	Fork:
+apps/server/src/orchestration-v2/Adapters/AntigravityAdapterV2.ts	appliesAccountEnvironment: true,
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.ts	Fork:
+apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.ts	input.accountOverlay === undefined
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.ts	Fork:
+apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.ts	input.accountOverlay,
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/orchestration-v2/ProviderSessionManager.test.ts	Fork:
+apps/server/src/orchestration-v2/ProviderSessionManager.test.ts	accountOverlays: [],
+
+# Fork: Fingerprint provider sessions by git account and reject incompatible shared sessions instead of reusing another project identity.
+apps/server/src/orchestration-v2/ProviderSessionManager.ts	GitAccounts
+apps/server/src/orchestration-v2/ProviderSessionManager.ts	Fork:
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/orchestration-v2/ProviderTurnStartService.test.ts	Fork:
+apps/server/src/orchestration-v2/ProviderTurnStartService.test.ts	account
+
+# Fork: Supply account-aware session dependencies in turn-start fixtures so account-mismatch regressions remain testable.
+apps/server/src/orchestration-v2/ProviderTurnStartService.testkit.ts	Fork:
+apps/server/src/orchestration-v2/ProviderTurnStartService.testkit.ts	Layer.mock(GitAccounts.GitAccounts)({ forWorkspace: () => Effect.succeed(null) }),
+
+# Fork: Move a thread to its own provider session after an account mismatch without disturbing sibling threads on the shared process.
+apps/server/src/orchestration-v2/ProviderTurnStartService.ts	ProviderSessionAccountChangedError
+apps/server/src/orchestration-v2/ProviderTurnStartService.ts	Fork:
+
+# Fork: Share one GitAccounts service across provider sessions, terminals, git actions, and RPC handlers so bypass changes reach every entry point.
+apps/server/src/orchestration-v2/runtimeLayer.ts	Fork:
+apps/server/src/orchestration-v2/runtimeLayer.ts	layerGitAccounts,
+
+# Fork: Supply the fork GitAccounts dependency in provider replay tests without opening real account-bound sessions.
+apps/server/src/orchestration-v2/testkit/ProviderReplayHarness.ts	Fork:
+apps/server/src/orchestration-v2/testkit/ProviderReplayHarness.ts	Layer.mock(GitAccounts.GitAccounts)({ forThread: () => Effect.succeed(null) }),
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/project/ProjectSetupScriptRunner.test.ts	Fork:
+apps/server/src/project/ProjectSetupScriptRunner.test.ts	expect(opened[0]?.gitAccountProjectId).toBe("project-1");
+
+# Fork: Launch project setup scripts with the resolved project git-account environment.
+apps/server/src/project/ProjectSetupScriptRunner.ts	Fork:
+apps/server/src/project/ProjectSetupScriptRunner.ts	gitAccountProjectId: project.id,
+
+# Fork: Apply the project account overlay before launching Antigravity so child git commands use the selected identity.
+apps/server/src/provider/Drivers/AntigravityDriver.ts	Fork:
+apps/server/src/provider/Drivers/AntigravityDriver.ts	input.accountOverlay === undefined
+
+# Fork: Carry the account overlay through the Antigravity runtime boundary so launchers can isolate project identity.
+apps/server/src/provider/acp/AntigravityAcpSupport.ts	Fork:
+apps/server/src/provider/acp/AntigravityAcpSupport.ts	readonly accountOverlay?: EnvironmentOverlay;
+
+# Fork: Keep the measured MCP tool-list budget accounting for git-account tooling; regenerate measurements when model-facing text changes.
+apps/server/src/provider/agentContextBudget.json	mcpToolListJsonBytes
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/pullRequest/PullRequestService.test.ts	Fork:
+apps/server/src/pullRequest/PullRequestService.test.ts	gitAccounts: {
+
+# Fork: Run forge calls and resolve/cache viewers per account, preventing projects on the same host from sharing another account identity.
+apps/server/src/pullRequest/PullRequestService.ts	GitAccounts
+apps/server/src/pullRequest/PullRequestService.ts	Fork:
+
+# Fork: Wire one shared account service and repository-config synchronizer into server consumers so identity and bypass state stay consistent.
+apps/server/src/server.ts	Fork:
+apps/server/src/server.ts	Layer.provide(layerGitAccounts),
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/serverSettings.test.ts	Fork:
+apps/server/src/serverSettings.test.ts	gitAccounts: {
+
+# Fork: Store and redact git-account credentials through the existing secret lifecycle, including redacted-token edits and deletion.
+apps/server/src/settingsSecrets.ts	Fork:
+apps/server/src/settingsSecrets.ts	gitAccountSecretFields
+
+# Fork: Expose the selected project credential to forge services instead of falling back to the environment-wide login.
+apps/server/src/sourceControl/ServerSourceControlHost.ts	Fork:
+apps/server/src/sourceControl/ServerSourceControlHost.ts	export const withGitAccount =
+
+# Fork: Reuse the Git 2.56 missing-repository classifier so stale gitfiles do not abort cleanup.
+apps/server/src/storageCleanup.ts	Fork:
+apps/server/src/storageCleanup.ts	if (isNonRepositoryGitStderr(result.stderr)) return null;
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/terminal/Manager.test.ts	Fork:
+apps/server/src/terminal/Manager.test.ts	gitAccountShims: true,
+
+# Fork: Launch terminals under the project account and refresh their protected git/gh environment files on account or bypass changes.
+apps/server/src/terminal/Manager.ts	gitAccountShimsDir
+apps/server/src/terminal/Manager.ts	Fork:
+
+# Fork: Keep regression coverage for pin the clock in the saved usage retention test.
+apps/server/src/usage/UsageService.test.ts	Fork:
+apps/server/src/usage/UsageService.test.ts	it.effect("reports saved usage of a removed directory only for windows it reaches", () =>
+
+# Fork: Carry an explicit account environment through commit and push options; hidden checkpoints keep their existing T3 identity.
+apps/server/src/vcs/GitVcsDriver.ts	Fork:
+apps/server/src/vcs/GitVcsDriver.ts	readonly env?: NodeJS.ProcessEnv;
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/vcs/GitVcsDriverCore.test.ts	Fork:
+apps/server/src/vcs/GitVcsDriverCore.test.ts	yield* initRepoWithCommit(cwd);
+
+# Fork: Pass the account environment to commits/pushes and recognize Git 2.56 invalid-gitfile diagnostics as a missing repository.
+apps/server/src/vcs/GitVcsDriverCore.ts	Fork:
+apps/server/src/vcs/GitVcsDriverCore.ts	yield* runGit("GitVcsDriver.pushCurrentBranch.push", cwd, ["push"], pushOptions);
+
+# Fork: Keep regression coverage for treat Git 2.56's invalid gitfile message as no repository.
+apps/server/src/vcs/gitNonRepository.test.ts	Fork:
+apps/server/src/vcs/gitNonRepository.test.ts	expect(isNonRepositoryGitStderr(stderr)).toBe(expected);
+
+# Fork: Treat Git 2.56 invalid-gitfile diagnostics as a missing repository alongside the older not-a-repository wording.
+apps/server/src/vcs/gitNonRepository.ts	Fork:
+apps/server/src/vcs/gitNonRepository.ts	export function isNonRepositoryGitStderr(stderr: string): boolean {
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/server/src/ws.test.ts	Fork:
+apps/server/src/ws.test.ts	Layer.mock(GitAccounts.GitAccounts)({}),
+
+# Fork: Keep account-status and bypass RPC handlers bound to the shared GitAccounts service and authorization path.
+apps/server/src/ws.ts	Fork:
+apps/server/src/ws.ts	[WS_METHODS.gitAccountsThreadStatus]: (input) =>
+
+# Fork: Inject fork release identity into server builds so update discovery uses this repository.
+apps/server/vite.config.ts	Fork:
+apps/server/vite.config.ts	...releaseIdentityDefine(),
+
+# Fork: Check the account guard before commit/push/PR actions so identity fallback requires the user decision.
+apps/web/src/components/GitActionsControl.tsx	Fork:
+apps/web/src/components/GitActionsControl.tsx	const gitAccountGuard = useGitAccountGuard(
+
+# Fork: Keep the bypass badge next to the thread title so the current git identity is visible.
+apps/web/src/components/chat/ChatHeader.tsx	Fork:
+apps/web/src/components/chat/ChatHeader.tsx	<GitAccountBypassBadge
+
+# Fork: Make a thread machine-login bypass visible and reversible from the chat header.
+apps/web/src/components/chat/GitAccountBypassBadge.tsx	Fork:
+apps/web/src/components/chat/GitAccountBypassBadge.tsx	const { status, setThreadBypass } = useGitAccountGuard(props.target);
+
+# Fork: Check the account guard before sending so an unusable project identity cannot silently fall back.
+apps/web/src/components/chat/useComposerSend.ts	Fork:
+apps/web/src/components/chat/useComposerSend.ts	const gitAccountGuard = useGitAccountGuard(
+
+# Fork: Require an explicit user decision before a thread falls back to this machine login, and support restoring its project account.
+apps/web/src/components/chat/useGitAccountGuard.ts	Fork:
+apps/web/src/components/chat/useGitAccountGuard.ts	const ensureGitAccount = async () => {
+
+# Fork: Use the fork release repository as the fallback when desktop update metadata does not specify one.
+apps/web/src/components/desktopUpdate.logic.ts	Fork:
+apps/web/src/components/desktopUpdate.logic.ts	const DEFAULT_DESKTOP_RELEASE_REPOSITORY = CLI_RELEASE_REPOSITORY;
+
+# Fork: Keep account-aware commit/push regressions; unwrap Effect Redacted env values when capturing child-process identity.
+apps/web/src/components/files/AttachmentFilePreview.browser.test.tsx	Fork:
+apps/web/src/components/files/AttachmentFilePreview.browser.test.tsx	await screen.getByRole("button", { name: "Next page", exact: true }).click();
+
+# Fork: Edit account identity and credentials without overwriting an unchanged redacted token.
+apps/web/src/components/settings/GitAccountDialog.tsx	Fork:
+apps/web/src/components/settings/GitAccountDialog.tsx	gitAccounts: {
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+apps/web/src/components/settings/GitAccountsSettings.browser.test.tsx	Fork:
+apps/web/src/components/settings/GitAccountsSettings.browser.test.tsx	gitAccounts: {
+
+# Fork: Manage git accounts with secret-safe edits and disclose affected projects before removal.
+apps/web/src/components/settings/GitAccountsSettings.tsx	Fork:
+apps/web/src/components/settings/GitAccountsSettings.tsx	<GitAccountDialog
+
+# Fork: Keep project account overrides and the opt-in to write author identity to repository-local config.
+apps/web/src/components/settings/ProjectDefaultsSettings.tsx	Fork:
+apps/web/src/components/settings/ProjectDefaultsSettings.tsx	mixed={mixedGitAccount}
+
+# Fork: Expose environment-default account management in Source Control settings with the appropriate permissions.
+apps/web/src/components/settings/SourceControlSettings.tsx	Fork:
+apps/web/src/components/settings/SourceControlSettings.tsx	{environmentId === null ? null : <GitAccountsSettings environmentId={environmentId} />}
+
+# Fork: Index account and repository-identity settings after the existing git fetch result so search stays useful.
+apps/web/src/components/settings/settingsSearch.ts	Fork:
+apps/web/src/components/settings/settingsSearch.ts	id: "git-account"
+
+# Fork: Warn on terminal account fallback while allowing existing terminals to follow the confirmed bypass live.
+apps/web/src/components/terminal/useThreadTerminalActions.ts	Fork:
+apps/web/src/components/terminal/useThreadTerminalActions.ts	void gitAccountGuard.ensureGitAccount();
+
+# Fork: Keep regression coverage for mock the git account guard in the panel close test.
+apps/web/src/hooks/useRightPanelSurfaceClose.browser.test.tsx	Fork:
+apps/web/src/hooks/useRightPanelSurfaceClose.browser.test.tsx	vi.mock("../components/chat/useGitAccountGuard", () => ({
+
+# Fork: Keep boot recovery links and triage commands on the built fork; avoid npx selecting upstream when the fork does not publish npm.
+apps/web/src/lib/bootError.ts	Fork:
+apps/web/src/lib/bootError.ts	: `https://github.com/${RELEASE_REPOSITORY}/releases`;
+
+# Fork: Declare the fork npm-release flag used by the standalone boot recovery bundle.
+apps/web/src/vite-env.d.ts	Fork:
+apps/web/src/vite-env.d.ts	readonly T3CODE_NPM_RELEASES: string;
+
+# Fork: Inject release identity into the standalone boot bundle without importing packages or coupling test builds to the CI repository.
+apps/web/vite.config.ts	Fork:
+apps/web/vite.config.ts	process.env.T3CODE_RELEASE_REPOSITORY?.trim() ||
+
+# Fork: Keep fork runner/release configuration, iOS 17 ABI workarounds, and upstream-sync preservation rules together.
+docs/operations/fork-releases.md	Fork:
+docs/operations/fork-releases.md	| `T3CODE_IOS_RUNNER`         | `macos-26-intel`   |
+
+# Fork: Keep guidance for project git-account overrides and optional repository identity configuration.
+docs/user/project-settings.md	Fork:
+docs/user/project-settings.md	access. Source control contains automatic pull, the default pull request merge method, text
+
+# Fork: Keep account management, explicit thread bypass, SSH alias, and live-terminal identity guidance.
+docs/user/source-control.md	Fork:
+docs/user/source-control.md	so they aren't available in projects that have one.
+
+# Fork: Keep the git-account bypass eval requiring the agent to relay the confirmation phrase and wait for a user-authored response.
+evals/mcp-tool-use/cases/projects.ndjson	git-account-bypass-asks-the-user
+
+# Fork: Export ./git-accounts so web and mobile share the fork account commands and choices.
+packages/client-runtime/package.json	./git-accounts
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+packages/client-runtime/src/gitAccounts.test.ts	Fork:
+packages/client-runtime/src/gitAccounts.test.ts	describe("gitAccountIdFromLabel", () => {
+
+# Fork: Share account choices, status, and bypass commands between web and mobile instead of letting clients bypass authorization.
+packages/client-runtime/src/gitAccounts.ts	Fork:
+packages/client-runtime/src/gitAccounts.ts	): GitAccountId {
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+packages/client-runtime/src/state/commandPermissions.test.ts	Fork:
+packages/client-runtime/src/state/commandPermissions.test.ts	const bypass = createCommandPermissions(runtime, WS_METHODS.gitAccountsSetThreadBypass);
+
+# Fork: Expose guarded account-status and bypass commands from the shared client runtime.
+packages/client-runtime/src/state/server.ts	Fork:
+packages/client-runtime/src/state/server.ts	project.gitAccountId,
+
+# Fork: Protect account bypass mutations with the source-control write grant on every client.
+packages/contracts/src/clientRpcPermissions.ts	Fork:
+packages/contracts/src/clientRpcPermissions.ts	[WS_METHODS.gitAccountsSetThreadBypass]: AuthSourceControlWriteScope,
+
+# Fork: Keep the branded GitAccountId shared by settings, RPC, and client account selection.
+packages/contracts/src/gitAccountId.ts	Fork:
+packages/contracts/src/gitAccountId.ts	export type GitAccountId = typeof GitAccountId.Type;
+
+# Fork: Keep credential-free thread account status and explicit bypass RPC input contracts shared by server and clients.
+packages/contracts/src/gitAccountStatus.ts	Fork:
+packages/contracts/src/gitAccountStatus.ts	state: GitAccountThreadState,
+
+# Fork: Export the fork account identity/status contracts so server, web, and mobile share the same wire types.
+packages/contracts/src/index.ts	Fork:
+packages/contracts/src/index.ts	export * from "./gitAccountId.ts";
+
+# Fork: Register account-status and bypass RPC methods, payloads, and results in the shared wire contract.
+packages/contracts/src/rpc.ts	Fork:
+packages/contracts/src/rpc.ts	WsGitAccountsSetThreadBypassRpc
+
+# Fork: Persist redacted git-account configurations, environment defaults, project overrides, and optional repository-config writes.
+packages/contracts/src/settings.ts	Fork:
+packages/contracts/src/settings.ts	"gitAccountId",
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+packages/provider-acp-registry/src/server/adapter.ts	Fork:
+packages/provider-acp-registry/src/server/adapter.ts	accountOverlay,
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+packages/provider-acp/src/server/adapter.ts	Fork:
+packages/provider-acp/src/server/adapter.ts	...(input.accountOverlay === undefined
+
+# Fork: Apply the session account overlay to ACP client terminals as well as the agent process.
+packages/provider-acp/src/server/clientTerminals.ts	Fork:
+packages/provider-acp/src/server/clientTerminals.ts	options.accountOverlay === undefined
+
+# Fork: Require adapters to declare account-environment support and carry the account overlay at session launch.
+packages/provider-core/src/server/ProviderAdapter.ts	Fork:
+packages/provider-core/src/server/ProviderAdapter.ts	readonly accountOverlay?: EnvironmentOverlay;
+
+# Fork: Share account environment overlays, including removal of inherited credentials, across provider process launchers.
+packages/provider-core/src/server/instanceEnvironment.ts	Fork:
+packages/provider-core/src/server/instanceEnvironment.ts	export interface EnvironmentOverlay {
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+packages/provider-fx/src/server/adapter.ts	Fork:
+packages/provider-fx/src/server/adapter.ts	accountOverlay,
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+packages/provider-grok/src/server/adapter.ts	Fork:
+packages/provider-grok/src/server/adapter.ts	accountOverlay === undefined
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+packages/provider-muse/src/server/adapter.ts	Fork:
+packages/provider-muse/src/server/adapter.ts	input.accountOverlay === undefined
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+packages/provider-opencode/src/server/adapter.ts	Fork:
+packages/provider-opencode/src/server/adapter.ts	input.accountOverlay === undefined
+
+# Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
+packages/provider-pi/src/server/adapter.ts	Fork:
+packages/provider-pi/src/server/adapter.ts	input.accountOverlay === undefined
+
+# Fork: Resolve update/download identity from the built repository with explicit overrides and upstream-compatible defaults.
+packages/shared/src/cliRelease.ts	T3CODE_RELEASE_REPOSITORY
+packages/shared/src/cliRelease.ts	Fork:
+
+# Fork: Keep regression coverage for run each project as its own git account (#1).
+packages/shared/src/projectSettings.test.ts	Fork:
+packages/shared/src/projectSettings.test.ts	gitAccountId: GitAccountId.make("work"),
+
+# Fork: Include git-account selection and repository-config opt-in in project-scoped server settings.
+packages/shared/src/serverSettings.ts	Fork:
+packages/shared/src/serverSettings.ts	gitAccounts: gitAccountsPatch,
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-azure-devops/src/server/AzureDevOpsCli.test.ts	Fork:
+packages/source-control-azure-devops/src/server/AzureDevOpsCli.test.ts	Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-azure-devops/src/server/AzureDevOpsCli.ts	Fork:
+packages/source-control-azure-devops/src/server/AzureDevOpsCli.ts	Effect.flatMap(Effect.service(SourceControlHost.AccountCredential), (account) =>
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-bitbucket/src/server/BitbucketApi.test.ts	Fork:
+packages/source-control-bitbucket/src/server/BitbucketApi.test.ts	Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-bitbucket/src/server/BitbucketApi.ts	Fork:
+packages/source-control-bitbucket/src/server/BitbucketApi.ts	Effect.service(SourceControlHost.AccountCredential),
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-core/src/server/SourceControlHost.ts	Fork:
+packages/source-control-core/src/server/SourceControlHost.ts	export interface SourceControlAccountCredential {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-forgejo/src/server/ForgejoCli.ts	Fork:
+packages/source-control-forgejo/src/server/ForgejoCli.ts	const account = yield* SourceControlHost.AccountCredential;
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-forgejo/src/server/ForgejoSourceControlProvider.test.ts	Fork:
+packages/source-control-forgejo/src/server/ForgejoSourceControlProvider.test.ts	Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-gitcafe/src/server/GitCafeCredentials.test.ts	Fork:
+packages/source-control-gitcafe/src/server/GitCafeCredentials.test.ts	const asAccount = Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-gitcafe/src/server/GitCafeCredentials.ts	Fork:
+packages/source-control-gitcafe/src/server/GitCafeCredentials.ts	const account = yield* SourceControlHost.AccountCredential;
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/GitHubAppAccess.ts	Fork:
+packages/source-control-github/src/server/GitHubAppAccess.ts	if ((yield* SourceControlHost.AccountCredential) !== null) return yield* api.credential(host);
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/GitHubAppSignIn.test.ts	Fork:
+packages/source-control-github/src/server/GitHubAppSignIn.test.ts	Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/GitHubCredentials.test.ts	Fork:
+packages/source-control-github/src/server/GitHubCredentials.test.ts	Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/GitHubCredentials.ts	Fork:
+packages/source-control-github/src/server/GitHubCredentials.ts	const account = yield* SourceControlHost.AccountCredential;
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/GitHubPullRequestProvider.ts	Fork:
+packages/source-control-github/src/server/GitHubPullRequestProvider.ts	"This project's git account can't see it. Give it access, or pick another account for the project.",
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/GitHubRequestPolicy.ts	Fork:
+packages/source-control-github/src/server/GitHubRequestPolicy.ts	if ((yield* SourceControlHost.AccountCredential) !== null)
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/githubStackActions.test.ts	Fork:
+packages/source-control-github/src/server/githubStackActions.test.ts	Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/githubStackActions.ts	Fork:
+packages/source-control-github/src/server/githubStackActions.ts	const account = yield* SourceControlHost.AccountCredential;
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/githubStackRebase.test.ts	Fork:
+packages/source-control-github/src/server/githubStackRebase.test.ts	expect(yield* repo.git("log", "--format=%cn <%ce>", "-2", top)).toBe(
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-github/src/server/githubStackRebase.ts	Fork:
+packages/source-control-github/src/server/githubStackRebase.ts	readonly account?: {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-gitlab/src/server/GitLabCli.test.ts	Fork:
+packages/source-control-gitlab/src/server/GitLabCli.test.ts	Effect.provideService(SourceControlHost.AccountCredential, {
+
+# Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
+packages/source-control-gitlab/src/server/GitLabCli.ts	Fork:
+packages/source-control-gitlab/src/server/GitLabCli.ts	Effect.flatMap(Effect.service(SourceControlHost.AccountCredential), (account) =>
+
+# Fork: Allow 60 seconds for the Swift module scan required by source-built Expo modules on busy CI runners.
 patches/expo-modules-autolinking@58.0.13.patch	timeout: 60000
+patches/expo-modules-autolinking@58.0.13.patch	Fork:
+
+# Fork: Avoid the consuming-switch cast that crashes the Swift 6.4 compiler when building ExpoModulesCore from source.
+patches/expo-modules-core@58.0.22.patch	case .failure(let error):
+patches/expo-modules-core@58.0.22.patch	Fork:
+
+# Fork: Avoid synchronous iOS UI-thread reads during JS initialization while preserving static initial insets and the initial content offset.
+patches/react-native-keyboard-controller@1.22.8.patch	Fork:
+patches/react-native-keyboard-controller@1.22.8.patch	+          contentInset: {
+
+# Fork: Avoid Swift-visible exception helpers linking iOS 18-only libc++ symbols; remove when a stable Nitro release includes the upstream fix.
+patches/react-native-nitro-modules@0.37.1.patch	Fork:
+patches/react-native-nitro-modules@0.37.1.patch	+  // Fork: Swift explicit modules import libc++ at the SDK version, so make_exception_ptr
+
+# Fork: Keep generated patch hashes for the Nitro, Expo, and keyboard initialization overrides synchronized with the patch files; regenerate with pnpm instead of hand-editing.
+pnpm-lock.yaml	react-native-keyboard-controller@1.22.8
+
+# Fork: Register the Nitro iOS 17 ABI and Expo scan-timeout patches so dependency installs retain the native workarounds.
 pnpm-workspace.yaml	expo-modules-autolinking@58.0.13: patches/expo-modules-autolinking@58.0.13.patch
 pnpm-workspace.yaml	react-native-nitro-modules@0.37.1
-.github/workflows/mobile-ios17-compile.yml
-.github/scripts/check-ios17-libcxx-imports.sh
-.github/scripts/ios17-libcxx-exports.txt
+pnpm-workspace.yaml	Fork:
+
+# Fork: Export migration discovery so fork GitHub releases carry the same compatibility metadata as npm releases.
+scripts/build-npm-launcher.ts	Fork:
+scripts/build-npm-launcher.ts	export const latestServerMigrationId = Effect.fn("latestServerMigrationId")(function* () {
+
+# Fork: Reject lost fork files, anchors, explanations, and source markers after upstream syncs; exempt only explicitly listed comment-free/generated formats.
+scripts/check-fork-manifest.sh	Fork:
+scripts/check-fork-manifest.sh	echo "::error file=$file::has a Fork: comment but isn't listed in $manifest"
+
+# Fork: Inject release repository and npm-publishing identity without binding ordinary test/dev builds to the CI repository.
+scripts/lib/public-config.ts	T3CODE_RELEASE_REPOSITORY
+scripts/lib/public-config.ts	Fork:
+
+# Fork: Keep native-screen walk coverage, iPad pose usage, and explicitly unsupported preview/picker flows documented.
+scripts/mobile-behavior/README.md	Fork:
+scripts/mobile-behavior/README.md	--case native-surfaces-open --samples 1 --forget-other-environments
+
+# Fork: Register the native-surface walk as an executable mobile behavior case.
+scripts/mobile-behavior/cases.ts	Fork:
+scripts/mobile-behavior/cases.ts	id: "native-surfaces-open",
+
+# Fork: Expose the isolated fixture checkout to native-walk scenarios without using the live T3 home.
+scripts/mobile-behavior/environment.ts	Fork:
+scripts/mobile-behavior/environment.ts	    workspace,
+
+# Fork: Keep the iPhone/iPad native route walk and layout-aware controls used to verify the iOS 17 backport.
+scripts/mobile-behavior/native-walk.ts	Fork:
+scripts/mobile-behavior/native-walk.ts	const directory = NodePath.join(ctx.out, "native-walk");
+
+# Fork: Dispatch the native walk with its selected device pose and fixture environment.
+scripts/mobile-behavior/run.ts	Fork:
+scripts/mobile-behavior/run.ts	(error) => /did not answer|"Open in" prompt/.test(error.message),
+
+# Fork: Keep the native-surface walk scenario selectable alongside the existing mobile behaviors.
+scripts/mobile-behavior/scenarios.ts	Fork:
+scripts/mobile-behavior/scenarios.ts	readonly out: string;
+
+# Fork: Emit t3-release.json migration metadata for servers updating from fork GitHub assets instead of npm.
+scripts/write-release-manifest.ts	Fork:
+scripts/write-release-manifest.ts	databaseMigration: yield* latestServerMigrationId()

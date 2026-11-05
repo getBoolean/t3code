@@ -1,3 +1,4 @@
+// Fork: Keep credential-free thread account status and explicit bypass RPC input contracts shared by server and clients.
 import * as Schema from "effect/Schema";
 
 import { ProjectId, ThreadId } from "./baseSchemas.ts";

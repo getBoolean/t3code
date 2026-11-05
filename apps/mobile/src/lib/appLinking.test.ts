@@ -1,3 +1,5 @@
+// Fork: retain real navigator coverage for nested native file-link paths.
+import * as NodeModule from "node:module";
 import { describe, expect, it } from "vite-plus/test";
 
 import type { NavigationState } from "@react-navigation/native";
@@ -7,7 +9,39 @@ import {
   restoreDraftLinkState,
   shouldHandleAppLink,
   updateLinkedRoute,
+  workspaceFileLinking,
 } from "./appLinking";
+
+const requireFromNative = NodeModule.createRequire(
+  NodeModule.createRequire(import.meta.url).resolve("@react-navigation/native/package.json"),
+);
+const { getStateFromPath, getPathFromState } = requireFromNative("@react-navigation/core") as {
+  readonly getStateFromPath: typeof import("@react-navigation/native").getStateFromPath;
+  readonly getPathFromState: typeof import("@react-navigation/native").getPathFromState;
+};
+
+describe("workspace file links", () => {
+  it.each(["new/draft", "threads/:environmentId/:threadId"])(
+    "opens and round-trips files below %s",
+    (prefix) => {
+      const config = { screens: { File: workspaceFileLinking(prefix) } };
+      const urlPrefix = prefix.replace(":environmentId", "env").replace(":threadId", "thread");
+      for (const path of ["README.md", "src/index.ts", "docs/a file.md", "/tmp/file.md"]) {
+        const href = path.startsWith("/")
+          ? encodeURIComponent(path)
+          : path.split("/").map(encodeURIComponent).join("/");
+        const state = getStateFromPath(`${urlPrefix}/files/${href}`, config);
+        expect(state?.routes[0]?.params).toEqual({
+          ...(prefix.startsWith("threads/") ? { environmentId: "env", threadId: "thread" } : {}),
+          path: path.split("/"),
+        });
+        expect(
+          getStateFromPath(getPathFromState(state!, config), config)?.routes[0]?.params,
+        ).toEqual(state?.routes[0]?.params);
+      }
+    },
+  );
+});
 
 describe("shouldHandleAppLink", () => {
   it.each(["t3code://", "t3code:///", "t3code-dev://", "t3code-preview://"])(

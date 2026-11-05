@@ -1,3 +1,5 @@
+// Fork: legacy iPad navigation preserves sidebar destinations and native pop state.
+import { useDeviceType } from "./native-layout-metrics";
 import {
   createNavigatorFactory,
   NavigationContext,
@@ -59,6 +61,7 @@ export function V5CardStackView(
   },
 ) {
   const { preventedRoutes } = usePreventRemoveContext();
+  const deviceType = useDeviceType();
   // Options a screen set inside this workspace tab slot, over its route's.
   const slot = use(WorkspaceSlotOptionsContext);
   const nativePopSource = useRef<string | null>(null);
@@ -132,10 +135,10 @@ export function V5CardStackView(
         };
       });
       if (nativePopSource.current === key) setNativePopSource(null);
-      const action = nativeStackPopAction(state, key);
+      const action = nativeStackPopAction(state, key, undefined, deviceType === "pad");
       if (action) props.navigation.dispatch(action);
     },
-    [props.navigation, setNativePopSource, setScreens],
+    [props.navigation, setNativePopSource, setScreens, deviceType],
   );
   const removeDismissed = (key: string) => {
     if (!props.navigation.getState().routes.some((route) => route.key === key)) {
@@ -187,7 +190,12 @@ export function V5CardStackView(
                   setNativePopSource(null);
                 } else if (source) {
                   const state = props.navigation.getState();
-                  const action = nativeStackPopAction(state, source, route.key);
+                  const action = nativeStackPopAction(
+                    state,
+                    source,
+                    route.key,
+                    deviceType === "pad",
+                  );
                   if (action) {
                     const sourceIndex = state.routes.findIndex((current) => current.key === source);
                     // Keep children until UIKit's dismissal callback; early router removal would enqueue a second pop.

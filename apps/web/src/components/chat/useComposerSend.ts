@@ -1,3 +1,4 @@
+// Fork: Check the account guard before sending so an unusable project identity cannot silently fall back.
 import { useGitAccountGuard } from "./useGitAccountGuard";
 import {
   mergeDirectPreviewAnnotation,

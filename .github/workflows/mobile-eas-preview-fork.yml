@@ -1,3 +1,4 @@
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 name: Mobile EAS Preview (Fork)
 
 # EAS previews for fork PRs. This runs the PR's code with an Expo token: the

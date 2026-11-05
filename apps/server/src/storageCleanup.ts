@@ -1,3 +1,4 @@
+// Fork: Reuse the Git 2.56 missing-repository classifier so stale gitfiles do not abort cleanup.
 import { isNonRepositoryGitStderr } from "./vcs/gitNonRepository.ts";
 import {
   GitCommandError,

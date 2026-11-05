@@ -1,3 +1,4 @@
+// Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
 import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import { MspError, type ProcessExit, type SendUserTurnOptions } from "@muse-code/sdk";
 import {

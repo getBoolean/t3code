@@ -1,4 +1,5 @@
 /// <reference types="vite-plus/client" />
+// Fork: Declare the fork npm-release flag used by the standalone boot recovery bundle.
 
 import type { DesktopBridge, ThreadId } from "@t3tools/contracts";
 

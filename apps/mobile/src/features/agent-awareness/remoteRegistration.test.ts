@@ -1,4 +1,5 @@
 /// <reference types="node" />
+// Fork: Keep regression coverage for register iOS 17 devices with the hosted relay.
 
 import * as NodeCrypto from "node:crypto";
 

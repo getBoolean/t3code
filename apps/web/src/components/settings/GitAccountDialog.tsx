@@ -1,3 +1,4 @@
+// Fork: Edit account identity and credentials without overwriting an unchanged redacted token.
 import {
   type EnvironmentId,
   type GitAccountConfig,

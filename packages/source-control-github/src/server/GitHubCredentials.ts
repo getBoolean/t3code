@@ -1,3 +1,4 @@
+// Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
 import { normalizeHost } from "@t3tools/source-control-core/server/pullRequestUtils";
 import * as Cache from "effect/Cache";
 import * as Context from "effect/Context";

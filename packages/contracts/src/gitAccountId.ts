@@ -1,3 +1,4 @@
+// Fork: Keep the branded GitAccountId shared by settings, RPC, and client account selection.
 import * as Schema from "effect/Schema";
 
 // Separate module avoids an import cycle between settings and git-account consumers.

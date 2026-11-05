@@ -1,3 +1,4 @@
+// Fork: Resolve update/download identity from the built repository with explicit overrides and upstream-compatible defaults.
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 

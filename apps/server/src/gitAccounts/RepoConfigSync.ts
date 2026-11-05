@@ -1,3 +1,4 @@
+// Fork: Apply repository-local author identity only when opted in, and restore previous values when the account is unbound or the option is disabled.
 import type { ProjectId, ServerSettings as ServerSettingsValue } from "@t3tools/contracts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import * as Context from "effect/Context";

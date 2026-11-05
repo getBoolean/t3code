@@ -1,3 +1,4 @@
+// Fork: Fingerprint provider sessions by git account and reject incompatible shared sessions instead of reusing another project identity.
 import { AgentScope } from "@t3tools/shared/AgentScope";
 import * as KeyedLock from "@t3tools/shared/KeyedLock";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";

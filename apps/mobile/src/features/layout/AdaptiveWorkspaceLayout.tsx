@@ -1,3 +1,4 @@
+// Fork: iPad utility selection uses persistent sidebar destinations on every iOS version.
 import {
   WorkspaceColumnsRendererContext,
   WorkspacePresentationHostContext,
@@ -104,7 +105,7 @@ import {
   NativeWorkspaceInspectorContext,
 } from "../../native/v5-workspace-context";
 
-import { useNativeLayoutMetrics } from "../../native/native-layout-metrics";
+import { useDeviceType, useNativeLayoutMetrics } from "../../native/native-layout-metrics";
 import { AndroidHingeObserver } from "../../native/AndroidHingeObserver";
 import { WindowHingeContext } from "../../native/window-hinge-context";
 import { useAndroidWorkspaceRoot } from "../workspace/AndroidWorkspaceTabsProvider";
@@ -232,6 +233,7 @@ function AdaptiveWorkspaceLayoutContent(
   },
 ) {
   const floatingTabsEnabled = useAndroidFloatingTabs();
+  const deviceType = useDeviceType();
   const projectGroupingMode = props.projectGroupingMode;
   const nativeWorkspace = use(NativeWorkspaceModeContext);
   const usesPresentationHost = use(WorkspacePresentationHostContext);
@@ -592,6 +594,7 @@ function AdaptiveWorkspaceLayoutContent(
       currentWorkspaceSelections(),
       {
         columns: workspaceTabColumns(Platform.OS, tab, options?.columns ?? layout.usesSplitView),
+        sidebarNavigation: Platform.OS === "ios" && deviceType === "pad",
         check: workspaceSelectionCheck,
         overlays,
       },

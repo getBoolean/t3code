@@ -1,3 +1,4 @@
+// Fork: iPad utility destinations and nested file links share the workspace stack.
 import { isDraftThreadRoute } from "./features/threads/thread-route-state";
 import { ComponentCatalogScreen } from "./features/development/ComponentCatalogScreen";
 import { PullRequestGuideStopScreen } from "./features/pull-requests/guide/PullRequestGuideScreen";
@@ -18,9 +19,13 @@ import { useResolveClassNames } from "uniwind";
 
 import { AppText as Text } from "./components/ui/AppText";
 import { androidWorkspaceDestinationAnimation } from "./lib/android-workspace-navigation";
+import { workspaceFileLinking } from "./lib/appLinking";
 import { getCompactBrandHeaderOptions } from "./components/CompactBrandTitle";
 import { WorkspaceConnectionStatusProvider } from "./features/home/WorkspaceConnectionTitle";
-import { WorkspaceRootScreen } from "./features/workspace/WorkspaceRootScreen";
+import {
+  PullRequestListRouteScreen,
+  WorkspaceRootScreen,
+} from "./features/workspace/WorkspaceRootScreen";
 import {
   recordHomeFocus,
   recordHomeTransitionEnd,
@@ -598,6 +603,11 @@ const RootStackConfig = createWorkspaceStackNavigator({
         headerShown: Platform.OS !== "android",
       },
     }),
+    PullRequests: createNativeStackScreen({
+      screen: PullRequestListRouteScreen,
+      linking: "pull-requests",
+      options: { ...DETAIL_HEADER_OPTIONS, title: "Pull requests" },
+    }),
     PullRequest: createNativeStackScreen({
       screen: PullRequestRouteScreen,
       linking: {
@@ -751,7 +761,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
       options: SOLID_HEADER_OPTIONS,
     }),
     NewTaskFile: createNativeStackScreen({
-      linking: "new/draft/files/:path*",
+      linking: workspaceFileLinking("new/draft"),
       screen: ThreadFileScreen,
       options: SOLID_HEADER_OPTIONS,
     }),
@@ -830,7 +840,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
     }),
     ThreadFile: createNativeStackScreen({
       screen: ThreadFileScreen,
-      linking: `${THREAD_LINKING_PREFIX}/files/:path*`,
+      linking: workspaceFileLinking(THREAD_LINKING_PREFIX),
       options: GLASS_HEADER_OPTIONS,
     }),
     ThreadMcpApp: createNativeStackScreen({

@@ -1,3 +1,4 @@
+// Fork: Resolve and validate the project account before commit/push/PR operations; also tolerate Git 2.56 invalid-gitfile diagnostics for missing repositories.
 import { isNonRepositoryGitStderr } from "../vcs/gitNonRepository.ts";
 import * as Arr from "effect/Array";
 import * as Cache from "effect/Cache";

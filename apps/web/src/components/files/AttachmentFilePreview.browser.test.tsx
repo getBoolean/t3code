@@ -1,3 +1,4 @@
+// Fork: Split PDF reload regressions for slow runners while retaining the no-new-worker assertion in both cases.
 import DocumentPages, { sanitizeDocumentHtml } from "./DocumentPages";
 import { act, render, stubGlobal, type Screen } from "../../../test/render";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";

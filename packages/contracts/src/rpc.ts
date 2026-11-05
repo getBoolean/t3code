@@ -1,3 +1,4 @@
+// Fork: Register account-status and bypass RPC methods, payloads, and results in the shared wire contract.
 import {
   OrchestrationV2SearchThreadError,
   OrchestrationV2SearchThreadInput,

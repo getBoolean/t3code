@@ -1,3 +1,4 @@
+// Fork: Keep account-status and bypass RPC handlers bound to the shared GitAccounts service and authorization path.
 import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";

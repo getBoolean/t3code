@@ -1,3 +1,4 @@
+// Fork: Apply the project git-account environment to provider processes; refuse account-bound sessions when the adapter cannot isolate that identity.
 import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { AgentScope } from "@t3tools/shared/AgentScope";
