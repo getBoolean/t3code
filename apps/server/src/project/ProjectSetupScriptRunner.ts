@@ -1,3 +1,4 @@
+// Fork: Launch project setup scripts with the resolved project git-account environment.
 import { linkOriginIsFenced, ProjectId, type ProjectScript, ThreadId } from "@t3tools/contracts";
 import {
   projectScriptRuntimeEnv,

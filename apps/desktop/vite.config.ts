@@ -1,3 +1,4 @@
+// Fork: Inject fork release identity into desktop builds so update and recovery paths use this repository.
 import "vite-plus/test/config";
 import { defaultInclude, defineConfig } from "vite-plus";
 

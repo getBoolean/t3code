@@ -1,3 +1,4 @@
+// Fork: bare iPad Settings links must not restore a remembered drill-in page.
 import type { NavigationState, PartialState } from "@react-navigation/native";
 
 import {

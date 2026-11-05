@@ -1,3 +1,4 @@
+// Fork: Overlay author, forge, SSH, and credential-helper identity while removing inherited credentials; blocked accounts must not silently use the machine login.
 import type { GitAccountConfig } from "@t3tools/contracts";
 import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- a synchronous hash keeps overlay building pure.

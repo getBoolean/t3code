@@ -1,3 +1,4 @@
+// Fork: iPad Settings projects into detail while the thread sidebar remains primary.
 import type {
   NavigationState,
   ParamListBase,

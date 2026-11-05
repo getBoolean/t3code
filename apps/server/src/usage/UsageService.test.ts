@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for pin the clock in the saved usage retention test.
 // @effect-diagnostics nodeBuiltinImport:off - the suite seeds and grows real
 // transcript trees on disk, outside the service's Effect FileSystem.
 import * as NodeChildProcess from "node:child_process";

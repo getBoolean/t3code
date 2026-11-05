@@ -1,3 +1,4 @@
+// Fork: Keep project/default account choices, repository-config opt-in, and providers:manage-gated account management on mobile.
 import { useNavigation } from "@react-navigation/native";
 import { SettingsRow } from "./components/SettingsRow";
 import { AuthProvidersManageScope, AuthSettingsWriteScope, GitAccountId } from "@t3tools/contracts";

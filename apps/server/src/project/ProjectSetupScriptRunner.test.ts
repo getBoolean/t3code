@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for run each project as its own git account (#1).
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import { describe, expect, it } from "@effect/vitest";
 import {

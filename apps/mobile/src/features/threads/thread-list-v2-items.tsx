@@ -1,3 +1,4 @@
+// Fork: active iPad rows retain readable contrast and expose their status to accessibility.
 import * as Dialog from "../../components/ui/Dialog";
 import type { ThreadRowProviderInstance } from "./thread-provider-instance";
 import {
@@ -745,8 +746,13 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
       : workingLabel) ?? (isUnread ? DONE_STATUS_LABEL : undefined);
   const recede = shouldRecedeThreadRow({ status, selected });
   const isRegeneratingTitle = thread.titleRegeneration != null;
-  const rowAccessibilityLabel = `${thread.title}${props.hasQueuedMessages ? ", messages queued to send" : ""}${isRegeneratingTitle ? ", regenerating title" : ""}`;
-  const rowAccessibilityValue = [showsWoke ? "Woke" : statusLabel?.label, props.environmentLabel]
+  const rowAccessibilityLabel = [
+    thread.title,
+    props.hasQueuedMessages ? "messages queued to send" : null,
+    isRegeneratingTitle ? "regenerating title" : null,
+    showsWoke ? "Woke" : statusLabel?.label,
+    props.environmentLabel,
+  ]
     .filter(Boolean)
     .join(", ");
   const timeLabel = props.timeLabel;
@@ -1354,7 +1360,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         className={rowAppearance.className}
         accessibilityHint={swipeAccessibilityHint}
         accessibilityLabel={rowAccessibilityLabel}
-        accessibilityValue={{ text: rowAccessibilityValue }}
         accessibilityRole="button"
         accessibilityState={{ selected }}
         accessibilityActions={rowAccessibilityActions}
@@ -1386,7 +1391,6 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         interactionOpacity={rowAppearance.interactionOpacity}
         accessibilityHint={swipeAccessibilityHint}
         accessibilityLabel={rowAccessibilityLabel}
-        accessibilityValue={{ text: rowAccessibilityValue }}
         accessibilityRole="button"
         accessibilityState={{ selected }}
         className={rowAppearance.className}

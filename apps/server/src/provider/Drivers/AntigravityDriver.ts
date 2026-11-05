@@ -1,3 +1,4 @@
+// Fork: Apply the project account overlay before launching Antigravity so child git commands use the selected identity.
 import { applyEnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
 import { AntigravitySettings, ProviderDriverKind, ProviderSetupError } from "@t3tools/contracts";

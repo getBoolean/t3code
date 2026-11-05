@@ -1,3 +1,4 @@
+// Fork: Manage git accounts with secret-safe edits and disclose affected projects before removal.
 import {
   AuthProvidersManageScope,
   type EnvironmentId,

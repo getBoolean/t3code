@@ -1,3 +1,4 @@
+// Fork: Point recovery downloads at the repository that built this fork rather than upstream releases.
 import type { DesktopUpdateState } from "@t3tools/contracts";
 import { CLI_RELEASES_PAGE_URL } from "@t3tools/shared/cliRelease";
 import * as Effect from "effect/Effect";

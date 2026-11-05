@@ -1,3 +1,4 @@
+// Fork: iPad utility destinations replace each other without a nested tab history.
 import type { WorkspaceSelections } from "../../persistence/mobile-preferences";
 import {
   SETTINGS_PAGE_TARGETS,

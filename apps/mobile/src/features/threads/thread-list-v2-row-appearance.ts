@@ -1,3 +1,4 @@
+// Fork: colored iPad thread cards keep visible separation at the sidebar scale.
 import type { ViewStyle } from "react-native";
 import type { MobileThemeVariables } from "../../lib/mobileTheme";
 

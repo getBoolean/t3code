@@ -1,3 +1,4 @@
+// Fork: the floating iPad utility group reserves list space without a footer backdrop.
 import { useActiveNewTask } from "../../state/active-new-task";
 import { ThreadUndoNotice } from "../home/ThreadUndoNotice";
 import { useAndroidControlSizing } from "../../components/ui/useAndroidControlSizing";

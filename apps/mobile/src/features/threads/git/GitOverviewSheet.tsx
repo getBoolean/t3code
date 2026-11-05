@@ -1,3 +1,4 @@
+// Fork: Show account bypass in the mobile git panel and let the user restore the selected account.
 import { useGitAccountGuard } from "../useGitAccountGuard";
 import * as Dialog from "../../../components/ui/Dialog";
 import { SheetHeader } from "../../../components/ui/SheetHeader";

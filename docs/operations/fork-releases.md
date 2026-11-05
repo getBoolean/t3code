@@ -1,3 +1,5 @@
+<!-- Fork: Keep fork runner/release configuration, iOS 17 ABI workarounds, and upstream-sync preservation rules together. -->
+
 # Releases and CI on a fork
 
 A fork can run CI, publish its own desktop and CLI releases, and have installs update from them.
@@ -6,13 +8,17 @@ Variables**). With none set, the workflows behave exactly as they do upstream.
 
 ## Fork manifest
 
-`.github/fork-manifest.txt` lists the fork's own work that an upstream merge must keep. Each entry is a file, plus a string the file must still contain where that's useful. `scripts/check-fork-manifest.sh` checks the list, and the fork-only `fork-manifest.yml` workflow runs it on every pull request and push to `main`. It fails in three cases:
+`.github/fork-manifest.txt` lists the fork's own work that an upstream merge must preserve or explicitly reconcile. Each file has a `# Fork:` explanation followed by entries with required literal anchors. `scripts/check-fork-manifest.sh` checks the list, and the fork-only `fork-manifest.yml` workflow runs it on every pull request and push to `main`. It fails when:
 
 - a listed file disappeared;
 - a file lost its string;
+- a manifest entry lost its explanation;
+- a listed source file lost its `Fork:` comment;
 - a code comment starting with `Fork:` sits in a file the manifest doesn't list.
 
-When you add a fork override, mark it with a `Fork:` comment and add its file to the manifest. Upstream syncs read the manifest as the list of what to keep.
+The repository rule in `AGENTS.md` requires a nearby `Fork:` explanation for every override, including why it exists and when it can be removed. A file-level explanation fits a fork-only module or related changes with one preservation constraint. JSON/NDJSON, generated lockfiles, and machine-consumed symbol lists keep their explanations and stable anchors in the manifest; the checker names these exceptions explicitly.
+
+For an upstream sync, consult the manifest and fork-owned commits, carry the documented behaviors through conflict resolution, and update their explanations if upstream supplies an equivalent fix. Do not treat every difference against a newer upstream tip as fork work: commits not merged here also appear in that comparison. The checker proves that files, explanations, and literal anchors remain, so relevant focused tests still need to establish behavior after reconciliation.
 
 ## Runners
 
@@ -136,12 +142,14 @@ each marked `Fork:`. Keep them all when merging upstream:
   off, so its first rows sat under the header and couldn't be tapped. This is an upstream bug that
   also affects iOS 18; drop the override once upstream fixes it.
 - `apps/mobile/src/features/layout/workspace-sidebar-footer.tsx`, used by `AdaptiveWorkspaceLayout.tsx`
-  and `WorkspaceNativeTabs.ios.tsx`. On iPads without liquid glass (iOS 17 and 18) the workspace is
-  a JS sidebar column beside the navigator, and the navigator drew the workspace tab bar at its own
-  left edge, one sidebar-width to the right, over the left part of the thread composer. The navigator
-  now projects the bar into a slot at the foot of the sidebar column. iOS 26 lays the workspace out
-  in native columns, provides no slot and is unchanged. This is an upstream bug that also affects
-  iOS 18; drop the slot once upstream fixes it.
+  and `WorkspaceNativeTabs.ios.tsx`. Before iOS 26, a slot keeps iPad sidebar controls out of the
+  thread composer. iPads on every supported iOS version use `IpadSidebarActions.tsx` for a floating
+  utility group in that sidebar: Settings stays pinned while Pull Requests and Usage expand above
+  it. Settings opens its landing page, and selecting a thread clears the utility selection. Keep
+  the navigation and stack-projection overrides listed in the manifest with this layout.
+- The iOS initialization guards in `patches/react-native-keyboard-controller@1.22.8.patch` avoid
+  synchronous UI-thread reads when a thread's scroll view mounts. Keep the initial content offset
+  and static insets with them; omitting the offset opens a short transcript at its top.
 - `patches/expo-modules-autolinking@58.0.13.patch`. Building Expo's modules from source makes the
   app's `[Expo] Configure project` phase scan their Swift sources, and autolinking gives that scan
   5 seconds. On a busy CI runner it times out and the Release build fails. The patch allows 60.

@@ -1,3 +1,4 @@
+# Fork: Compile against the 17.0 deployment target, verify target settings and libc++ imports, and optionally launch the simulator build.
 # Fork-only: proves the mobile app still compiles at its iOS 17.0 deployment target.
 # Enable with the repository variable T3CODE_IOS17_CHECK=true. See docs/operations/fork-releases.md.
 name: Mobile iOS 17 compile

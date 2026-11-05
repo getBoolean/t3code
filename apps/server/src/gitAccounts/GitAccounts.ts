@@ -1,3 +1,4 @@
+// Fork: Resolve project/default accounts, isolate credentials and SSH aliases, fail closed on unusable identities, and permit only explicit per-thread bypass.
 import {
   type GitAccountConfig,
   GitAccountId,

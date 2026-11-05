@@ -1,3 +1,4 @@
+// Fork: Share account choices, status, and bypass commands between web and mobile instead of letting clients bypass authorization.
 import {
   GitAccountId,
   type GitAccountThreadStatus,

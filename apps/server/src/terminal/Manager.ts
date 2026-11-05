@@ -1,3 +1,4 @@
+// Fork: Launch terminals under the project account and refresh their protected git/gh environment files on account or bypass changes.
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- Effect's Crypto digest is effectful; a sync hash keeps historyPath a plain function.
 import * as NodeCrypto from "node:crypto";
 

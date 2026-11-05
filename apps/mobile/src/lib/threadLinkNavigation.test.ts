@@ -1,3 +1,4 @@
+// Fork: recorded child navigation remains restricted to the parent environment.
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { expect, it } from "vite-plus/test";
 import { resolveThreadLinkRef } from "./threadLinkNavigation";

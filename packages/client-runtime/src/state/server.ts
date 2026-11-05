@@ -1,3 +1,4 @@
+// Fork: Expose guarded account-status and bypass commands from the shared client runtime.
 import {
   type EnvironmentId,
   type ProviderInstanceId,

@@ -1,3 +1,4 @@
+// Fork: returning from a file must pop to the existing thread instead of replacing it.
 import { returnToFileThreadAction } from "./file-navigation";
 import { formatFilePathForClipboard } from "@t3tools/client-runtime/media-actions";
 import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";

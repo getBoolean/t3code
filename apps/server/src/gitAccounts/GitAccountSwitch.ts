@@ -1,3 +1,4 @@
+// Fork: Require a user-authored confirmation phrase before an agent switches an account or enables bypass; ending bypass restores the account.
 import {
   type GitAccountId,
   type GitAccountMachineIdentity,

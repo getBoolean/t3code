@@ -1,3 +1,4 @@
+# Fork: Keep unsigned Personal Team IPA packaging, fork OTA isolation, iOS 17 checks, concurrency, and hosted compilation/dependency caches.
 # Fork-only: builds the mobile app as an unsigned iOS IPA for sideloading. Users re-sign it with
 # their own Apple ID (AltStore, SideStore, Sideloadly), so it is the Personal Team build: no push,
 # widget or share extension, or native Sign in with Apple. release.yml calls this when the fork

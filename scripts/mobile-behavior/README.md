@@ -1,3 +1,5 @@
+<!-- Fork: Keep native-screen walk coverage, iPad pose usage, and explicitly unsupported preview/picker flows documented. -->
+
 # Mobile behavior
 
 `vp run mobile:behavior` checks what the iOS app does, from its own state rather than pixels: scroll position, dropped frames, composer drafts and focus, status labels, and which thread opens. It leases an iPhone 18 Pro and an iPad Pro 13 from the Simlock pool and runs the cases on both in parallel. It is the companion to `vp run mobile:e2e`, which checks layout.

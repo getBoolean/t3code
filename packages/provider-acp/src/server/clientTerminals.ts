@@ -1,3 +1,4 @@
+// Fork: Apply the session account overlay to ACP client terminals as well as the agent process.
 import {
   applyEnvironmentOverlay,
   type EnvironmentOverlay,

@@ -1,3 +1,4 @@
+// Fork: Carry an explicit account environment through commit and push options; hidden checkpoints keep their existing T3 identity.
 import * as NodeBuffer from "node:buffer";
 
 import * as Context from "effect/Context";

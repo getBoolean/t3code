@@ -1,3 +1,4 @@
+// Fork: Supply the fork GitAccounts dependency in provider replay tests without opening real account-bound sessions.
 import * as OtelEnvironment from "@t3tools/shared/otelEnvironment";
 import { DEFAULT_SIGNAL_EXPORT } from "@t3tools/shared/observability";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";

@@ -1,3 +1,4 @@
+// Fork: Keep t3_project_git_account and project-read account metadata, including the user-confirmation requirement and credential redaction.
 import { McpAttachmentInput } from "../attachment/input.ts";
 import {
   NonNegativeInt,

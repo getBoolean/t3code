@@ -1,3 +1,4 @@
+// Fork: iPad Settings links open the sidebar landing page instead of a remembered subpage.
 import { installPermissionUpdateNotice } from "./features/connection/permissionUpdateNotice";
 import { installComposerAttachmentUploads } from "./state/composer-attachment-uploads";
 import { installThreadOutboxDelivery } from "./state/threadOutboxDelivery";

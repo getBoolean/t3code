@@ -1,3 +1,4 @@
+// Fork: Move a thread to its own provider session after an account mismatch without disturbing sibling threads on the shared process.
 import { modelSelectionsEqual } from "@t3tools/shared/model";
 import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
 import {

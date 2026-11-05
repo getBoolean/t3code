@@ -1,3 +1,4 @@
+// Fork: legacy iPad navigation preserves sidebar destinations and native pop state.
 import { useDeviceType } from "./native-layout-metrics";
 import {
   createNavigatorFactory,

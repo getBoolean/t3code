@@ -1,3 +1,4 @@
+// Fork: Expose the isolated fixture checkout to native-walk scenarios without using the live T3 home.
 // @effect-diagnostics nodeBuiltinImport:off globalTimers:off - the eval owns a server subprocess and a scratch workspace.
 /**
  * An isolated T3 server for one device run. Its only provider is `evalbot`, an Fx instance

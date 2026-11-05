@@ -1,3 +1,4 @@
+// Fork: recorded subagent links may target a child not present in the sidebar.
 import type { EnvironmentId, OrchestrationV2Subagent, ScopedThreadRef } from "@t3tools/contracts";
 import {
   guessThreadLinkRef,

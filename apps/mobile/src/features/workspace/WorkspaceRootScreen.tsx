@@ -1,3 +1,4 @@
+// Fork: iPad utility pages use plain titles and preserve a single selected destination.
 import { IpadSidebarActions } from "./IpadSidebarActions";
 import { WorkspaceNoTabs } from "./WorkspaceNoTabs";
 import { WORKSPACE_TAB_LABELS, useEnabledNavigationTabs } from "./navigation-tabs";

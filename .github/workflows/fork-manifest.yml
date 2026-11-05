@@ -1,3 +1,4 @@
+# Fork: Check the fork preservation manifest on pull requests and main pushes so upstream syncs cannot silently drop registered overrides.
 # Fork-only: fails when an upstream merge dropped fork-owned work (see .github/fork-manifest.txt).
 name: Fork manifest
 

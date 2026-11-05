@@ -1,3 +1,4 @@
+// Fork: Require orchestration-read permission for account status; preserve source-control write protection for changing bypass.
 import {
   CLIENT_GUARDED_RPC_SCOPES,
   type DeviceListInput,

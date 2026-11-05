@@ -1,3 +1,4 @@
+// Fork: selecting an iPad thread clears the utility destination selection.
 import { IpadSidebarActions } from "./IpadSidebarActions";
 import { useDeviceType } from "../../native/native-layout-metrics";
 import { Platform } from "react-native";

@@ -1,3 +1,4 @@
+// Fork: retain real navigator coverage for nested native file-link paths.
 import * as NodeModule from "node:module";
 import { describe, expect, it } from "vite-plus/test";
 

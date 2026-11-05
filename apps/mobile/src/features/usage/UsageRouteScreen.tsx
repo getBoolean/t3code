@@ -1,3 +1,4 @@
+// Fork: Usage is an iPad sidebar destination with no landing-page Back arrow.
 import { Button } from "../../components/ui/Button";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { ChatGptUsageSummary } from "./ChatGptUsageSummary";

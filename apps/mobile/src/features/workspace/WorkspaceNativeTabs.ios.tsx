@@ -1,3 +1,4 @@
+// Fork: iPad uses sidebar utilities instead of the native bottom tab bar.
 import { IpadSidebarActions } from "./IpadSidebarActions";
 import {
   WORKSPACE_TAB_LABELS,

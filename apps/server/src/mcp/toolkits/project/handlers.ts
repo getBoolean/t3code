@@ -1,3 +1,4 @@
+// Fork: Expose effective account metadata and require user-confirmed project switches/bypasses through the shared account service.
 import * as GitAccounts from "../../../gitAccounts/GitAccounts.ts";
 import * as GitAccountSwitch from "../../../gitAccounts/GitAccountSwitch.ts";
 import { GitAccountId } from "@t3tools/contracts";

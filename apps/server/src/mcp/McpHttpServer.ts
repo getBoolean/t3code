@@ -1,3 +1,4 @@
+// Fork: Provide GitAccountSwitch to project MCP handlers so agent account changes use the confirmed service path.
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";

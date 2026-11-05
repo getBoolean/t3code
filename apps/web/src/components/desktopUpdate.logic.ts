@@ -1,3 +1,4 @@
+// Fork: Use the fork release repository as the fallback when desktop update metadata does not specify one.
 import type { DesktopUpdateActionResult, DesktopUpdateState } from "@t3tools/contracts";
 import { CLI_RELEASE_REPOSITORY } from "@t3tools/shared/cliRelease";
 

@@ -1,3 +1,4 @@
+// Fork: Require an explicit user decision before a thread falls back to this machine login, and support restoring its project account.
 import type { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
 import { gitAccountBypassPrompt } from "@t3tools/client-runtime/git-accounts";
 import {

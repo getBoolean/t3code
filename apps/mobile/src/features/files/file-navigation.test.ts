@@ -1,3 +1,4 @@
+// Fork: preserve native pop behavior and direct-file recovery across upstream merges.
 import * as NodeModule from "node:module";
 import { expect, it } from "vite-plus/test";
 import { returnToFileThreadAction } from "./file-navigation";

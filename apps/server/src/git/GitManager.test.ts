@@ -1,3 +1,4 @@
+// Fork: Keep account-aware commit/push regressions; unwrap Effect Redacted env values when capturing child-process identity.
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import * as VcsStatusBroadcaster from "../vcs/VcsStatusBroadcaster.ts";
 import { SourceControlProviderKind } from "@t3tools/contracts";

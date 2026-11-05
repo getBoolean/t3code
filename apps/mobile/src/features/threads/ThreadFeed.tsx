@@ -1,3 +1,4 @@
+// Fork: provider-native subagent links resolve within the parent thread environment.
 import { Button } from "../../components/ui/Button";
 import * as Dialog from "../../components/ui/Dialog";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";

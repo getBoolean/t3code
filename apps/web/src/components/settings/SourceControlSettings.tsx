@@ -1,3 +1,4 @@
+// Fork: Expose environment-default account management in Source Control settings with the appropriate permissions.
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { GitAccountsSettings } from "./GitAccountsSettings";
 import { ChevronDownIcon } from "lucide-react";

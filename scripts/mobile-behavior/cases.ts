@@ -1,3 +1,4 @@
+// Fork: Register the native-surface walk as an executable mobile behavior case.
 /**
  * Cases for the mobile behavior eval. `bad` fails on main today and must pass once fixed;
  * `guard` passes on main and must keep passing (its issue is fixed, or does not show on iOS);

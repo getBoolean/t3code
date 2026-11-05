@@ -1,3 +1,4 @@
+// Fork: Warn on terminal account fallback while allowing existing terminals to follow the confirmed bypass live.
 import { useGitAccountGuard } from "../chat/useGitAccountGuard";
 import {
   AuthTerminalOperateScope,

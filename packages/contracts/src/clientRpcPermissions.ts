@@ -1,3 +1,4 @@
+// Fork: Protect account bypass mutations with the source-control write grant on every client.
 import * as Schema from "effect/Schema";
 import { GitPreparePullRequestThreadInput, GitRunStackedActionInput } from "./git.ts";
 import {

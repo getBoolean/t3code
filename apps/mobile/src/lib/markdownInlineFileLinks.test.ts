@@ -1,3 +1,4 @@
+// Fork: retain subagent-link coverage without changing real file or code links.
 import { describe, expect, it } from "vite-plus/test";
 import { unified } from "unified";
 import remarkParse from "remark-parse";

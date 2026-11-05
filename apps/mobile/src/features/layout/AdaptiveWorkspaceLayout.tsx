@@ -1,3 +1,4 @@
+// Fork: iPad utility selection uses persistent sidebar destinations on every iOS version.
 import {
   WorkspaceColumnsRendererContext,
   WorkspacePresentationHostContext,

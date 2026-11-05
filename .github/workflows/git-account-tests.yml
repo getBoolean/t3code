@@ -1,3 +1,4 @@
+# Fork: Run account-focused Linux/macOS regressions without broadening the macOS lane to unrelated pre-existing path failures.
 # Git accounts inject git config, credential helpers and SSH commands that behave
 # differently per OS shell, so their tests also run on macOS and Windows (ci.yml covers Linux only).
 name: Git Account Tests

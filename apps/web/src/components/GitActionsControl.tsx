@@ -1,3 +1,4 @@
+// Fork: Check the account guard before commit/push/PR actions so identity fallback requires the user decision.
 import { useGitAccountGuard } from "./chat/useGitAccountGuard";
 import { ThreadDetailsControl } from "./chat/ThreadDetailsControl";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";

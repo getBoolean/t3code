@@ -1,3 +1,4 @@
+# Fork: Keep opt-in fork publishing, repository identity, hosted/Intel runner selection, and the unsigned IPA dependency.
 name: Release
 
 on:

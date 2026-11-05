@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Fork: Export migration discovery so fork GitHub releases carry the same compatibility metadata as npm releases.
 // GitHub archives avoid npm scanning delays; output <output-dir>/t3/ and publishable t3.tgz.
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";

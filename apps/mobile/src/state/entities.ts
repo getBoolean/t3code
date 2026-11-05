@@ -1,3 +1,4 @@
+// Fork: recorded subagent targets can be absent from the visible sidebar thread shells.
 import * as Option from "effect/Option";
 import { resolveThreadLinkRef } from "../lib/threadLinkNavigation";
 import { markdownWithSubagentLinks } from "../lib/markdownDocument";

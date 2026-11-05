@@ -1,3 +1,4 @@
+// Fork: iPad Settings lives in the pinned utility group, avoiding a duplicate header target.
 import type {
   NativeStackHeaderItem,
   NativeStackHeaderItemMenu,

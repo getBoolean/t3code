@@ -1,3 +1,4 @@
+// Fork: Read fork GitHub release migration metadata when npm publishing is disabled instead of checking the upstream npm package.
 import {
   ServerNpmReleaseError,
   ServerNpmReleaseInput,

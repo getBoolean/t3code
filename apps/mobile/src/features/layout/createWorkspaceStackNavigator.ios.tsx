@@ -1,3 +1,4 @@
+// Fork: iPad Settings stays beside the thread sidebar in native split columns.
 import {
   createNavigatorFactory,
   NavigationContext,

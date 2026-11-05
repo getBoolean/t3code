@@ -1,3 +1,4 @@
+// Fork: Keep project account overrides and the opt-in to write author identity to repository-local config.
 import {
   DEFAULT_SERVER_SETTINGS,
   type ModelSelection,

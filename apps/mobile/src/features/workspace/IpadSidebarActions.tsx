@@ -1,3 +1,4 @@
+// Fork: iPad utilities expand upward above pinned Settings, with orientation-specific defaults.
 import { useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

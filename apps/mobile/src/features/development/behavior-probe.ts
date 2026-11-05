@@ -1,3 +1,4 @@
+// Fork: Report native route and scroll-surface details to the mobile behavior harness so iOS 17 screens can be verified.
 // Read by evals/mobile-behavior through the Hermes inspector; product modules load lazily so import order is unchanged.
 
 interface Fiber {

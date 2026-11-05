@@ -1,3 +1,5 @@
+<!-- Fork: Keep account management, explicit thread bypass, SSH alias, and live-terminal identity guidance. -->
+
 # Source control
 
 T3 Code integrates with GitHub, GitLab, Forgejo, Gitea, Bitbucket, Azure DevOps, and GitCafe to clone

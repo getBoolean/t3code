@@ -1,3 +1,4 @@
+// Fork: recorded provider-native /root links identify subagent threads, not files.
 import type { EnvironmentId, OrchestrationV2Subagent } from "@t3tools/contracts";
 import { formatThreadLink } from "@t3tools/shared/threadLinks";
 import type { Root, RootContent } from "mdast";

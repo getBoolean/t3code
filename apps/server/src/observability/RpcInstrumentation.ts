@@ -1,3 +1,4 @@
+// Fork: Attribute the fork account-status and bypass RPCs to the gitAccounts aggregate.
 import { ORCHESTRATION_V2_WS_METHODS, WS_METHODS, type WsRpcGroup } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

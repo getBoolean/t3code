@@ -1,3 +1,4 @@
+// Fork: iPad sidebar selection follows the visible destination rather than remembered tabs.
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { createContext, use, useState, type Dispatch, type ReactNode } from "react";

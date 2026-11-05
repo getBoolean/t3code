@@ -1,3 +1,4 @@
+// Fork: keep iPad sidebar destinations independent from phone tab history.
 import { describe, expect, it } from "vite-plus/test";
 
 import { restoreSettingsLinkState } from "../settings/settings-navigation";

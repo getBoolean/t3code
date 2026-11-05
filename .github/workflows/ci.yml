@@ -1,3 +1,4 @@
+# Fork: Keep hosted runner overrides, the fork web-test timeout, and the explicit macOS CI opt-out.
 name: CI
 
 on:

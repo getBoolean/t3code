@@ -1,3 +1,4 @@
+// Fork: Carry the account overlay through the Antigravity runtime boundary so launchers can isolate project identity.
 import type { EnvironmentOverlay } from "@t3tools/provider-core/server/instanceEnvironment";
 import {
   ANTIGRAVITY_DEFAULT_MODEL,

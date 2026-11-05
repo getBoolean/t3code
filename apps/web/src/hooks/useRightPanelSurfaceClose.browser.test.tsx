@@ -1,3 +1,4 @@
+// Fork: Keep regression coverage for mock the git account guard in the panel close test.
 import { EnvironmentId, ThreadId, type ScopedThreadRef } from "@t3tools/contracts";
 import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import { expect, it, vi } from "vite-plus/test";

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Fork: Emit t3-release.json migration metadata for servers updating from fork GitHub assets instead of npm.
 // Servers that update from GitHub releases instead of npm read this asset; see CLI_RELEASE_MANIFEST_ASSET.
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
