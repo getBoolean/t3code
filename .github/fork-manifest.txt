@@ -1,4 +1,12 @@
 # Fork-owned changes that upstream syncs must preserve or explicitly reconcile.
+# Fork: iPad PR links reuse the existing detail route and pop drill-ins, preserving phone pushes and explicit replacement.
+apps/mobile/src/lib/pullRequestNavigation.ts	Fork:
+apps/mobile/src/lib/pullRequestNavigation.ts	payload: { ...payload, pop: true }
+apps/mobile/src/native/useOpenPullRequest.ts	Fork:
+apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(params, deviceType === "pad", replace)
+apps/mobile/src/features/workspace/workspace-detail-selection.test.ts	Fork:
+apps/mobile/src/features/workspace/workspace-detail-selection.test.ts	reuses the iPad PR screen without losing the originating thread
+
 # Fork: Normalize native BigInt upload counters before progress arithmetic so attaching images does not throw.
 apps/mobile/src/lib/attachmentUpload.ts	Fork:
 apps/mobile/src/lib/attachmentUpload.ts	if (total > 0) onProgress(Number(bytesSent) / total);
