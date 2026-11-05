@@ -1,3 +1,4 @@
+// Fork: Upload progress must stay numeric when native Int64 byte counts arrive as BigInt.
 import { EnvironmentId, PROVIDER_SEND_TURN_MAX_IMAGE_BYTES } from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -321,11 +322,33 @@ describe("prepareTurnAttachments", () => {
 
   // regression: #9713 read file-backed image drafts before enabling them
   it("uploads a file-backed image from its owned copy without staging base64", async () => {
+    const progress: number[] = [];
+    mocks.upload.mockImplementation(
+      async (
+        _uri: string,
+        _url: string,
+        options: {
+          onProgress: (event: { bytesSent: number | bigint; totalBytes: number | bigint }) => void;
+        },
+      ) => {
+        for (const event of [
+          { bytesSent: 1, totalBytes: 4 },
+          { bytesSent: 1n, totalBytes: 4n },
+          { bytesSent: 3n, totalBytes: 4 },
+          { bytesSent: 4, totalBytes: 4n },
+          { bytesSent: 0n, totalBytes: 0n },
+        ])
+          options.onProgress(event);
+        return { status: 204, body: "", headers: {} };
+      },
+    );
     const prepared = await prepareTurnAttachments({
       environmentId,
       attachments: [fileBackedImage],
       supportsImageUploads: true,
+      onUploadProgress: (_id, value) => progress.push(value),
     });
+    expect(progress).toEqual([0.25, 0.25, 0.75, 1]);
 
     expect(mocks.upload).toHaveBeenCalledWith(
       fileBackedImage.fileUri,
