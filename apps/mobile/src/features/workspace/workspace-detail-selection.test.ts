@@ -1,3 +1,5 @@
+// Fork: repeated iPad PR entry preserves its route key and dismisses drill-in pages.
+import { iosPullRequestNavigationAction } from "../../lib/pullRequestNavigation";
 import * as NodeModule from "node:module";
 import { describe, expect, it } from "vite-plus/test";
 import {
@@ -97,6 +99,37 @@ describe("selectWorkspaceDetail", () => {
     const selected = select(settings, pullRequest);
     expect(page(selected)).toEqual({ names: ["Home", "PullRequest"], index: 1 });
     expect(selected.routes[0]?.key).toBe(settings.routes[0]?.key);
+  });
+
+  it("reuses the iPad PR screen without losing the originating thread or stacking repeat taps", () => {
+    const thread = select(home(), threadA);
+    const open = (
+      state: State,
+      params: Parameters<typeof iosPullRequestNavigationAction>[0] = pullRequest.params,
+    ) => apply(state, iosPullRequestNavigationAction(params, true) as RouterAction);
+    const first = open(thread);
+    const repeated = open(open(first));
+    expect(page(repeated)).toEqual({ names: ["Home", "Thread", "PullRequest"], index: 2 });
+    expect(repeated.routes[1]?.key).toBe(thread.routes[1]?.key);
+    expect(repeated.routes[2]?.key).toBe(first.routes[2]?.key);
+    const drilled = push(repeated, "PullRequestReviewers", pullRequest.params);
+    const returned = open(drilled);
+    expect(page(returned)).toEqual(page(first));
+    expect(returned.routes[2]?.key).toBe(first.routes[2]?.key);
+    const another = open(returned, { ...pullRequest.params, number: 2 });
+    expect(another.routes[2]?.key).toBe(first.routes[2]?.key);
+    expect(another.routes[2]?.params).toEqual({ ...pullRequest.params, number: 2 });
+    const phone = apply(
+      first,
+      iosPullRequestNavigationAction(pullRequest.params, false) as RouterAction,
+    );
+    expect(phone.routes).toHaveLength(first.routes.length + 1);
+    const replaced = apply(
+      drilled,
+      iosPullRequestNavigationAction(pullRequest.params, true, true) as RouterAction,
+    );
+    expect(replaced.routes.at(-1)?.name).toBe("PullRequest");
+    expect(replaced.routes.at(-1)?.key).not.toBe(first.routes[2]?.key);
   });
 
   it("puts Home under a cold-linked page and a sheet over the selection", () => {

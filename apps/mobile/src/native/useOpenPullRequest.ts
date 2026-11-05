@@ -1,5 +1,9 @@
-import { useNavigation, useRoute, StackActions } from "@react-navigation/native";
-import { nativePullRequestDestination } from "../lib/pullRequestNavigation";
+// Fork: iPad PR buttons return to the existing detail instead of pushing duplicate screens.
+import { useNavigation, useRoute } from "@react-navigation/native";
+import {
+  iosPullRequestNavigationAction,
+  nativePullRequestDestination,
+} from "../lib/pullRequestNavigation";
 import { Platform } from "react-native";
 import { useSelectWorkspaceDetail } from "../features/workspace/useSelectWorkspaceDetail";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
@@ -8,6 +12,8 @@ import { tryOpenExternalUrl } from "../lib/openExternalUrl";
 import { appAtomRegistry } from "../state/atom-registry";
 import { environmentServerConfigsAtom } from "../state/server";
 
+import { useDeviceType } from "./native-layout-metrics";
+
 type PullRequestContext = { readonly environmentId: string; readonly projectId: string };
 
 // Avoid useRoute so layouts without route context can open any thread's pull requests.
@@ -15,6 +21,7 @@ export function useNavigateToPullRequest(options?: { readonly replace?: boolean 
   const navigation = useNavigation();
   const selectDetail = useSelectWorkspaceDetail();
   const projects = useProjects();
+  const deviceType = useDeviceType();
   const replace = options?.replace;
   return async (url: string, context: PullRequestContext | null) => {
     // Read at press time so a config push does not hand every link a new handler.
@@ -23,10 +30,8 @@ export function useNavigateToPullRequest(options?: { readonly replace?: boolean 
       serverConfigs.has(environmentId),
     );
     if (!params) return tryOpenExternalUrl(url, "pull-request");
-    // Android shows one page at a time; iOS opens it over the current page, so Back returns.
     if (Platform.OS === "android") selectDetail({ name: "PullRequest", params });
-    else if (replace) navigation.dispatch(StackActions.replace("PullRequest", params));
-    else navigation.dispatch(StackActions.push("PullRequest", params));
+    else navigation.dispatch(iosPullRequestNavigationAction(params, deviceType === "pad", replace));
     return true;
   };
 }
