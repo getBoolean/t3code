@@ -1,3 +1,4 @@
+// Fork: Decorative review icons must not become full-size image blocks; meaningful HTML images remain available.
 import { describe, expect, it } from "vite-plus/test";
 import {
   markdownForNativeRendering,
@@ -26,6 +27,31 @@ describe("HTML in native Markdown", () => {
         "<a href='https://example.com'><img src='https://example.com/banner.svg' alt='Review' /></a>",
       ),
     ).toBe("[![Review](<https://example.com/banner.svg>)](<https://example.com>)");
+    expect(
+      markdownHtmlContent(
+        '<picture><img src="https://example.com/major.svg" width="16" height="16" alt=""></picture> Major',
+      ),
+    ).toBe(" Major");
+    expect(
+      markdownWithHtml(
+        '**<picture><img src="https://example.com/major.svg" width="16" height="16" alt=""></picture> Major**',
+      ),
+    ).toBe("**Major**");
+    expect(
+      markdownHtmlContent(
+        '<summary><picture><img src="https://example.com/details.svg" width="16" height="16" alt=""></picture> Supported by analysis</summary>',
+      ),
+    ).toContain("**Supported by analysis**");
+    for (const attributes of [
+      'width="16" height="16" alt="Review"',
+      'width="640" height="480" alt=""',
+      'width="16" alt=""',
+      'width="16" height="16"',
+    ]) {
+      expect(
+        markdownHtmlContent(`<img src="https://example.com/keep.png" ${attributes}>`),
+      ).toContain("https://example.com/keep.png");
+    }
   });
 
   it("decodes HTML attributes once and preserves entity-shaped query values through Markdown", () => {

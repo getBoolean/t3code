@@ -194,8 +194,11 @@ export function markdownHtmlContent(
     anchorMarkdown(tags.map((tag) => tag[0]).filter((tag) => ANCHOR_TAG.test(tag)));
   let result = "";
   let end = 0;
+  // Fork: Removing leading HTML decorations must not leave whitespace after a Markdown emphasis opener.
+  const emphasisText = (text: string) =>
+    /(?:^|\s)(?:\*{1,2}|_{1,2})$/.test(result) ? text.replace(/^[ \t]+/, "") : text;
   for (const match of tags) {
-    const text = content.slice(end, match.index);
+    const text = emphasisText(content.slice(end, match.index));
     result += anchors.open > 0 ? escapeLinkLabel(text) : text;
     const replacement = htmlTagMarkdown(match[0], anchors, options);
     if (replacement === "[" && bangBefore(result, result.length))
@@ -206,7 +209,7 @@ export function markdownHtmlContent(
         : replacement;
     end = match.index + match[0].length;
   }
-  const text = content.slice(end);
+  const text = emphasisText(content.slice(end));
   return result + (anchors.open > 0 ? escapeLinkLabel(text) : text);
 }
 
@@ -225,6 +228,11 @@ function htmlTagMarkdown(
   if (/^<img\b/i.test(tag)) {
     const src = attribute(tag, "src");
     if (!src) return "";
+    // Fork: Small empty-alt icons are decorative; native Markdown otherwise expands them into blank media blocks.
+    const width = Number(attribute(tag, "width"));
+    const height = Number(attribute(tag, "height"));
+    if (attribute(tag, "alt") === "" && width > 0 && width <= 24 && height > 0 && height <= 24)
+      return "";
     const alt = (attribute(tag, "alt") ?? "").replace(/[\\[\]&]/g, "\\$&");
     return `![${alt}](${markdownDestination(src)})`;
   }
@@ -258,22 +266,28 @@ export function markdownWithHtml(markdown: string): string {
                 : [],
             ),
           );
+    let atEmphasisStart = node.type === "strong" || node.type === "emphasis";
     for (const child of children) {
       const start = child.position?.start.offset;
       const end = child.position?.end.offset;
       const linkLabel = inLink || (anchors?.open ?? 0) > 0;
       if (child.type === "text") {
-        if (linkLabel && start !== undefined && end !== undefined) {
-          const content = escapeLinkLabel(markdown.slice(start, end));
+        if (start !== undefined && end !== undefined) {
+          let content = markdown.slice(start, end);
+          if (atEmphasisStart) content = content.replace(/^[ \t]+/, "");
+          if (linkLabel) content = escapeLinkLabel(content);
           if (content !== markdown.slice(start, end)) edits.push({ start, end, content });
         }
+        atEmphasisStart = false;
         continue;
       }
       if (child.type !== "html") {
         visit(child, inTableCell, linkLabel);
+        atEmphasisStart = false;
         continue;
       }
       const content = markdownHtmlContent(child.value, { anchors, inTableCell });
+      if (content) atEmphasisStart = false;
       if (start === undefined || end === undefined) continue;
       // Text before an outermost link is never edited, so this edit cannot overlap another.
       if (content.startsWith("[") && !linkLabel && bangBefore(markdown, start))

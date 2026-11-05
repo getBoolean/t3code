@@ -1,4 +1,9 @@
 # Fork-owned changes that upstream syncs must preserve or explicitly reconcile.
+# Fork: Decorative tiny empty-alt review icons must not expand into blank full-size media blocks on mobile.
+apps/mobile/src/lib/markdownDocument.ts	width <= 24 && height > 0 && height <= 24
+apps/mobile/src/lib/markdownHtml.test.ts	Fork:
+apps/mobile/src/lib/markdownHtml.test.ts	major.svg
+
 # Fork: Docked Files uses the parent folder toggle; modal file sheets still need an accessible close control.
 apps/mobile/src/features/files/thread-file-navigator-pane.tsx	Fork:
 apps/mobile/src/features/files/thread-file-navigator-pane.tsx	closeSheet ? closeInspector : null
