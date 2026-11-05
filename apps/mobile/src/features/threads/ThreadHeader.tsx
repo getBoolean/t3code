@@ -1,3 +1,4 @@
+// Fork: One file control opens and closes the visible file pane on native iOS and Android headers.
 import { useMemo } from "react";
 import { AppBar } from "../../components/ui/AppBar";
 import { ScreenHeaderButton } from "../../components/ui/ScreenHeaderButton";
@@ -23,7 +24,18 @@ export function ThreadHeader(
   const { layout, panes, toggleAuxiliaryPane, composerKeyboardActive } =
     useAdaptiveWorkspaceLayout();
   const { onOpenTerminal, onMergeBack } = props.gitControls;
-  const native = useThreadHeaderOptions(props);
+  const filesVisible =
+    (props.inspectorMode === "files" || props.inspectorMode === "route") &&
+    panes.auxiliaryPaneVisible;
+  const onToggleFiles = filesVisible ? toggleAuxiliaryPane : props.onOpenFilesInspector;
+  const native = useThreadHeaderOptions({
+    ...props,
+    gitControls: {
+      ...props.gitControls,
+      filesVisible,
+      onOpenFilesInspector: onToggleFiles,
+    },
+  });
   const androidHeaderActions = useMemo<ReadonlyArray<AppBarAction>>(() => {
     const actions: AppBarAction[] = [];
     if (props.onReturnToThread) {
@@ -34,12 +46,11 @@ export function ThreadHeader(
       });
     }
     if (props.hasThreadCwd) {
-      const filesVisible = props.inspectorMode === "files" && panes.auxiliaryPaneVisible;
       actions.push({
         accessibilityLabel: filesVisible ? "Close files" : "Open files",
         selected: filesVisible,
-        icon: "folder",
-        onPress: filesVisible ? toggleAuxiliaryPane : props.onOpenFilesInspector,
+        icon: filesVisible ? "folder.fill" : "folder",
+        onPress: onToggleFiles,
       });
     }
     if (props.hasWorkspaceRoot && props.gitControls.canOpenTerminal) {
@@ -63,13 +74,11 @@ export function ThreadHeader(
     }
     return actions;
   }, [
-    props.inspectorMode,
-    panes.auxiliaryPaneVisible,
-    props.onOpenFilesInspector,
+    filesVisible,
+    onToggleFiles,
     onOpenTerminal,
     onMergeBack,
     props.onOpenGitInspector,
-    toggleAuxiliaryPane,
     props.onReturnToThread,
     props.hasThreadCwd,
     props.hasWorkspaceRoot,

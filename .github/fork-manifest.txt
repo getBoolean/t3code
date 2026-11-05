@@ -1,4 +1,14 @@
 # Fork-owned changes that upstream syncs must preserve or explicitly reconcile.
+# Fork: Docked Files uses the parent folder toggle; modal file sheets still need an accessible close control.
+apps/mobile/src/features/files/thread-file-navigator-pane.tsx	Fork:
+apps/mobile/src/features/files/thread-file-navigator-pane.tsx	closeSheet ? closeInspector : null
+
+# Fork: Keep the folder button as one open/close control with a visible active state on iOS and Android.
+apps/mobile/src/features/threads/ThreadHeader.tsx	Fork:
+apps/mobile/src/features/threads/ThreadHeader.tsx	onOpenFilesInspector: onToggleFiles
+apps/mobile/src/features/threads/ThreadGitControls.tsx	Fork:
+apps/mobile/src/features/threads/ThreadGitControls.tsx	props.filesVisible ? "folder.fill" : "folder"
+
 # Each path has a Fork: explanation followed by one or more required literal anchors.
 # Comment-free/generated formats keep their explanation here; see AGENTS.md.
 

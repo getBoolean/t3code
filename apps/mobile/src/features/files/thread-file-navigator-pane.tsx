@@ -1,9 +1,10 @@
+// Fork: Docked file panes close through the parent toggle; modal sheets retain their own close button.
 import { resolveFilesystemReadAccess } from "@t3tools/client-runtime/state/filesystem";
 import { environmentSession } from "../../state/session";
 import type { EnvironmentId } from "@t3tools/contracts";
 import { AppBar } from "../../components/ui/AppBar";
 import { ScreenContent } from "../../components/ui/ScreenContent";
-import { useState } from "react";
+import { use, useState } from "react";
 import { View } from "react-native";
 
 import { useEnvironmentQuery } from "../../state/query";
@@ -12,6 +13,8 @@ import { useAppearancePreferences } from "../settings/appearance/AppearancePrefe
 import { FileTreeBrowser } from "./FileTreeBrowser";
 import { useFileTreeEntries } from "./useFileTreeEntries";
 import { preloadWorkspaceFileContents } from "./preload-workspace-file";
+import { InspectorCloseContext } from "../layout/inspector-bar-store";
+import { InspectorSheetContext } from "../layout/workspace-inspector-sheet";
 
 export function ThreadFileNavigatorPane(props: {
   readonly cwd: string;
@@ -21,6 +24,8 @@ export function ThreadFileNavigatorPane(props: {
   readonly onSelectFile: (path: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const closeInspector = use(InspectorCloseContext);
+  const closeSheet = use(InspectorSheetContext);
   const { themeAppearance: highlightTheme } = useAppearancePreferences();
   const fileAccessSession = useEnvironmentQuery(
     environmentSession.sessionStateAtom(props.environmentId),
@@ -79,16 +84,18 @@ export function ThreadFileNavigatorPane(props: {
 
   return (
     <View className="flex-1 ios:bg-sheet android:bg-header">
-      <AppBar
-        title="Files"
-        subtitle={props.projectName}
-        search={{
-          value: searchQuery,
-          onChangeText: setSearchQuery,
-          placeholder: "Search files",
-        }}
-        refresh={{ accessibilityLabel: "Refresh files", onPress: entriesQuery.refresh }}
-      />
+      <InspectorCloseContext value={closeSheet ? closeInspector : null}>
+        <AppBar
+          title="Files"
+          subtitle={props.projectName}
+          search={{
+            value: searchQuery,
+            onChangeText: setSearchQuery,
+            placeholder: "Search files",
+          }}
+          refresh={{ accessibilityLabel: "Refresh files", onPress: entriesQuery.refresh }}
+        />
+      </InspectorCloseContext>
       <ScreenContent insetHorizontal>{fileTree}</ScreenContent>
     </View>
   );
