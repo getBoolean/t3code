@@ -1,4 +1,4 @@
-// Fork: recorded subagent links may target a child not present in the sidebar.
+// Fork: scoped thread links remain navigable without cached sidebar records; remove when upstream supports this.
 import type { EnvironmentId, OrchestrationV2Subagent, ScopedThreadRef } from "@t3tools/contracts";
 import {
   guessThreadLinkRef,
@@ -20,5 +20,7 @@ export function resolveThreadLinkRef(
     subagents.some((subagent) => subagent.childThreadId === link.threadId)
   )
     return { environmentId, threadId: link.threadId };
-  return link.environmentId === null ? guessThreadLinkRef(link, refs()) : null;
+  return link.environmentId === null
+    ? guessThreadLinkRef(link, refs())
+    : { environmentId: link.environmentId, threadId: link.threadId };
 }

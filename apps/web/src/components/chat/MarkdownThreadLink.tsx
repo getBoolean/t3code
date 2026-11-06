@@ -30,6 +30,18 @@ export function MarkdownThreadLink(props: {
   const refs = useThreadRefs(guess);
   const remote = useThreadShell(guess ? guessThreadLinkRef(props.link, refs) : null);
   const thread = local ?? remote;
+  // Fork: scoped links can name uncached children; let navigation load them (remove when upstream supports this).
+  if (thread === null && props.link.environmentId !== null) {
+    return (
+      <ThreadContextChip
+        record={{
+          environmentId,
+          threadId: props.link.threadId,
+          title: props.label || "Open thread",
+        }}
+      />
+    );
+  }
   if (thread === null) {
     const unknown = unknownThreadLinkLabel(props.link, props.environmentId);
     return <UnresolvedChip label={props.label ?? unknown} tooltip={unknown} />;
