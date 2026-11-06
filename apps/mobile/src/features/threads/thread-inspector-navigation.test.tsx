@@ -374,7 +374,9 @@ it("opens attached and workspace files inside the subagent navigator and returns
           Screen: ({ name }: { name: string }) => <span data-screen={name} />,
         }),
       };
-    if (name === "react-native") return { View: passthrough, Modal: passthrough };
+    if (name === "react-native")
+      return { View: passthrough, Modal: passthrough, Platform: { OS: "ios" } };
+    if (name === "../layout/route-options") return { pageRoute: () => ({}) };
     if (name === "react-native-safe-area-context")
       return { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) };
     if (name === "../files/file-preview-presentation")

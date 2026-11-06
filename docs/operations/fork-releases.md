@@ -110,6 +110,9 @@ each marked `Fork:`. Keep them all when merging upstream:
 
 - `deploymentTarget` in `apps/mobile/app.config.ts`
 - `:ios` in `apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec`
+- `s.platform` in `apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec`.
+  Expo skips a module whose podspec minimum is above the app's target, so at 18.0 no iPhone on this
+  fork would get paired-environment dictation. The module only uses AudioToolbox.
 - `HOSTED_RELAY_MIN_IOS_MAJOR` in `apps/mobile/src/features/agent-awareness/registrationPayload.ts`.
   The hosted relay rejects devices reporting iOS below 18, so iOS 17 devices report 18. They show
   as iOS 18 in the device list. This gets registration accepted. Push delivery still needs a build

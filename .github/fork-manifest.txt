@@ -998,3 +998,7 @@ apps/mobile/src/components/ui/AppBar.types.ts	Fork:
 apps/mobile/src/components/ui/AppBar.types.ts	readonly hideBack?: boolean;
 apps/mobile/src/features/settings/components/SettingsScreen.tsx	Fork:
 apps/mobile/src/features/settings/components/SettingsScreen.tsx	hideBack={workspaceRoot}
+
+# Fork: The iOS 17 app cannot link a pod raised to 18.0; this module only uses AudioToolbox.
+apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	Fork:
+apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	s.platform = :ios, '17.0'
