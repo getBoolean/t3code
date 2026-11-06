@@ -167,69 +167,69 @@ export function ThreadInspectorPreview(props: {
                   {/* Fork: The local stack draws its own bars, so its screens skip the pane's bar slot, and the expanded modal has no inspector to close. */}
                   <WorkspaceSlotOptionsContext value={null}>
                     <InspectorCloseContext value={expanded ? null : closeInspector}>
-                  <NavigationIndependentTree>
-                    {/* Fork: Reset the state-owning container when changing subagents until upstream scopes independent navigation state by target. */}
-                    <NavigationContainer
-                      key={targetKey}
-                      theme={theme}
-                      initialState={localState}
-                      onStateChange={(state) => {
-                        if (state) setPreviewState({ targetKey, state });
-                      }}
-                      onUnhandledAction={navigation.dispatch}
-                    >
-                      <PreviewStack.Navigator
-                        key={`${target.environmentId}:${target.threadId}`}
-                        screenOptions={{
-                          ...pageRoute(),
-                          headerBackVisible: true,
-                          headerShown: Platform.OS !== "android",
-                        }}
-                      >
-                        <PreviewStack.Screen
-                          name="Thread"
-                          initialParams={target}
-                          options={{ headerBackVisible: false }}
+                      <NavigationIndependentTree>
+                        {/* Fork: Reset the state-owning container when changing subagents until upstream scopes independent navigation state by target. */}
+                        <NavigationContainer
+                          key={targetKey}
+                          theme={theme}
+                          initialState={localState}
+                          onStateChange={(state) => {
+                            if (state) setPreviewState({ targetKey, state });
+                          }}
+                          onUnhandledAction={navigation.dispatch}
                         >
-                          {(screen) =>
-                            props.renderThread({
-                              route: screen.route,
-                              inspectorPresentation: expanded
-                                ? { onClose: () => setExpandedTarget(null) }
-                                : {
-                                    onMaximize: () =>
-                                      navigation.navigate("ThreadInspectorFullscreen", {
-                                        environmentId: screen.route.params.environmentId,
-                                        threadId: screen.route.params.threadId,
-                                      }),
-                                  },
-                            })
-                          }
-                        </PreviewStack.Screen>
-                        <PreviewStack.Screen name="ThreadAttachment">
-                          {(screen) => (
-                            <InspectorFileScope>
-                              <AttachmentFileScreen {...screen} />
-                            </InspectorFileScope>
-                          )}
-                        </PreviewStack.Screen>
-                        <PreviewStack.Screen name="ThreadFile">
-                          {(screen) => (
-                            <InspectorFileScope>
-                              <ThreadFileScreen {...screen} />
-                            </InspectorFileScope>
-                          )}
-                        </PreviewStack.Screen>
-                        <PreviewStack.Screen name="ThreadFiles">
-                          {(screen) => (
-                            <InspectorFileScope>
-                              <ThreadFilesTreeScreen {...screen} />
-                            </InspectorFileScope>
-                          )}
-                        </PreviewStack.Screen>
-                      </PreviewStack.Navigator>
-                    </NavigationContainer>
-                  </NavigationIndependentTree>
+                          <PreviewStack.Navigator
+                            key={`${target.environmentId}:${target.threadId}`}
+                            screenOptions={{
+                              ...pageRoute(),
+                              headerBackVisible: true,
+                              headerShown: Platform.OS !== "android",
+                            }}
+                          >
+                            <PreviewStack.Screen
+                              name="Thread"
+                              initialParams={target}
+                              options={{ headerBackVisible: false }}
+                            >
+                              {(screen) =>
+                                props.renderThread({
+                                  route: screen.route,
+                                  inspectorPresentation: expanded
+                                    ? { onClose: () => setExpandedTarget(null) }
+                                    : {
+                                        onMaximize: () =>
+                                          navigation.navigate("ThreadInspectorFullscreen", {
+                                            environmentId: screen.route.params.environmentId,
+                                            threadId: screen.route.params.threadId,
+                                          }),
+                                      },
+                                })
+                              }
+                            </PreviewStack.Screen>
+                            <PreviewStack.Screen name="ThreadAttachment">
+                              {(screen) => (
+                                <InspectorFileScope>
+                                  <AttachmentFileScreen {...screen} />
+                                </InspectorFileScope>
+                              )}
+                            </PreviewStack.Screen>
+                            <PreviewStack.Screen name="ThreadFile">
+                              {(screen) => (
+                                <InspectorFileScope>
+                                  <ThreadFileScreen {...screen} />
+                                </InspectorFileScope>
+                              )}
+                            </PreviewStack.Screen>
+                            <PreviewStack.Screen name="ThreadFiles">
+                              {(screen) => (
+                                <InspectorFileScope>
+                                  <ThreadFilesTreeScreen {...screen} />
+                                </InspectorFileScope>
+                              )}
+                            </PreviewStack.Screen>
+                          </PreviewStack.Navigator>
+                        </NavigationContainer>
+                      </NavigationIndependentTree>
                     </InspectorCloseContext>
                   </WorkspaceSlotOptionsContext>
                 </FilePreviewCloseContext>

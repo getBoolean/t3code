@@ -465,13 +465,11 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
                     >
                       {[
                         ...(projectSelected ? [] : [{ id: null, label: "None", host: null }]),
-                        ...Object.entries(reference.settings.gitAccounts).map(
-                          ([id, account]) => ({
-                            id: GitAccountId.make(id),
-                            label: account.label,
-                            host: account.host,
-                          }),
-                        ),
+                        ...Object.entries(reference.settings.gitAccounts).map(([id, account]) => ({
+                          id: GitAccountId.make(id),
+                          label: account.label,
+                          host: account.host,
+                        })),
                       ].map((choice, index) => (
                         <SettingsChoiceRow
                           key={choice.id ?? "none"}
@@ -526,18 +524,18 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
                 ) : (
                   <SettingsSection title="Git accounts">
                     <Text className="px-4 py-3 text-sm text-foreground-muted">
-                      Git accounts require a server build from the getBoolean/t3code fork. Install
-                      a build with Git accounts support on{" "}
+                      Git accounts require a server build from the getBoolean/t3code fork. Install a
+                      build with Git accounts support on{" "}
                       {targets
                         .filter(
                           (target) =>
-                            target.environment.serverConfig.environment.capabilities
-                              .gitAccounts !== true,
+                            target.environment.serverConfig.environment.capabilities.gitAccounts !==
+                            true,
                         )
                         .map((target) => target.environment.label)
                         .join(", ")}{" "}
-                      to manage accounts and write account details to repo git config. Updating
-                      the iOS app alone does not update the connected server.
+                      to manage accounts and write account details to repo git config. Updating the
+                      iOS app alone does not update the connected server.
                     </Text>
                   </SettingsSection>
                 )}

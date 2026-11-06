@@ -1,5 +1,5 @@
 // Fork: Keep the iPhone/iPad native route walk and layout-aware controls used to verify the iOS 17 backport.
-// @effect-diagnostics nodeBuiltinImport:off preferSchemaOverJson:off - writes screenshots and a report beside the run.
+// @effect-diagnostics nodeBuiltinImport:off globalJsonInEffect:off - writes screenshots and a report beside the run.
 /**
  * Opens every screen that mounts a native module or native view, one deep link at a time, and
  * records what broke: a route that never opened, error text on screen, a JS error or rejection the
