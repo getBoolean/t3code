@@ -68,7 +68,6 @@ import {
   THREAD_LIST_V2_SETTLED_PAGE_COUNT,
   type ThreadListV2ListItem,
 } from "./threadListV2";
-import { WORKSPACE_LIST_SCROLL_INSETS } from "../layout/workspace/workspace-list-insets";
 import { useSelectWorkspaceDetail } from "../layout/workspace/useSelectWorkspaceDetail";
 import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
 
@@ -595,7 +594,10 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
                 itemsAreEqual={sidebarItemsAreEqual}
                 keyExtractor={(item) => item.key}
                 renderItem={renderListItem}
-                {...WORKSPACE_LIST_SCROLL_INSETS}
+                // Fork: the list extends under the header on every iOS, so upstream's "never" preset
+                // hid the first rows behind it on iPads without liquid glass (iOS 17 and 18).
+                automaticallyAdjustsScrollIndicatorInsets
+                contentInsetAdjustmentBehavior="automatic"
                 contentContainerStyle={[
                   styles.threadListContent,
                   {

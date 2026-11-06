@@ -71,7 +71,7 @@ export const NATIVE_WALK_STEPS: ReadonlyArray<NativeWalkStep> = [
   {
     id: "microphone",
     path: "settings/microphone",
-    route: "SettingsMicrophone",
+    route: "SettingsVoice",
     native: "expo-audio permission",
   },
   {
