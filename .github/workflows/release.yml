@@ -269,7 +269,8 @@ jobs:
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
     runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
-    timeout-minutes: 10
+    # Fork: Hosted runners run these past upstream's 10-minute limit; the variable is unset upstream.
+    timeout-minutes: ${{ fromJSON(vars.T3CODE_TEST_WEB_TIMEOUT_MINUTES || '10') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -305,7 +306,8 @@ jobs:
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
     runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
-    timeout-minutes: 10
+    # Fork: Hosted runners run these past upstream's 10-minute limit; the variable is unset upstream.
+    timeout-minutes: ${{ fromJSON(vars.T3CODE_TEST_WEB_TIMEOUT_MINUTES || '10') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -359,7 +361,8 @@ jobs:
     needs: [preflight]
     if: ${{ !failure() && !cancelled() && needs.preflight.result == 'success' }}
     runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
-    timeout-minutes: 10
+    # Fork: Hosted runners run these past upstream's 10-minute limit; the variable is unset upstream.
+    timeout-minutes: ${{ fromJSON(vars.T3CODE_TEST_WEB_TIMEOUT_MINUTES || '10') }}
     strategy:
       fail-fast: false
       matrix:
