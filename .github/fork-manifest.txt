@@ -985,3 +985,6 @@ apps/mobile/src/features/files/preload-workspace-file.ts	isDownloadOnlyFile(inpu
 # Fork: Switching subagent embeds resets the independent container, not just its child navigator, until upstream scopes inspector route state by target.
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	key={targetKey}
 apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	expect(containerIdentity).not.toBe(previousContainer)
+
+# Fork: The mixed healthy/FIFO subprocess test uses live deadlines until its fixture can deterministically coordinate all child completions.
+apps/server/src/project/AgentSessionScanner.test.ts	it.live("still reads the git identity
