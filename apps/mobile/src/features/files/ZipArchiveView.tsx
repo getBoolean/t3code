@@ -16,7 +16,7 @@ import { LegendList } from "@legendapp/list/react-native";
 import { fetch } from "expo/fetch";
 import { File } from "expo-file-system";
 import { useNavigation, usePreventRemove } from "@react-navigation/native";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { use, useEffect, useEffectEvent, useRef, useState } from "react";
 import { Keyboard, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -27,6 +27,7 @@ import { AppText as Text } from "../../components/ui/AppText";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Progress } from "../../components/ui/Progress";
+import { FilePreviewCloseContext } from "./file-preview-presentation";
 import { Toolbar } from "../../components/ui/Toolbar";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
 import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
@@ -293,6 +294,8 @@ function ZipArchiveHeader(props: {
   readonly onSave: () => void;
   readonly onRemove: (() => void) | null;
 }) {
+  // Fork: Expanded archives dismiss from their filename bar until upstream supports single-bar inspector expansion.
+  const closePreview = use(FilePreviewCloseContext);
   const navigation = useNavigation();
   const isAndroid = Platform.OS === "android";
   return (
@@ -331,6 +334,13 @@ function ZipArchiveHeader(props: {
         />
       ) : (
         <Toolbar placement="right">
+          {closePreview ? (
+            <Toolbar.Button
+              icon="xmark"
+              accessibilityLabel="Close expanded file preview"
+              onPress={closePreview}
+            />
+          ) : null}
           {props.onRemove ? (
             <Toolbar.Menu accessibilityLabel="ZIP actions" icon="ellipsis">
               <Toolbar.MenuAction icon="square.and.arrow.up" onPress={props.onSave}>

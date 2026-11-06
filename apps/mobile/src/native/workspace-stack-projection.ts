@@ -154,16 +154,37 @@ export function partitionStackPresentations<T>(
   return groups;
 }
 
+// Fork: iPad destination selection swaps the native root's contents until upstream distinguishes tab selection from pushes.
+export function workspaceScreenSlots<T extends { readonly key: string }>(
+  routes: readonly T[],
+  rootIndex?: number,
+  previous: readonly (T & { readonly screenKey: string; readonly rootSlot: boolean })[] = [],
+  nativelyLeavingKey?: string | null,
+) {
+  const root = rootIndex === undefined ? undefined : routes[rootIndex];
+  const previousRoot = previous.findLast((route) => route.rootSlot);
+  const rootScreenKey =
+    previousRoot && (previousRoot.key === root?.key || previousRoot.key !== nativelyLeavingKey)
+      ? previousRoot.screenKey
+      : `workspace-detail-root:${root?.key}`;
+  return routes.map((route, index) => ({
+    ...route,
+    screenKey: index === rootIndex ? rootScreenKey : route.key,
+    rootSlot: index === rootIndex,
+  }));
+}
+
 /** Keep outgoing screens in place until dismissal; Fabric moves enqueue native pop/push operations. */
 export function reconcileStackScreens<T extends { readonly key: string }>(
   previous: readonly T[],
   current: readonly T[],
   completedNativeDismissals: ReadonlySet<string> = new Set(),
+  screenKey: (route: T) => string = (route) => route.key,
 ): T[] {
-  const active = new Set(current.map((route) => route.key));
+  const active = new Set(current.map(screenKey));
   const screens = [...current];
   previous.forEach((route, index) => {
-    if (!active.has(route.key) && !completedNativeDismissals.has(route.key)) {
+    if (!active.has(screenKey(route)) && !completedNativeDismissals.has(route.key)) {
       screens.splice(Math.min(index, screens.length), 0, route);
     }
   });

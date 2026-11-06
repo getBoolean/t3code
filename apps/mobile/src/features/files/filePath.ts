@@ -2,6 +2,7 @@ import type { FilesystemEntryMetadata } from "@t3tools/contracts";
 import { filePreviewDelimiter } from "@t3tools/shared/delimitedPreview";
 import { joinPath, resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
 import {
+  binaryPreviewKind,
   isWorkspaceAudioPreviewPath,
   isWorkspaceVideoPreviewPath,
 } from "@t3tools/shared/filePreview";
@@ -111,6 +112,15 @@ export function isMarkdownPreviewFile(path: string): boolean {
   return /\.(?:md|mdx)$/i.test(path.split(/[?#]/, 1)[0] ?? "");
 }
 
+// Fork: Installers and archives download as bytes until upstream supports download-only workspace files.
+export function isDownloadOnlyFile(path: string): boolean {
+  const name = path.split(/[?#]/, 1)[0] ?? "";
+  return (
+    binaryPreviewKind({ name }) !== null ||
+    /\.(ipa|apk|aab|dmg|pkg|exe|msi|7z|rar|xz|bz2|zst|iso)$/i.test(name)
+  );
+}
+
 export function needsWorkspaceFileContents(input: {
   readonly relativePath: string | null;
   readonly metadataKind: FilesystemEntryMetadata["kind"] | undefined;
@@ -122,6 +132,7 @@ export function needsWorkspaceFileContents(input: {
     path !== null &&
     !isVideoPreviewFile(path) &&
     !isAudioPreviewFile(path) &&
+    !isDownloadOnlyFile(path) &&
     (input.activeMode === "source" ||
       isMarkdownPreviewFile(path) ||
       filePreviewDelimiter({ name: path }) !== null)

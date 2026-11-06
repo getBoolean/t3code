@@ -4,6 +4,12 @@ import {
   resolveNavigationTabOrder,
   type NavigationTab,
 } from "./navigation-tab-order";
+import type { DeviceType } from "../../lib/device-type";
+
+// Fork: Compact iPad windows need bottom navigation until upstream makes iPad sidebar navigation width-aware.
+export function workspaceUsesSidebarNavigation(deviceType: DeviceType, usesSplitView: boolean) {
+  return deviceType === "pad" && usesSplitView;
+}
 
 export function resolveWorkspaceTabOrder(saved: readonly unknown[] | undefined) {
   return navigationCustomizationAvailable()

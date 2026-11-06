@@ -34,6 +34,7 @@ import {
   nativeStackPopAction,
   partitionStackPresentations,
   reconcileStackScreens,
+  workspaceScreenSlots,
 } from "./workspace-stack-projection";
 
 export type V5StackViewProps = ComponentProps<typeof NativeStackView>;
@@ -58,37 +59,50 @@ export function V5CardStackView(
     readonly onRootVisibilityChange?: (visible: boolean) => void;
     /** The card native Back is popping, which the router still shows until the pop finishes. */
     readonly onNativePopChange?: (key: string | null) => void;
+    readonly workspaceDetailSlot?: boolean;
   },
 ) {
   const { preventedRoutes } = usePreventRemoveContext();
   const deviceType = useDeviceType();
   // Options a screen set inside this workspace tab slot, over its route's.
   const slot = use(WorkspaceSlotOptionsContext);
+  // Fork: iPad sidebar selections reuse one native detail controller until upstream separates selection from pushes.
   const nativePopSource = useRef<string | null>(null);
+  const [nativePopKey, setNativePopKey] = useState<string | null>(null);
   const { onNativePopChange } = props;
   const setNativePopSource = useCallback(
     (key: string | null) => {
       nativePopSource.current = key;
+      setNativePopKey(key);
       onNativePopChange?.(key);
     },
     [onNativePopChange],
   );
-  const [screens, setScreens] = useState({
+  const [screens, setScreens] = useState(() => ({
     completedNativeDismissals: new Set<string>(),
     nativeCompletingPops: new Set<string>(),
-    routes: props.state.routes,
+    routes: workspaceScreenSlots(props.state.routes, props.workspaceDetailSlot ? 1 : undefined),
     descriptors: props.descriptors,
     observedRoutes: props.state.routes,
+    observedDetailSlot: props.workspaceDetailSlot,
     observedDescriptors: props.descriptors,
-  });
+  }));
   if (
     screens.observedRoutes !== props.state.routes ||
+    screens.observedDetailSlot !== props.workspaceDetailSlot ||
     screens.observedDescriptors !== props.descriptors
   ) {
+    const slottedRoutes = workspaceScreenSlots(
+      props.state.routes,
+      props.workspaceDetailSlot ? 1 : undefined,
+      screens.routes,
+      nativePopKey,
+    );
     const routes = reconcileStackScreens(
       screens.routes,
-      props.state.routes,
+      slottedRoutes,
       screens.completedNativeDismissals,
+      (route) => route.screenKey,
     );
     const active = new Set(props.state.routes.map((route) => route.key));
     const retainedKeys = new Set(routes.map((route) => route.key));
@@ -106,6 +120,7 @@ export function V5CardStackView(
         ),
       ),
       observedRoutes: props.state.routes,
+      observedDetailSlot: props.workspaceDetailSlot,
       observedDescriptors: props.descriptors,
     });
   }
@@ -163,16 +178,16 @@ export function V5CardStackView(
           const attached = props.state.routes.some((current) => current.key === route.key);
           return (
             <Stack.Screen
-              key={route.key}
-              screenKey={route.key}
+              key={route.screenKey}
+              screenKey={route.screenKey}
               activityMode={
                 attached || screens.nativeCompletingPops.has(route.key) ? "attached" : "detached"
               }
               preventNativeDismiss={
                 preventedRoutes[route.key]?.preventRemove || options.gestureEnabled === false
               }
-              onDismiss={removeDismissed}
-              onNativeDismiss={nativeDismiss}
+              onDismiss={() => removeDismissed(route.key)}
+              onNativeDismiss={() => nativeDismiss(route.key)}
               onNativeDismissPrevented={() => {
                 if (preventedRoutes[route.key]?.preventRemove) descriptor.navigation.goBack();
               }}
@@ -240,7 +255,7 @@ export function V5CardStackView(
                 })
               }
             >
-              <NavigationContext value={descriptor.navigation}>
+              <NavigationContext key={route.key} value={descriptor.navigation}>
                 <NavigationRouteContext value={descriptor.route}>
                   <V5StackHeader
                     options={options}

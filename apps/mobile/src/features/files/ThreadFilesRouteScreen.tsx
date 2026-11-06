@@ -1,4 +1,5 @@
 // Fork: returning from a file must pop to the existing thread instead of replacing it.
+import { FilePreviewCloseContext, FilePreviewExpandContext } from "./file-preview-presentation";
 import { returnToFileThreadAction } from "./file-navigation";
 import { formatFilePathForClipboard } from "@t3tools/client-runtime/media-actions";
 import { resolvePathLinkTarget } from "@t3tools/shared/fileLinks";
@@ -6,7 +7,7 @@ import { resolveFilesystemReadAccess } from "@t3tools/client-runtime/state/files
 import { environmentSession } from "../../state/session";
 import { NativeStackScreenOptions } from "../../native/StackHeader";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, use, useId, useState } from "react";
 import { Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
@@ -23,6 +24,7 @@ import { ScreenContent } from "../../components/ui/ScreenContent";
 import { filePreviewDelimiter, parseDelimitedPreview } from "@t3tools/shared/delimitedPreview";
 import { DelimitedFilePreview } from "./DelimitedFilePreview";
 import { AudioFilePreview } from "./AudioFilePreview";
+import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { FilePreviewModal, type FilePreviewSource } from "../../components/FilePreviewModal";
 import { LoadingScreen } from "../../components/LoadingScreen";
@@ -41,7 +43,6 @@ import { projectEnvironment } from "../../state/projects";
 import type { AssetUrlFailureReason } from "../../state/asset-url-state";
 import { Inspector, useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
-import { ThreadRouteScreen } from "../threads/ThreadRouteScreen";
 import { FilePreviewLoading, FilePreviewNotice } from "./FilePreviewFeedback";
 import { FileMarkdownPreview } from "./FileMarkdownPreview";
 import { FileTreeBrowser } from "./FileTreeBrowser";
@@ -66,6 +67,7 @@ import {
   isSvgImagePreviewFile,
   isVideoPreviewFile,
   needsWorkspaceFileContents,
+  isDownloadOnlyFile,
 } from "./filePath";
 import { useWorkspaceFileAssetUrlState } from "./workspaceFileAssetUrl";
 
@@ -76,9 +78,22 @@ function FilesBrowserHeader(props: {
   readonly onRefresh: () => void;
   readonly onBack: () => void;
 }) {
+  // Fork: File navigation keeps full-screen dismissal in its existing bar until upstream supports inspector expansion.
+  const closePreview = use(FilePreviewCloseContext);
   return (
     <AppBar
       title="Files"
+      actions={
+        closePreview
+          ? [
+              {
+                accessibilityLabel: "Close expanded file preview",
+                icon: "xmark",
+                onPress: closePreview,
+              },
+            ]
+          : undefined
+      }
       subtitle={props.projectName}
       onBack={props.onBack}
       hideBottomBorder
@@ -122,6 +137,9 @@ function FileHeader(props: {
   }>;
 }) {
   const { panes, toggleAuxiliaryPane } = useAdaptiveWorkspaceLayout();
+  // Fork: Files in the subagent pane can expand without leaving their local navigation stack until upstream supports pane expansion.
+  const expandPreview = use(FilePreviewExpandContext);
+  const closePreview = use(FilePreviewCloseContext);
   const modes = props.actions.filter(({ inline }) => inline);
   return (
     <AppBar
@@ -139,20 +157,38 @@ function FileHeader(props: {
             }
           : undefined
       }
-      actions={
-        props.fileInspectorSupported
+      actions={[
+        ...(closePreview
+          ? [
+              {
+                accessibilityLabel: "Close expanded file preview",
+                icon: "xmark" as const,
+                onPress: closePreview,
+              },
+            ]
+          : []),
+        ...(expandPreview
+          ? [
+              {
+                accessibilityLabel: "Expand file preview",
+                icon: "arrow.up.left.and.arrow.down.right" as const,
+                onPress: expandPreview,
+              },
+            ]
+          : []),
+        ...(props.fileInspectorSupported
           ? [
               {
                 accessibilityLabel: panes.auxiliaryPaneVisible
                   ? "Hide file navigator"
                   : "Show file navigator",
-                icon: "sidebar.right",
+                icon: "sidebar.right" as const,
                 selected: panes.auxiliaryPaneVisible,
                 onPress: toggleAuxiliaryPane,
               },
             ]
-          : undefined
-      }
+          : []),
+      ]}
       menus={[
         {
           title: "File actions",
@@ -230,6 +266,8 @@ function FileContent(props: {
   readonly initialLine: number | null;
   readonly truncated: boolean;
   readonly onRefresh?: () => Promise<void> | void;
+  readonly onShare: () => void;
+  readonly sharing: boolean;
 }) {
   // Reopening a mutable host file must not reuse a poster from an earlier visit.
   const thumbnailInstanceId = useId();
@@ -247,6 +285,27 @@ function FileContent(props: {
     isVideoFile ||
     isAudioFile ||
     (props.activeMode === "preview" && (isImageFile || isBrowserFile));
+
+  // Fork: Binary artifacts use the existing download/share flow instead of the text reader until upstream supports download-only file previews.
+  if (isDownloadOnlyFile(props.relativePath)) {
+    return (
+      <View className="flex-1 items-center justify-center bg-sheet px-6">
+        <EmptyState
+          title={basename(props.relativePath)}
+          detail="This file is available to download."
+          action={
+            <Button
+              label="Save or share"
+              icon="square.and.arrow.up"
+              loading={props.sharing}
+              disabled={!props.mediaSource}
+              onPress={props.onShare}
+            />
+          }
+        />
+      </View>
+    );
+  }
 
   if (needsAssetUrl && props.previewFailure !== null) {
     return (
@@ -338,7 +397,7 @@ function FileContent(props: {
   );
 }
 
-type ThreadFilesRouteScreenProps = StaticScreenProps<{
+export type ThreadFilesRouteScreenProps = StaticScreenProps<{
   readonly environmentId: string;
   readonly threadId?: string;
   readonly cwd?: string;
@@ -428,7 +487,17 @@ function FilesToolbarBottomFade() {
   );
 }
 
-export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
+// Fork: The root route supplies its thread renderer so inspector file screens do not import back into thread navigation; remove when upstream separates these entry points.
+export function ThreadFilesTreeScreen(
+  props: ThreadFilesRouteScreenProps & {
+    readonly renderThread?: (
+      props: ThreadFilesRouteScreenProps & {
+        readonly onReturnToThread: () => void;
+        readonly renderInspector: () => ReactNode;
+      },
+    ) => ReactNode;
+  },
+) {
   const navigation = useNavigation();
   const { fileInspector, layout } = useAdaptiveWorkspaceLayout();
   const [searchQuery, setSearchQuery] = useState("");
@@ -436,7 +505,8 @@ export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
   const { cwd, environmentId, projectName, selectedThread, threadId } = useThreadFilesWorkspace(
     props.route.params,
   );
-  const hasFileInspector = fileInspector.supported && threadId !== null;
+  const hasFileInspector =
+    fileInspector.supported && threadId !== null && props.renderThread !== undefined;
   const fileAccessSession = useEnvironmentQuery(
     environmentId !== null ? environmentSession.sessionStateAtom(environmentId) : null,
   );
@@ -510,13 +580,11 @@ export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
   };
   if (environmentId === null || (threadId !== null && selectedThread === null)) {
     if (hasFileInspector) {
-      return (
-        <ThreadRouteScreen
-          onReturnToThread={handleReturnToThread}
-          renderInspector={renderInspector}
-          route={props.route}
-        />
-      );
+      return props.renderThread?.({
+        onReturnToThread: handleReturnToThread,
+        renderInspector,
+        route: props.route,
+      });
     }
     return <LoadingScreen message="Opening files..." messagePlacement="above-spinner" />;
   }
@@ -534,13 +602,11 @@ export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
   }
 
   if (hasFileInspector) {
-    return (
-      <ThreadRouteScreen
-        onReturnToThread={handleReturnToThread}
-        renderInspector={renderInspector}
-        route={props.route}
-      />
-    );
+    return props.renderThread?.({
+      onReturnToThread: handleReturnToThread,
+      renderInspector,
+      route: props.route,
+    });
   }
 
   const content = (
@@ -661,22 +727,33 @@ export function ThreadFileScreen(props: ThreadFileRouteScreenProps) {
     draftCwd: threadId === null ? cwd : null,
   });
   const assetPreviewUri = assetPreview._tag === "Success" ? assetPreview.url : null;
+  // Fork: Download-only artifacts mint attachment URLs, including absolute host paths, until upstream exposes binary workspace downloads on mobile.
+  const isDownloadFile = relativePath !== null && isDownloadOnlyFile(relativePath);
+  const fileResource =
+    isDownloadFile && threadId !== null && targetPath !== null
+      ? {
+          _tag: "media-file" as const,
+          threadId,
+          path: targetPath,
+          disposition: "attachment" as const,
+        }
+      : assetPreview.resource;
   const mediaSource: MediaActionsSource | undefined =
     environmentId !== null &&
     relativePath !== null &&
-    assetPreview.resource !== null &&
-    "path" in assetPreview.resource &&
-    typeof assetPreview.resource.path === "string" &&
-    (isImageFile || isVideoFile)
+    fileResource !== null &&
+    "path" in fileResource &&
+    typeof fileResource.path === "string" &&
+    (isImageFile || isVideoFile || isDownloadFile)
       ? {
-          reference: mediaFileReference(assetPreview.resource.path, cwd),
+          reference: mediaFileReference(fileResource.path, cwd),
           name: basename(relativePath),
           mimeType:
             mediaMimeTypeFromExtension(relativePath.slice(relativePath.lastIndexOf("."))) ??
             "application/octet-stream",
           environmentId,
           ...(threadId === null ? {} : { threadId }),
-          resource: assetPreview.resource,
+          resource: fileResource,
         }
       : undefined;
   const mediaActions = useMediaActions(mediaSource);
@@ -800,7 +877,7 @@ export function ThreadFileScreen(props: ThreadFileRouteScreenProps) {
             onPress: () => setModeOverride({ path: relativePath, mode: "source" }),
           } as const)
         : null,
-      resolvedActiveMode === "source"
+      resolvedActiveMode === "source" && !isDownloadFile
         ? ({
             id: "word-wrap",
             title: appearance.codeWordBreak ? "Disable word wrap" : "Enable word wrap",
@@ -848,7 +925,7 @@ export function ThreadFileScreen(props: ThreadFileRouteScreenProps) {
         ? ({
             id: "open-pdf",
             title: "Open PDF",
-            icon: "arrow.up.left.and.arrow.down.right",
+            icon: "arrow.up.left.and.arrow.down.right" as const,
             inline: false,
             onPress: () =>
               setFullScreenPreview({
@@ -998,6 +1075,8 @@ export function ThreadFileScreen(props: ThreadFileRouteScreenProps) {
           onRetryPreview={handleRetryPreview}
           videoSource={videoSource}
           mediaSource={mediaSource}
+          onShare={() => void mediaActions.share()}
+          sharing={mediaActions.sharing}
           resolveVideoUri={assetPreview.refresh}
           fileContents={fileData?.contents ?? null}
           fileError={fileQuery.error}

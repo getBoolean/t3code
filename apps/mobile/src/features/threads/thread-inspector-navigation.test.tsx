@@ -38,11 +38,17 @@ const { StackRouter, StackActions } = requireNavigation("@react-navigation/route
   StackActions: typeof import("@react-navigation/native").StackActions;
 };
 
-function setup(fromAgents: boolean, fullscreen = false) {
+function setup(fromAgents: boolean, fullscreen = false, sheet = "ThreadAgents") {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   const router = StackRouter({});
   const options = {
-    routeNames: ["Home", "Thread", "ThreadAgents", "ThreadInspectorFullscreen"],
+    routeNames: [
+      "Home",
+      "Thread",
+      "ThreadAgents",
+      "ThreadBackgroundWork",
+      "ThreadInspectorFullscreen",
+    ],
     routeParamList: {},
     routeGetIdList: {},
   };
@@ -61,9 +67,7 @@ function setup(fromAgents: boolean, fullscreen = false) {
   if (fullscreen)
     dispatch(StackActions.push("ThreadInspectorFullscreen", { ...source, threadId: "child" }));
   if (fromAgents)
-    dispatch(
-      StackActions.push("ThreadAgents", fullscreen ? { ...source, threadId: "child" } : source),
-    );
+    dispatch(StackActions.push(sheet, fullscreen ? { ...source, threadId: "child" } : source));
   let openInspector: ReturnType<typeof useOpenThreadInspector>;
   let openLinkedThread: ReturnType<typeof useOpenLinkedThread>;
   function Probe() {
@@ -100,26 +104,30 @@ function setup(fromAgents: boolean, fullscreen = false) {
   };
 }
 
-it("opens a subagent from the Agents sheet without replacing the parent thread", () => {
-  using screen = setup(true);
-  const inspector = {
-    type: "thread",
-    environmentId: screen.source.environmentId,
-    threadId: "child",
-  } as const;
-  screen.open(inspector);
-  expect(screen.state.routes.map((route) => route.name)).toEqual(["Home", "Thread"]);
-  expect(screen.state.routes.at(-1)).toMatchObject({
-    key: screen.parentKey,
-    params: { ...screen.source, prompt: "retained prompt", inspector },
-  });
-  screen.dispatch(StackActions.push("ThreadInspectorFullscreen", inspector));
-  screen.dispatch(StackActions.pop());
-  expect(screen.state.routes.at(-1)).toMatchObject({
-    key: screen.parentKey,
-    params: { ...screen.source, inspector },
-  });
-});
+// Fork: Background work shares the Agents sheet's parent-preserving inspector route until upstream unifies the entry points.
+it.each(["ThreadAgents", "ThreadBackgroundWork"])(
+  "opens a subagent from %s without replacing the parent thread",
+  (sheet) => {
+    using screen = setup(true, false, sheet);
+    const inspector = {
+      type: "thread",
+      environmentId: screen.source.environmentId,
+      threadId: "child",
+    } as const;
+    screen.open(inspector);
+    expect(screen.state.routes.map((route) => route.name)).toEqual(["Home", "Thread"]);
+    expect(screen.state.routes.at(-1)).toMatchObject({
+      key: screen.parentKey,
+      params: { ...screen.source, prompt: "retained prompt", inspector },
+    });
+    screen.dispatch(StackActions.push("ThreadInspectorFullscreen", inspector));
+    screen.dispatch(StackActions.pop());
+    expect(screen.state.routes.at(-1)).toMatchObject({
+      key: screen.parentKey,
+      params: { ...screen.source, inspector },
+    });
+  },
+);
 
 it("opens a completion link in the parent inspector", () => {
   using screen = setup(false);
@@ -296,4 +304,173 @@ it("keeps a focused inspector registered across renders and updates its content"
   act(() => root.unmount());
   expect(activeRender).toBeUndefined();
   expect(listeners.focus.size + listeners.blur.size).toBe(0);
+});
+
+// Fork: File previews opened in a subagent must stay on its local stack until upstream scopes inspector navigation.
+it("opens attached and workspace files inside the subagent navigator and returns to that subagent", () => {
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  const requireMobile = NodeModule.createRequire(import.meta.url);
+  const babel = requireMobile("@babel/core") as {
+    transformFileSync(file: string, options: Record<string, unknown>): { code: string };
+  };
+  const compiled = babel.transformFileSync(
+    NodePath.resolve(__dirname, "thread-inspector-preview.tsx"),
+    {
+      babelrc: false,
+      configFile: false,
+      presets: [
+        [
+          requireMobile.resolve("babel-preset-expo"),
+          { unstable_transformImportMeta: true, enableBabelRuntime: false },
+        ],
+      ],
+      caller: {
+        name: "metro",
+        bundler: "metro",
+        platform: "ios",
+        isDev: false,
+        isServer: false,
+        isNodeModule: false,
+        supportsStaticESM: false,
+        supportsReactCompiler: true,
+      },
+    },
+  );
+  const passthrough = ({ children }: { children?: React.ReactNode }) => children;
+  const context = React.createContext(null);
+  const expandContext = React.createContext<(() => void) | null>(null);
+  const closeContext = React.createContext<(() => void) | null>(null);
+  let expand: (() => void) | null = null;
+  let containerMounts = 0;
+  let containerIdentity = 0;
+  let initialState: unknown;
+  let saveState: (state: unknown) => void = () => {};
+  let closeExpanded: () => void = () => {};
+  const exports: { ThreadInspectorPreview?: React.ComponentType<Record<string, unknown>> } = {};
+  const load = (name: string) => {
+    if (name === "react" || name.startsWith("react/")) return requireMobile(name);
+    if (name === "@react-navigation/native")
+      return {
+        NavigationContainer: (props: {
+          children: React.ReactNode;
+          initialState?: unknown;
+          onStateChange: (state: unknown) => void;
+        }) => {
+          [containerIdentity] = React.useState(() => ++containerMounts);
+          expand = React.use(expandContext);
+          closeExpanded = React.use(closeContext) ?? (() => {});
+          initialState = props.initialState;
+          saveState = props.onStateChange;
+          return props.children;
+        },
+        NavigationIndependentTree: passthrough,
+        useNavigation: () => ({ dispatch: () => undefined }),
+        useIsFocused: () => true,
+      };
+    if (name === "../../native/createV5StackNavigator")
+      return {
+        createV5StackNavigator: () => ({
+          Navigator: passthrough,
+          Screen: ({ name }: { name: string }) => <span data-screen={name} />,
+        }),
+      };
+    if (name === "react-native") return { View: passthrough, Modal: passthrough };
+    if (name === "react-native-safe-area-context")
+      return { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) };
+    if (name === "../files/file-preview-presentation")
+      return { FilePreviewExpandContext: expandContext, FilePreviewCloseContext: closeContext };
+    if (name === "../../components/ui/SheetHeader")
+      return {
+        SheetHeader: ({ title }: { title: string }) => {
+          return <span data-expanded-title>{title}</span>;
+        },
+      };
+    if (name === "./thread-inspector-navigation")
+      return { ThreadInspectorNavigationContext: context };
+    if (name === "../layout/inspector-bar-store") return { InspectorCloseContext: context };
+    if (name === "../../native/v5-workspace-context")
+      return { WorkspaceSlotOptionsContext: context };
+    if (name === "../layout/workspace-content-width")
+      return {
+        WorkspaceContentWidthContext: context,
+        WorkspaceSettledContentWidthContext: context,
+      };
+    if (name === "../../lib/useMobileNavigationTheme")
+      return { useMobileNavigationTheme: () => ({}) };
+    return {};
+  };
+  new Function("require", "exports", compiled.code)(load, exports);
+  const Preview = exports.ThreadInspectorPreview!;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  using _root = { [Symbol.dispose]: () => act(() => root.unmount()) };
+  act(() =>
+    root.render(
+      <Preview
+        target={{ type: "thread", environmentId: "env", threadId: "child" }}
+        onOpen={() => {}}
+        onClose={() => {}}
+        renderThread={() => null}
+      />,
+    ),
+  );
+  const routeNames = [...container.querySelectorAll<HTMLElement>("[data-screen]")].map(
+    (node) => node.dataset.screen!,
+  );
+  const router = StackRouter({});
+  const options = { routeNames, routeParamList: {}, routeGetIdList: {} };
+  const initial = router.getRehydratedState(
+    {
+      stale: true,
+      routes: [{ name: "Thread", params: { environmentId: "env", threadId: "child" } }],
+    },
+    options,
+  );
+  for (const name of ["ThreadAttachment", "ThreadFile", "ThreadFiles"]) {
+    const opened = router.getStateForAction(
+      initial,
+      StackActions.push(name, {
+        environmentId: "env",
+        threadId: "child",
+        path: ["README.md"],
+        attachmentId: "a",
+      }),
+      options,
+    );
+    expect(opened?.routes.at(-1)?.name).toBe(name);
+    if (!opened || opened.stale !== false) throw new Error("Expected a local file preview");
+    const returned = router.getStateForAction(
+      opened,
+      name === "ThreadAttachment"
+        ? StackActions.pop()
+        : StackActions.popTo("Thread", { environmentId: "env", threadId: "child" }),
+      options,
+    );
+    expect(returned?.routes).toEqual(initial.routes);
+    act(() => saveState(opened));
+    act(() => expand?.());
+    expect(initialState).toBe(opened);
+    expect(expand).toBeNull();
+    expect(container.querySelector("[data-expanded-title]")).toBeNull();
+    act(() => saveState(returned));
+    expect(container.querySelector("[data-expanded-title]")).toBeNull();
+    act(() => saveState(opened));
+    act(() => closeExpanded());
+    expect(initialState).toBe(opened);
+    expect(expand).toBeTypeOf("function");
+  }
+  // Fork: A different subagent needs a fresh independent navigation state until upstream resets inspector containers by target.
+  const previousContainer = containerIdentity;
+  act(() =>
+    root.render(
+      <Preview
+        target={{ type: "thread", environmentId: "env", threadId: "working-child" }}
+        onOpen={() => {}}
+        onClose={() => {}}
+        renderThread={() => null}
+      />,
+    ),
+  );
+  expect(containerIdentity).not.toBe(previousContainer);
+  expect(initialState).toBeUndefined();
 });

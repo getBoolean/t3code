@@ -56,5 +56,15 @@ describe("needsWorkspaceFileContents", () => {
     const input = { relativePath: "package.json", activeMode: "source" } as const;
     expect(needsWorkspaceFileContents({ ...input, metadataKind: undefined })).toBe(true);
     expect(needsWorkspaceFileContents({ ...input, metadataKind: "directory" })).toBe(false);
+    // Fork: Installers and archives use byte downloads rather than text reads until upstream supports download-only workspace files.
+    for (const relativePath of [
+      "/Users/maria/Library/Mobile Documents/build.ipa",
+      "app.APK",
+      "build.zip",
+    ]) {
+      expect(needsWorkspaceFileContents({ ...input, relativePath, metadataKind: "file" })).toBe(
+        false,
+      );
+    }
   });
 });

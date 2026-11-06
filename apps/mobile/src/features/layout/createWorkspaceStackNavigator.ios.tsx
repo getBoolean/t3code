@@ -71,6 +71,7 @@ import {
   projectWorkspaceStack,
   partitionStackPresentations,
   reconcileStackScreens,
+  workspaceScreenSlots,
   type CollapsedSplitColumn,
 } from "../../native/workspace-stack-projection";
 import {
@@ -216,26 +217,43 @@ function WorkspaceColumns(
   } = useAdaptiveWorkspaceLayout();
   const deviceType = useDeviceType();
   const inspectorWidth = nativeInspectorWidth;
+  // Fork: Keep iPad sidebar destinations in one native root until upstream separates selection from pushes.
+  const collapsedColumn = useRef<CollapsedSplitColumn>({
+    visible: props.detail.length ? "secondary" : "primary",
+    leaving: null,
+  });
+  const [nativelyLeavingKey, setNativelyLeavingKey] = useState<string | null>(null);
   const resizeStartWidth = useRef(inspectorWidth);
   const settingsDetailIn = (detail: readonly Route[]) =>
     deviceType !== "pad" && layout.usesSplitView && detail[0] && isSettingsRoute(detail[0].name)
       ? detail[0]
       : undefined;
   // Split screens must remain mounted while UIKit animates a detached route away.
-  const [screens, setScreens] = useState({
-    routes: props.detail,
+  const [screens, setScreens] = useState(() => ({
+    routes: workspaceScreenSlots(props.detail, deviceType === "pad" ? 0 : undefined),
     descriptors: props.descriptors,
     observedRoutes: props.detail,
     observedDescriptors: props.descriptors,
     completed: new Set<string>(),
-  });
+  }));
   if (
     screens.observedRoutes !== props.detail ||
     screens.observedDescriptors !== props.descriptors
   ) {
+    const slottedDetail = workspaceScreenSlots(
+      props.detail,
+      deviceType === "pad" ? 0 : undefined,
+      screens.routes,
+      nativelyLeavingKey,
+    );
     const active = new Set(props.detail.map((route) => route.key));
     const settingsSlot = settingsDetailIn(props.detail);
-    const routes = reconcileStackScreens(screens.routes, props.detail, screens.completed).filter(
+    const routes = reconcileStackScreens(
+      screens.routes,
+      slottedDetail,
+      screens.completed,
+      (route) => route.screenKey,
+    ).filter(
       // The slot's native screen stays; the pages it showed, and any above them, just go.
       (route) => !settingsSlot || active.has(route.key) || !isSettingsRoute(route.name),
     );
@@ -271,7 +289,6 @@ function WorkspaceColumns(
   const activeDetailKey = props.detail.at(-1)?.key;
   const compactColumn = activeDetailKey ? "secondary" : "primary";
   const collapsed = useRef(!layout.usesSplitView);
-  const collapsedColumn = useRef<CollapsedSplitColumn>({ visible: compactColumn, leaving: null });
   const threadParams = props.detail.findLast((route) => route.name === "Thread")?.params;
   const pullRequestParams = props.detail.findLast(isPullRequestRoute)?.params;
   const selectedPullRequestKey =
@@ -322,6 +339,7 @@ function WorkspaceColumns(
       deviceType === "pad",
     );
     collapsedColumn.current = transition.column;
+    setNativelyLeavingKey(transition.column.leaving);
     setNativelyPoppingWorkspaceRoute(transition.column.leaving);
     if (transition.pop) props.navigation.dispatch(transition.pop);
   };
@@ -331,7 +349,7 @@ function WorkspaceColumns(
     if (layout.usesSplitView || collapsedColumn.current.visible === compactColumn) return;
     collapsedColumn.current = { ...collapsedColumn.current, visible: compactColumn };
     hostRef.current?.show(compactColumn);
-  }, [compactColumn, layout.usesSplitView]);
+  }, [compactColumn, layout.usesSplitView, collapsedColumn]);
 
   const primary = props.descriptors[props.primary.key];
   if (!primary) return null;
@@ -406,7 +424,11 @@ function WorkspaceColumns(
           <ColumnScreen
             descriptor={primary}
             primary
-            footer={deviceType === "pad" ? <WorkspaceSidebarTabsFooter /> : undefined}
+            footer={
+              deviceType === "pad" && layout.usesSplitView ? (
+                <WorkspaceSidebarTabsFooter />
+              ) : undefined
+            }
             selectedThreadKey={selectedThreadKey}
             selectedPullRequestKey={selectedPullRequestKey}
             onDismiss={handleNativeDismiss}
@@ -437,7 +459,7 @@ function WorkspaceColumns(
           {screens.routes.map((route) => {
             const descriptor = props.descriptors[route.key] ?? screens.descriptors[route.key];
             const inSettingsSlot = settingsDetailIn(props.detail)?.key === route.key;
-            const screenKey = inSettingsSlot ? SETTINGS_DETAIL_SCREEN : route.key;
+            const screenKey = inSettingsSlot ? SETTINGS_DETAIL_SCREEN : route.screenKey;
             return descriptor ? (
               <ColumnScreen
                 key={screenKey}
@@ -533,10 +555,14 @@ function WorkspaceStackView(props: ViewProps & { readonly nativeColumns: boolean
     options: { headerShown: false },
     render: () => (
       <WorkspaceNativeTabs
-        tabsInSidebarColumn={props.nativeColumns && !workspacePage && deviceType === "pad"}
+        tabsInSidebarColumn={
+          props.nativeColumns && layout.usesSplitView && !workspacePage && deviceType === "pad"
+        }
         hidden={
           !workspacePage &&
           projection.detail.length > 0 &&
+          // Fork: Keep compact iPad destination navigation visible until upstream makes sidebar utilities width-aware.
+          !(deviceType === "pad" && projection.detail.length === 1) &&
           !primaryVisible &&
           !layout.usesSplitView &&
           (metrics?.verticalBarEdge ?? "none") === "none"
@@ -552,6 +578,7 @@ function WorkspaceStackView(props: ViewProps & { readonly nativeColumns: boolean
         ) : (
           <V5CardStackView
             {...props}
+            workspaceDetailSlot={deviceType === "pad"}
             onRootVisibilityChange={setPrimaryVisible}
             onNativePopChange={setNativelyPoppingWorkspaceRoute}
             descriptors={descriptors}

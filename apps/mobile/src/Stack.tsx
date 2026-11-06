@@ -50,7 +50,9 @@ import {
 import { ArchivedThreadsRouteScreen } from "./features/archive/ArchivedThreadsRouteScreen";
 import { ConnectOnboardingRouteScreen } from "./features/cloud/ConnectOnboardingRouteScreen";
 import { AttachmentFileScreen } from "./features/files/AttachmentFileScreen";
-import { ThreadFilesTreeScreen, ThreadFileScreen } from "./features/files/ThreadFilesRouteScreen";
+// Fork: Root file navigation composes its thread renderer outside the inspector dependency graph until upstream separates the file entry points.
+import { ThreadFilesTreeRouteScreen } from "./features/files/ThreadFilesTreeRouteScreen";
+import { ThreadFileScreen } from "./features/files/ThreadFilesRouteScreen";
 import { AdaptiveWorkspaceLayout } from "./features/layout/AdaptiveWorkspaceLayout";
 import {
   HardwareKeyboardCommandOverlay,
@@ -757,7 +759,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
     }),
     NewTaskFiles: createNativeStackScreen({
       linking: "new/draft/files",
-      screen: ThreadFilesTreeScreen,
+      screen: ThreadFilesTreeRouteScreen,
       options: SOLID_HEADER_OPTIONS,
     }),
     NewTaskFile: createNativeStackScreen({
@@ -831,7 +833,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
       },
     }),
     ThreadFiles: createNativeStackScreen({
-      screen: ThreadFilesTreeScreen,
+      screen: ThreadFilesTreeRouteScreen,
       linking: `${THREAD_LINKING_PREFIX}/files`,
       options: {
         ...GLASS_HEADER_OPTIONS,
