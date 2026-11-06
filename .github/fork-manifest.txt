@@ -988,3 +988,8 @@ apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	expect(con
 
 # Fork: The mixed healthy/FIFO subprocess test uses live deadlines until its fixture can deterministically coordinate all child completions.
 apps/server/src/project/AgentSessionScanner.test.ts	it.live("still reads the git identity
+
+# Fork: Root files compose the thread renderer outside inspector file screens to keep both mobile dependency graphs acyclic until upstream separates these entry points.
+apps/mobile/src/Stack.tsx	screen: ThreadFilesTreeRouteScreen
+apps/mobile/src/features/files/ThreadFilesTreeRouteScreen.tsx	renderThread=
+apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	props.renderThread?.({

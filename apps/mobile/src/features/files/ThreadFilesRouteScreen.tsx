@@ -43,7 +43,6 @@ import { projectEnvironment } from "../../state/projects";
 import type { AssetUrlFailureReason } from "../../state/asset-url-state";
 import { Inspector, useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
-import { ThreadRouteScreen } from "../threads/ThreadRouteScreen";
 import { FilePreviewLoading, FilePreviewNotice } from "./FilePreviewFeedback";
 import { FileMarkdownPreview } from "./FileMarkdownPreview";
 import { FileTreeBrowser } from "./FileTreeBrowser";
@@ -398,7 +397,7 @@ function FileContent(props: {
   );
 }
 
-type ThreadFilesRouteScreenProps = StaticScreenProps<{
+export type ThreadFilesRouteScreenProps = StaticScreenProps<{
   readonly environmentId: string;
   readonly threadId?: string;
   readonly cwd?: string;
@@ -488,7 +487,17 @@ function FilesToolbarBottomFade() {
   );
 }
 
-export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
+// Fork: The root route supplies its thread renderer so inspector file screens do not import back into thread navigation; remove when upstream separates these entry points.
+export function ThreadFilesTreeScreen(
+  props: ThreadFilesRouteScreenProps & {
+    readonly renderThread?: (
+      props: ThreadFilesRouteScreenProps & {
+        readonly onReturnToThread: () => void;
+        readonly renderInspector: () => ReactNode;
+      },
+    ) => ReactNode;
+  },
+) {
   const navigation = useNavigation();
   const { fileInspector, layout } = useAdaptiveWorkspaceLayout();
   const [searchQuery, setSearchQuery] = useState("");
@@ -496,7 +505,8 @@ export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
   const { cwd, environmentId, projectName, selectedThread, threadId } = useThreadFilesWorkspace(
     props.route.params,
   );
-  const hasFileInspector = fileInspector.supported && threadId !== null;
+  const hasFileInspector =
+    fileInspector.supported && threadId !== null && props.renderThread !== undefined;
   const fileAccessSession = useEnvironmentQuery(
     environmentId !== null ? environmentSession.sessionStateAtom(environmentId) : null,
   );
@@ -570,13 +580,11 @@ export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
   };
   if (environmentId === null || (threadId !== null && selectedThread === null)) {
     if (hasFileInspector) {
-      return (
-        <ThreadRouteScreen
-          onReturnToThread={handleReturnToThread}
-          renderInspector={renderInspector}
-          route={props.route}
-        />
-      );
+      return props.renderThread?.({
+        onReturnToThread: handleReturnToThread,
+        renderInspector,
+        route: props.route,
+      });
     }
     return <LoadingScreen message="Opening files..." messagePlacement="above-spinner" />;
   }
@@ -594,13 +602,11 @@ export function ThreadFilesTreeScreen(props: ThreadFilesRouteScreenProps) {
   }
 
   if (hasFileInspector) {
-    return (
-      <ThreadRouteScreen
-        onReturnToThread={handleReturnToThread}
-        renderInspector={renderInspector}
-        route={props.route}
-      />
-    );
+    return props.renderThread?.({
+      onReturnToThread: handleReturnToThread,
+      renderInspector,
+      route: props.route,
+    });
   }
 
   const content = (
