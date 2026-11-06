@@ -6,13 +6,12 @@ import type { ProjectEntry } from "@t3tools/contracts";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, RefreshControl, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, RefreshControl, View } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { PierreEntryIcon } from "../../components/PierreEntryIcon";
 import { cn } from "../../lib/cn";
-import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
+import { useContentTopInset } from "../../components/ui/useBarInset";
 import {
   buildFileTree,
   flattenFileTree,
@@ -123,9 +122,7 @@ export function FileTreeBrowser(props: {
     readonly path: string;
     readonly selectedPathAtPress: string | null;
   } | null>(null);
-  const insets = useSafeAreaInsets();
-  const columnMetrics = useNativeColumnLayoutMetrics();
-  const headerInset = Platform.OS === "ios" ? (columnMetrics?.safeArea.top ?? insets.top) : 0;
+  const headerInset = useContentTopInset();
   const {
     onLoadDirectory,
     onPreviewFile,
@@ -217,14 +214,14 @@ export function FileTreeBrowser(props: {
   // Keep the list as direct screen content so UIKit can apply header insets.
   return (
     <LegendList
-      renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+      renderScrollComponent={renderNativeScrollView}
       contentInsetStartAdjustment={headerInset}
       alwaysBounceVertical
       className="flex-1"
       data={visibleNodes}
       keyExtractor={(item) => item.node.path}
-      contentInsetAdjustmentBehavior={Platform.OS === "ios" ? "automatic" : "never"}
-      automaticallyAdjustsScrollIndicatorInsets={Platform.OS === "ios"}
+      contentInsetAdjustmentBehavior="automatic"
+      automaticallyAdjustsScrollIndicatorInsets
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       estimatedItemSize={42}
