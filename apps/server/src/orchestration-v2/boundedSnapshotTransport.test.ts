@@ -465,6 +465,8 @@ it.layer(TestLayer)("compact bounded snapshot transport", (it) => {
         assert.isBelow(compactBody.length, legacyBody.length);
 
         const legacy = decodeBounded(legacyBody);
+        // Fork: Both initial transports fit a small first page; remove with upstream opening budgets.
+        assert.isAtMost(legacy.projection.visibleTurnItems.length, 25);
         const compact = decodeBounded(compactBody);
         assert.isTrue(compact.turnItemsOmitLocalVisible);
         const { turnItemsOmitLocalVisible: _marker, projection: _p, ...compactRest } = compact;
@@ -532,6 +534,7 @@ it.layer(TestLayer)("compact bounded snapshot transport", (it) => {
       Effect.gen(function* () {
         const input = { threadId, acceptBoundedSnapshot: true, acceptCompactTurnItems: true };
         const plain = yield* firstSnapshot(input);
+        assert.isAtMost(plain.decoded.projection.visibleTurnItems.length, 25);
         const table = yield* firstSnapshot({ ...input, acceptCompactIds: true });
 
         assert.notProperty(encodeStreamItem(plain.raw), "ids");

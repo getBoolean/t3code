@@ -9,6 +9,7 @@ import { dedupeSnapshotBodies } from "@t3tools/shared/orchestrationV2DedupedBodi
 import {
   buildBoundedThreadProjection,
   type BoundedProjectionResult,
+  type ThreadHistoryPagePolicy,
 } from "./threadHistoryPaging.ts";
 import {
   capProjectionCheckpointFilesForWire,
@@ -67,12 +68,15 @@ export function boundedSnapshotResponseFields(input: {
 
 export function buildBoundedThreadStreamSnapshot(input: {
   readonly snapshotSequence: number;
+  // Fork: Paginated clients request a small opening window; guests retain their existing context budget until upstream separates these policies.
+  readonly policy?: ThreadHistoryPagePolicy;
   readonly projection: OrchestrationV2ThreadProjection;
   readonly compactTurnItems?: boolean;
   readonly dedupeBodies?: boolean;
   readonly compactIds?: boolean;
 }): ThreadSnapshotStreamItem {
   const bounded = buildBoundedThreadProjection({
+    policy: input.policy,
     snapshotSequence: input.snapshotSequence,
     projection: projectThreadProjectionForWire(input.projection),
   });

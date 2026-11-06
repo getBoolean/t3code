@@ -160,7 +160,8 @@ import {
 } from "./orchestration-v2/ThreadStream.ts";
 import {
   buildBoundedThreadProjection,
-  THREAD_HISTORY_PAGE_POLICY,
+  THREAD_INITIAL_HISTORY_POLICY,
+  THREAD_INITIAL_SNAPSHOT_WINDOW,
   THREAD_HISTORY_SNAPSHOT_ROW_LIMIT,
 } from "./orchestration-v2/threadHistoryPaging.ts";
 import {
@@ -970,9 +971,9 @@ export const subscribeOrchestrationV2Thread = Effect.fn("ws.orchestrationV2.subs
       const snapshot = yield* (
         useBoundedSnapshot
           ? threadManagement.getThreadSnapshotWindow(input.threadId, {
-              rowLimit: THREAD_HISTORY_SNAPSHOT_ROW_LIMIT,
+              // Fork: Socket fallback uses the same first page as HTTP; remove with upstream opening limits.
+              ...THREAD_INITIAL_SNAPSHOT_WINDOW,
               deferWork: input.acceptDeferredWork === true,
-              userTurnLimit: THREAD_HISTORY_PAGE_POLICY.maxUserTurns,
             })
           : threadManagement.getThreadSnapshot(input.threadId)
       ).pipe(
@@ -989,6 +990,7 @@ export const subscribeOrchestrationV2Thread = Effect.fn("ws.orchestrationV2.subs
       const snapshotItem = useBoundedSnapshot
         ? buildBoundedThreadStreamSnapshot({
             ...snapshot,
+            policy: THREAD_INITIAL_HISTORY_POLICY,
             compactTurnItems: input.acceptCompactTurnItems === true,
             dedupeBodies,
             compactIds: input.acceptCompactIds === true,

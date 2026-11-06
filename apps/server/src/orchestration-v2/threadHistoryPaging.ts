@@ -20,6 +20,21 @@ export const THREAD_HISTORY_PAGE_POLICY = {
   maxEncodedBytes: 1_048_576,
 } as const;
 
+// Fork: Open only a viewport-sized transcript; explicit older-page loads retain their larger budget until upstream separates opening windows.
+export const THREAD_INITIAL_HISTORY_POLICY = {
+  maxUserTurns: 1,
+  maxItems: 25,
+  maxTurnItems: 25,
+  maxEncodedBytes: 128 * 1024,
+} as const;
+export const THREAD_INITIAL_SNAPSHOT_WINDOW = {
+  rowLimit: THREAD_INITIAL_HISTORY_POLICY.maxItems + 2,
+  userTurnLimit: THREAD_INITIAL_HISTORY_POLICY.maxUserTurns,
+  turnItemLimit: THREAD_INITIAL_HISTORY_POLICY.maxTurnItems,
+  // Fork: Fetch completed collapsed work on expansion, including smaller groups; remove with upstream lazy opening work.
+  inlineWorkItemLimit: 1,
+} as const;
+
 export const THREAD_HISTORY_INLINE_WORK_ITEM_LIMIT = 150;
 
 export const OLDER_THREAD_USER_TURN_LIMIT = 20;

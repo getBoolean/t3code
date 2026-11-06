@@ -108,7 +108,6 @@ import {
   selectRecentTimelineWindow,
   THREAD_HISTORY_PAGE_POLICY,
   THREAD_HISTORY_INLINE_WORK_ITEM_LIMIT,
-  THREAD_HISTORY_TURN_SNAPSHOT_ROW_LIMIT,
 } from "./threadHistoryPaging.ts";
 
 export class ProjectionStoreApplyEventError extends Schema.TaggedError<ProjectionStoreApplyEventError>()(
@@ -702,6 +701,10 @@ export interface ProjectionStoreV2Shape {
     options: {
       readonly rowLimit: number;
       readonly userTurnLimit?: number | undefined;
+      // Fork: Initial reads must not inherit the 500-row history budget; remove with upstream opening limits.
+      readonly turnItemLimit?: number | undefined;
+      // Fork: The opening page needs summaries instead of hidden tool payloads; remove with upstream lazy opening work.
+      readonly inlineWorkItemLimit?: number | undefined;
       readonly deferWork?: boolean | undefined;
       readonly anchorItemId?: TurnItemId | undefined;
       readonly anchorThreadId?: ThreadId | undefined;
@@ -2872,6 +2875,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       threadId: ThreadId,
       window: ProjectionWindow,
     ) {
+      const turnItemLimit = window.turnItemLimit ?? THREAD_HISTORY_PAGE_POLICY.maxTurnItems;
       const eligible = sql`
                 WITH eligible AS NOT MATERIALIZED (
                   SELECT item.rowid AS item_rowid, item.payload_json, item.ordinal, item.turn_item_id,
@@ -3045,7 +3049,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                   SELECT run_id, segment, attempt_id, MIN(ordinal) AS first_ordinal,
                     MAX(ordinal) AS last_ordinal, COUNT(*) AS item_count
                   FROM work_segments WHERE can_defer = 1
-                  GROUP BY run_id, segment, attempt_id HAVING COUNT(*) > ${THREAD_HISTORY_INLINE_WORK_ITEM_LIMIT}
+                  GROUP BY run_id, segment, attempt_id HAVING COUNT(*) > ${window.inlineWorkItemLimit ?? THREAD_HISTORY_INLINE_WORK_ITEM_LIMIT}
                 ), window_items AS NOT MATERIALIZED (
                   SELECT item_rowid, ordinal, turn_item_id, run_id, type
                   FROM eligible WHERE ${window.deferWork ? 1 : 0} = 0
@@ -3065,7 +3069,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                     SELECT 1
                     FROM window_items
                     WHERE ordinal >= ${boundary.latest}
-                    LIMIT ${THREAD_HISTORY_PAGE_POLICY.maxTurnItems + 1}
+                    LIMIT ${turnItemLimit + 1}
                   )
                 ), selected AS (
                   -- Choose and sort rows by ID, then fetch payloads in that
@@ -3078,8 +3082,8 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                   LIMIT CASE
                     WHEN ${window.rowLimit} = 0 THEN 0
                     WHEN (SELECT row_count FROM latest_user_turn)
-                      BETWEEN 1 AND ${THREAD_HISTORY_PAGE_POLICY.maxTurnItems}
-                      THEN ${THREAD_HISTORY_TURN_SNAPSHOT_ROW_LIMIT}
+                      BETWEEN 1 AND ${turnItemLimit}
+                      THEN ${turnItemLimit + 2}
                     ELSE ${window.rowLimit}
                   END
                 ), retained AS MATERIALIZED (
@@ -3898,6 +3902,8 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                 return {
                   rowLimit: window.rowLimit,
                   userTurnLimit: window.userTurnLimit,
+                  turnItemLimit: window.turnItemLimit,
+                  inlineWorkItemLimit: window.inlineWorkItemLimit,
                   deferWork: window.deferWork,
                   requiredRunId: forkedFrom.runId,
                   suppressLocal: anchor === undefined || anchorIsInDescendant,
@@ -6090,6 +6096,8 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             const projection = yield* readProjection(threadId, new Set(), {
               rowLimit: options.rowLimit,
               userTurnLimit: options.userTurnLimit,
+              turnItemLimit: options.turnItemLimit,
+              inlineWorkItemLimit: options.inlineWorkItemLimit,
               deferWork: options.deferWork,
               ...(historyAnchor?.threadId === threadId
                 ? { anchorItemId: historyAnchor.itemId }

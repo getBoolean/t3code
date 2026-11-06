@@ -8,7 +8,8 @@ import * as Schema from "effect/Schema";
 import { StoredOrchestrationThreadSnapshot } from "./orchestrationCache.ts";
 
 // Keep the full format for web/desktop; older clients discard compact records.
-export const COMPACT_THREAD_CACHE_SCHEMA_VERSION = 6 as const;
+// Fork: Old compact records retain larger opening windows; remove with upstream first-page cache invalidation.
+export const COMPACT_THREAD_CACHE_SCHEMA_VERSION = 8 as const;
 
 const StoredCompactThreadSnapshot = StoredOrchestrationThreadSnapshot.mapFields((fields) => ({
   ...fields,

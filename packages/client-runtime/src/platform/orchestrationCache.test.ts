@@ -74,14 +74,15 @@ describe("orchestration cache envelopes", () => {
     expect(decoded.visibleTurnItems.find((entry) => entry.item.id === item.id)?.item).toEqual(item);
   });
 
-  it("rejects thread snapshots saved before human history was bounded, but not shells", () => {
+  it("rejects thread snapshots saved with larger opening windows, but not shells", () => {
     const currentThread = encodeStoredThreadSnapshotJson({
       schemaVersion: ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION,
       environmentId,
       threadId: v2ThreadId,
       snapshot: { snapshotSequence: 4, projection: v2Projection },
     });
-    for (const staleVersion of [3, 4]) {
+    // Fork: Old opening windows must be fetched with the smaller policy; remove with upstream cache invalidation.
+    for (const staleVersion of [3, 4, 5, 6]) {
       const staleThread = currentThread.replace(
         `"schemaVersion":${ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION}`,
         `"schemaVersion":${staleVersion}`,

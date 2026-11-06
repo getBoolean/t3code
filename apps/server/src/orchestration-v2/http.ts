@@ -26,7 +26,8 @@ import {
   decodeThreadHistoryCursor,
   InvalidThreadHistoryCursorError,
   THREAD_HISTORY_SNAPSHOT_ROW_LIMIT,
-  THREAD_HISTORY_PAGE_POLICY,
+  THREAD_INITIAL_HISTORY_POLICY,
+  THREAD_INITIAL_SNAPSHOT_WINDOW,
   OLDER_THREAD_USER_TURN_LIMIT,
 } from "./threadHistoryPaging.ts";
 import * as ThreadManagementService from "./ThreadManagementService.ts";
@@ -134,12 +135,14 @@ export const layer = HttpApiBuilder.group(
       ) {
         return yield* threadManagement
           .getThreadSnapshotWindow(threadId, {
-            rowLimit: THREAD_HISTORY_SNAPSHOT_ROW_LIMIT,
+            // Fork: Initial HTTP reads use the opening budget, including SQL overscan; remove with upstream first-page limits.
+            ...(anchorItemId === undefined
+              ? THREAD_INITIAL_SNAPSHOT_WINDOW
+              : {
+                  rowLimit: THREAD_HISTORY_SNAPSHOT_ROW_LIMIT,
+                  userTurnLimit: OLDER_THREAD_USER_TURN_LIMIT,
+                }),
             deferWork,
-            userTurnLimit:
-              anchorItemId === undefined
-                ? THREAD_HISTORY_PAGE_POLICY.maxUserTurns
-                : OLDER_THREAD_USER_TURN_LIMIT,
             ...(anchorItemId === undefined ? {} : { anchorItemId }),
             ...(anchorThreadId === undefined ? {} : { anchorThreadId }),
           })
@@ -229,6 +232,7 @@ export const layer = HttpApiBuilder.group(
             args.query.deferWork === "1",
           ).pipe(traceLocalHandlerWork);
           const bounded = buildBoundedThreadProjection({
+            policy: THREAD_INITIAL_HISTORY_POLICY,
             projection: snapshot.projection,
             snapshotSequence: snapshot.snapshotSequence,
           });
