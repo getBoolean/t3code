@@ -186,9 +186,7 @@ export function replaceThreadLinks(
 }
 
 /**
- * Writes each link with its thread's current title, a hosted link as a v2 link. A link `title`
- * cannot resolve becomes plain text, its written label or a neutral one, except a labeled v1
- * link, which may open elsewhere.
+ * Writes each link with its thread's current title, a hosted link as a v2 link.
  */
 export function relabelThreadLinks(
   markdown: string,
@@ -206,6 +204,8 @@ export function relabelThreadLinks(
         : written.threadId;
     const current = title({ environmentId, threadId });
     if (current === undefined) {
+      // Fork: sidebar absence does not prove deletion; preserve scoped targets until navigation loads them (remove when upstream does).
+      if (written.environmentId !== null) return formatThreadLink(written, label || "Open thread");
       if (label !== undefined && written.environmentId === null) return undefined;
       return label?.trim() || unknownThreadLinkLabel(written, messageEnvironmentId);
     }
