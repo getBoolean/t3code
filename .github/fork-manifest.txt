@@ -113,6 +113,7 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 .github/workflows/release.yml	vars.T3CODE_RELEASES
 .github/workflows/release.yml	vars.T3CODE_MOBILE_RELEASE
 .github/workflows/release.yml	Fork:
+.github/workflows/release.yml	vars.T3CODE_TEST_WEB_TIMEOUT_MINUTES
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/web-preview.yml	Fork:
