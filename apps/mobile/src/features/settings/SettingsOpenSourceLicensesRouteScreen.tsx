@@ -88,7 +88,7 @@ export function SettingsOpenSourceLicensesRouteScreen() {
   return (
     <SettingsScreen title="Open source licenses" search={search}>
       <LegendList
-        renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+        renderScrollComponent={renderNativeScrollView}
         className="flex-1"
         contentContainerStyle={{
           paddingBottom:

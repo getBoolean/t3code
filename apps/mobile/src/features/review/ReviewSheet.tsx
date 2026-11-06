@@ -338,7 +338,7 @@ function ReviewFileNavigator({ files, sectionId, onSelectFile, ref }: ReviewFile
       />
       <ScreenContent insetHorizontal>
         <FlatList
-          renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+          renderScrollComponent={renderNativeScrollView}
           data={files}
           extraData={selectedFileId}
           keyExtractor={(file) => file.id}

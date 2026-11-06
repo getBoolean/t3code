@@ -169,7 +169,7 @@ apps/mobile/src/features/agent-awareness/remoteRegistration.test.ts	it("reports 
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx	Fork:
-apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: Report native route and scroll-surface details to the mobile behavior harness so iOS 17 screens can be verified.
 apps/mobile/src/features/development/behavior-probe.ts	Fork:
@@ -177,7 +177,7 @@ apps/mobile/src/features/development/behavior-probe.ts	navigate(name: string, pa
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/files/FileTreeBrowser.tsx	Fork:
-apps/mobile/src/features/files/FileTreeBrowser.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+apps/mobile/src/features/files/FileTreeBrowser.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: returning from a file must pop to the existing thread instead of replacing it.
 apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	Fork:
@@ -189,7 +189,7 @@ apps/mobile/src/features/files/ZipArchiveView.test.tsx	vi.mock("../../native/Nat
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/files/ZipArchiveView.tsx	Fork:
-apps/mobile/src/features/files/ZipArchiveView.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+apps/mobile/src/features/files/ZipArchiveView.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: preserve native pop behavior and direct-file recovery across upstream merges.
 apps/mobile/src/features/files/file-navigation.test.ts	Fork:
@@ -217,15 +217,15 @@ apps/mobile/src/features/layout/workspace-sidebar-footer.tsx	Fork:
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/pull-requests/PullRequestFiles.tsx	Fork:
-apps/mobile/src/features/pull-requests/PullRequestFiles.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+apps/mobile/src/features/pull-requests/PullRequestFiles.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/review/ReviewSheet.tsx	Fork:
-apps/mobile/src/features/review/ReviewSheet.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+apps/mobile/src/features/review/ReviewSheet.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx	Fork:
-apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: Keep regression coverage for run each project as its own git account (#1).
 apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.test.tsx	Fork:
@@ -249,7 +249,7 @@ apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx	void ensureGitAc
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx	Fork:
-apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx	renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: Guard sends with the project git-account warning and inset legacy-iOS thread history below the native app bar so Load earlier remains tappable.
 apps/mobile/src/features/threads/ThreadDetailScreen.tsx	Fork:

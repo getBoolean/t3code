@@ -5,7 +5,7 @@ import { AnimatedLegendList } from "@legendapp/list/reanimated";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import type { PullRequestChangeBreakdown } from "@t3tools/contracts";
 import { useState } from "react";
-import { View, Platform } from "react-native";
+import { View } from "react-native";
 import Animated from "react-native-reanimated";
 import { PierreEntryIcon } from "../../components/PierreEntryIcon";
 import { AppText as Text } from "../../components/ui/AppText";
@@ -434,7 +434,7 @@ export function PullRequestFilesSheet({ route }: StaticScreenProps<PullRequestDi
       />
       <ScreenContent>
         <AnimatedLegendList
-          renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+          renderScrollComponent={renderNativeScrollView}
           className="flex-1"
           data={parsed.kind === "files" ? groupByDirectory(parsed.files, collapsed) : []}
           keyExtractor={(item) => item.key}

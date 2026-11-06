@@ -6,7 +6,7 @@ import type { ProjectEntry } from "@t3tools/contracts";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, RefreshControl, View, Platform } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { PierreEntryIcon } from "../../components/PierreEntryIcon";
@@ -214,7 +214,7 @@ export function FileTreeBrowser(props: {
   // Keep the list as direct screen content so UIKit can apply header insets.
   return (
     <LegendList
-      renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+      renderScrollComponent={renderNativeScrollView}
       contentInsetStartAdjustment={headerInset}
       alwaysBounceVertical
       className="flex-1"

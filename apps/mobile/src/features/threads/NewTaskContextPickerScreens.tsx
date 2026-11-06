@@ -441,7 +441,7 @@ export function BranchPickerScreen(props: {
       </ScrollView>
     ) : (
       <LegendList
-        renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+        renderScrollComponent={renderNativeScrollView}
         alwaysBounceVertical={false}
         automaticallyAdjustsScrollIndicatorInsets
         automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}

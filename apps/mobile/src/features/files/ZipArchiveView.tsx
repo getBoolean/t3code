@@ -18,7 +18,7 @@ import { fetch } from "expo/fetch";
 import { File } from "expo-file-system";
 import { useNavigation, usePreventRemove } from "@react-navigation/native";
 import { use, useEffect, useEffectEvent, useRef, useState } from "react";
-import { Keyboard, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { PierreEntryIcon } from "../../components/PierreEntryIcon";
 import { AppBar } from "../../components/ui/AppBar";
@@ -411,7 +411,7 @@ function ZipArchiveList(props: {
   return (
     <View className="flex-1 bg-sheet">
       <LegendList
-        renderScrollComponent={Platform.OS === "ios" ? renderNativeScrollView : undefined}
+        renderScrollComponent={renderNativeScrollView}
         contentInsetStartAdjustment={props.headerInset}
         className="flex-1"
         data={rows}
