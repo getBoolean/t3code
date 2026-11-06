@@ -1,3 +1,4 @@
+// Fork: uncached scoped links must survive relabeling until navigation loads their targets; remove when upstream preserves them.
 import { describe, expect, it, vi } from "vite-plus/test";
 import { EnvironmentId, ThreadId, type ScopedThreadRef } from "@t3tools/contracts";
 
@@ -104,14 +105,20 @@ describe("thread links", () => {
     ).toBe("[There](t3-thread://v2/there/t1) and [Here](t3-thread://v2/local/t1)");
   });
 
-  it("turns a v2 link it cannot resolve into plain text, never the raw link", () => {
+  it("keeps uncached scoped links navigable without changing encoded identities", () => {
     expect(
       relabelThreadLinks(
         "<t3-thread://v2/there/t1>, <t3-thread://v2/local/t1>, [Old title](t3-thread://v2/there/t1)",
         local,
         () => undefined,
       ),
-    ).toBe("Thread on another machine, Thread no longer available, Old title");
+    ).toBe(
+      "[Open thread](t3-thread://v2/there/t1), [Open thread](t3-thread://v2/local/t1), [Old title](t3-thread://v2/there/t1)",
+    );
+    const encoded = "t3-thread://v2/local/thread:delegated-task:command%3Amcp%3A1";
+    expect(relabelThreadLinks(`<${encoded}>`, local, () => undefined)).toBe(
+      `[Open thread](${encoded})`,
+    );
     expect(relabelThreadLinks("[Old](t3-thread://v1/t1)", local, () => undefined)).toBe(
       "[Old](t3-thread://v1/t1)",
     );
@@ -231,7 +238,7 @@ describe("hosted thread links", () => {
     );
     expect(
       relabelThreadLinks("https://app.t3.codes/threads/there/t1", local, () => undefined),
-    ).toBe("Thread on another machine");
+    ).toBe("[Open thread](t3-thread://v2/there/t1)");
     expect(threadLinkRefs("Open https://app.t3.codes/threads/there/t%3A1", local)).toEqual([
       ref("there", "t:1"),
     ]);

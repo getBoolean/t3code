@@ -329,9 +329,9 @@ apps/mobile/src/lib/markdownDocument.ts	visit(parser.parse(markdown));
 apps/mobile/src/lib/markdownInlineFileLinks.test.ts	Fork:
 apps/mobile/src/lib/markdownInlineFileLinks.test.ts	it("opens known subagent task paths as thread links without rewriting files or code", () => {
 
-# Fork: recorded child navigation remains restricted to the parent environment.
+# Fork: scoped child navigation uses its explicit environment even without sidebar records.
 apps/mobile/src/lib/threadLinkNavigation.test.ts	Fork:
-apps/mobile/src/lib/threadLinkNavigation.test.ts	it("opens a recorded child outside the loaded sidebar without guessing another environment", () => {
+apps/mobile/src/lib/threadLinkNavigation.test.ts	it("opens scoped links without cached sidebar records in their explicit environment", () => {
 
 # Fork: recorded subagent links may target a child not present in the sidebar.
 apps/mobile/src/lib/threadLinkNavigation.ts	Fork:
@@ -1002,3 +1002,10 @@ apps/mobile/src/features/settings/components/SettingsScreen.tsx	hideBack={worksp
 # Fork: The iOS 17 app cannot link a pod raised to 18.0; this module only uses AudioToolbox.
 apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	Fork:
 apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	s.platform = :ios, '17.0'
+
+# Fork: preserve uncached scoped thread links on mobile, web, and desktop until navigation loads them; remove when upstream supports this.
+packages/shared/src/threadLinks.ts	if (written.environmentId !== null) return formatThreadLink(written, label || "Open thread");
+packages/shared/src/threadLinks.test.ts	keeps uncached scoped links navigable
+apps/web/src/components/chat/MarkdownThreadLink.tsx	thread === null && props.link.environmentId !== null
+apps/web/src/components/ThreadContextChip.tsx	Fork:
+apps/web/src/components/ThreadContextChip.tsx	: "Open thread"}

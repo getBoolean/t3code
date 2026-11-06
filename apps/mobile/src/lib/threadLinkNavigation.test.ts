@@ -1,9 +1,9 @@
-// Fork: recorded child navigation remains restricted to the parent environment.
+// Fork: scoped links navigate without sidebar records in their explicit environment; remove when upstream supports this.
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { expect, it } from "vite-plus/test";
 import { resolveThreadLinkRef } from "./threadLinkNavigation";
 
-it("opens a recorded child outside the loaded sidebar without guessing another environment", () => {
+it("opens scoped links without cached sidebar records in their explicit environment", () => {
   const environmentId = EnvironmentId.make("environment");
   const threadId = ThreadId.make("child");
   const link = { environmentId, threadId };
@@ -25,10 +25,30 @@ it("opens a recorded child outside the loaded sidebar without guessing another e
       () => [],
       subagents,
     ),
-  ).toBeNull();
+  ).toEqual(link);
   expect(
     resolveThreadLinkRef(
       link,
+      environmentId,
+      () => null,
+      () => [],
+    ),
+  ).toEqual(link);
+  const encoded = {
+    environmentId,
+    threadId: ThreadId.make("thread:delegated-task:command%3Amcp%3A1"),
+  };
+  expect(
+    resolveThreadLinkRef(
+      encoded,
+      environmentId,
+      () => null,
+      () => [],
+    ),
+  ).toEqual(encoded);
+  expect(
+    resolveThreadLinkRef(
+      { environmentId: null, threadId },
       environmentId,
       () => null,
       () => [],
