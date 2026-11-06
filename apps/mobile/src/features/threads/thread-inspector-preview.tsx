@@ -9,24 +9,24 @@ import {
 } from "@react-navigation/native";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { use, useState, type ReactNode } from "react";
-import { Modal, View } from "react-native";
+import { Modal, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   FilePreviewCloseContext,
   FilePreviewExpandContext,
 } from "../files/file-preview-presentation";
 
-import { IconButton } from "../../components/ui/IconButton";
+import { AppBar } from "../../components/ui/AppBar";
 import { SheetHeader } from "../../components/ui/SheetHeader";
-import { InspectorCloseContext } from "../layout/inspector-bar-store";
-import { createV5StackNavigator } from "../../native/createV5StackNavigator";
-import { NativeStackScreenOptions } from "../../native/StackHeader";
-import { WorkspaceSlotOptionsContext } from "../../native/v5-workspace-context";
-import { useMobileNavigationTheme } from "../../lib/useMobileNavigationTheme";
 import { DevicePreviewScreen } from "../devices/DevicePreviewRouteScreen";
 import { AttachmentFileScreen } from "../files/AttachmentFileScreen";
 import { ThreadFileScreen, ThreadFilesTreeScreen } from "../files/ThreadFilesRouteScreen";
+import { useMobileNavigationTheme } from "../../lib/useMobileNavigationTheme";
+import { createV5StackNavigator } from "../../native/createV5StackNavigator";
+import { WorkspaceSlotOptionsContext } from "../../native/v5-workspace-context";
 import { AdaptiveWorkspaceContext } from "../layout/adaptive-workspace-context";
+import { InspectorCloseContext } from "../layout/inspector-bar-store";
+import { pageRoute } from "../layout/route-options";
 import {
   WorkspaceContentWidthContext,
   WorkspaceSettledContentWidthContext,
@@ -36,32 +36,30 @@ import {
   type ThreadInspectorTarget,
 } from "./thread-inspector-navigation";
 
-export interface ThreadInspectorPresentation {
-  readonly onClose: () => void;
-  readonly onMaximize?: () => void;
-}
+/** A thread shown outside its route: in the inspector pane, or presented full screen with a close. */
+export type ThreadInspectorPresentation =
+  | { readonly onMaximize: () => void }
+  | { readonly onClose: () => void };
 
 export function ThreadInspectorHeader(
   props: ThreadInspectorPresentation & { readonly title: string },
 ) {
-  return (
-    <>
-      <NativeStackScreenOptions options={{ headerShown: true, headerTransparent: true }} />
-      <SheetHeader
+  if ("onMaximize" in props) {
+    return (
+      <AppBar
         title={props.title}
-        onClose={props.onClose}
-        accessibilityLabel="Close thread preview"
-        trailing={
-          props.onMaximize ? (
-            <IconButton
-              icon="arrow.up.left.and.arrow.down.right"
-              accessibilityLabel="Maximize thread"
-              onPress={props.onMaximize}
-            />
-          ) : undefined
-        }
+        actions={[
+          {
+            accessibilityLabel: "Maximize thread",
+            icon: "arrow.up.left.and.arrow.down.right",
+            onPress: props.onMaximize,
+          },
+        ]}
       />
-    </>
+    );
+  }
+  return (
+    <SheetHeader title={props.title} onClose={props.onClose} accessibilityLabel="Close thread" />
   );
 }
 
@@ -88,17 +86,14 @@ function InspectorFileScope({ children }: { readonly children: ReactNode }) {
   );
 }
 
+/** A thread shown beside or over the workspace does not take the workspace's content width. */
 export function InspectorContentScope({ children }: { readonly children: ReactNode }) {
   return (
-    <WorkspaceSlotOptionsContext value={null}>
-      <InspectorCloseContext value={null}>
-        <WorkspaceContentWidthContext value={null}>
-          <WorkspaceSettledContentWidthContext value={null}>
-            {children}
-          </WorkspaceSettledContentWidthContext>
-        </WorkspaceContentWidthContext>
-      </InspectorCloseContext>
-    </WorkspaceSlotOptionsContext>
+    <WorkspaceContentWidthContext value={null}>
+      <WorkspaceSettledContentWidthContext value={null}>
+        {children}
+      </WorkspaceSettledContentWidthContext>
+    </WorkspaceContentWidthContext>
   );
 }
 
@@ -116,6 +111,7 @@ export function ThreadInspectorPreview(props: {
   const focused = useIsFocused();
   const theme = useMobileNavigationTheme();
   const insets = useSafeAreaInsets();
+  const closeInspector = use(InspectorCloseContext);
   const { target } = props;
   const targetKey = `${target.environmentId}:${target.threadId}`;
   const [expandedTarget, setExpandedTarget] = useState<string | null>(null);
@@ -168,6 +164,9 @@ export function ThreadInspectorPreview(props: {
               >
                 {/* Fork: Expanded files use their existing filename bar for dismissal until upstream supplies a single-bar inspector presentation. */}
                 <FilePreviewCloseContext value={expanded ? () => setExpandedTarget(null) : null}>
+                  {/* Fork: The local stack draws its own bars, so its screens skip the pane's bar slot, and the expanded modal has no inspector to close. */}
+                  <WorkspaceSlotOptionsContext value={null}>
+                    <InspectorCloseContext value={expanded ? null : closeInspector}>
                   <NavigationIndependentTree>
                     {/* Fork: Reset the state-owning container when changing subagents until upstream scopes independent navigation state by target. */}
                     <NavigationContainer
@@ -181,7 +180,11 @@ export function ThreadInspectorPreview(props: {
                     >
                       <PreviewStack.Navigator
                         key={`${target.environmentId}:${target.threadId}`}
-                        screenOptions={{ headerBackVisible: true }}
+                        screenOptions={{
+                          ...pageRoute(),
+                          headerBackVisible: true,
+                          headerShown: Platform.OS !== "android",
+                        }}
                       >
                         <PreviewStack.Screen
                           name="Thread"
@@ -191,16 +194,15 @@ export function ThreadInspectorPreview(props: {
                           {(screen) =>
                             props.renderThread({
                               route: screen.route,
-                              inspectorPresentation: {
-                                onClose: expanded ? () => setExpandedTarget(null) : props.onClose,
-                                onMaximize: expanded
-                                  ? undefined
-                                  : () =>
+                              inspectorPresentation: expanded
+                                ? { onClose: () => setExpandedTarget(null) }
+                                : {
+                                    onMaximize: () =>
                                       navigation.navigate("ThreadInspectorFullscreen", {
                                         environmentId: screen.route.params.environmentId,
                                         threadId: screen.route.params.threadId,
                                       }),
-                              },
+                                  },
                             })
                           }
                         </PreviewStack.Screen>
@@ -228,6 +230,8 @@ export function ThreadInspectorPreview(props: {
                       </PreviewStack.Navigator>
                     </NavigationContainer>
                   </NavigationIndependentTree>
+                    </InspectorCloseContext>
+                  </WorkspaceSlotOptionsContext>
                 </FilePreviewCloseContext>
               </FilePreviewExpandContext>
             </View>,

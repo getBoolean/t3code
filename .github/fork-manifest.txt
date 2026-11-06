@@ -4,8 +4,8 @@ apps/mobile/src/lib/pullRequestNavigation.ts	Fork:
 apps/mobile/src/lib/pullRequestNavigation.ts	payload: { ...payload, pop: true }
 apps/mobile/src/native/useOpenPullRequest.ts	Fork:
 apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(params, deviceType === "pad", replace)
-apps/mobile/src/features/workspace/workspace-detail-selection.test.ts	Fork:
-apps/mobile/src/features/workspace/workspace-detail-selection.test.ts	reuses the iPad PR screen without losing the originating thread
+apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	Fork:
+apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	reuses the iPad PR screen without losing the originating thread
 
 # Fork: Normalize native BigInt upload counters before progress arithmetic so attaching images does not throw.
 apps/mobile/src/lib/attachmentUpload.ts	Fork:
@@ -24,9 +24,7 @@ apps/mobile/src/features/files/thread-file-navigator-pane.tsx	closeSheet ? close
 
 # Fork: Keep the folder button as one open/close control with a visible active state on iOS and Android.
 apps/mobile/src/features/threads/ThreadHeader.tsx	Fork:
-apps/mobile/src/features/threads/ThreadHeader.tsx	onOpenFilesInspector: onToggleFiles
-apps/mobile/src/features/threads/ThreadGitControls.tsx	Fork:
-apps/mobile/src/features/threads/ThreadGitControls.tsx	props.filesVisible ? "folder.fill" : "folder"
+apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.fill" : "folder"
 
 # Each path has a Fork: explanation followed by one or more required literal anchors.
 # Comment-free/generated formats keep their explanation here; see AGENTS.md.
@@ -159,7 +157,7 @@ apps/mobile/src/App.tsx	restoreSettingsLinkState(state, settingsLinkPage(), Plat
 
 # Fork: iPad utility destinations and nested file links share the workspace stack.
 apps/mobile/src/Stack.tsx	Fork:
-apps/mobile/src/Stack.tsx	headerBackVisible: false
+apps/mobile/src/Stack.tsx	screen: PullRequestListRouteScreen
 
 # Fork: Report the hosted relay minimum version for iOS 17 registration; this does not add APNs signing entitlement support.
 apps/mobile/src/features/agent-awareness/registrationPayload.ts	HOSTED_RELAY_MIN_IOS_MAJOR
@@ -270,8 +268,6 @@ apps/mobile/src/features/threads/git/GitOverviewSheet.tsx	Fork:
 apps/mobile/src/features/threads/git/GitOverviewSheet.tsx	{gitAccountStatus?.state === "bypassed" ? (
 
 # Fork: iPad Settings lives in the pinned utility group, avoiding a duplicate header target.
-apps/mobile/src/features/threads/sidebar-native-header-items.ts	Fork:
-apps/mobile/src/features/threads/sidebar-native-header-items.ts	type: "button",
 
 # Fork: active iPad rows retain readable contrast and expose their status to accessibility.
 apps/mobile/src/features/threads/thread-list-v2-items.tsx	Fork:
@@ -287,35 +283,35 @@ apps/mobile/src/features/threads/useGitAccountGuard.ts	const ensureGitAccount = 
 
 # Fork: Usage is an iPad sidebar destination with no landing-page Back arrow.
 apps/mobile/src/features/usage/UsageRouteScreen.tsx	Fork:
-apps/mobile/src/features/usage/UsageRouteScreen.tsx	options={Platform.OS === "ios" && Platform.isPad ? { headerBackVisible: false } : undefined}
+apps/mobile/src/features/usage/UsageRouteScreen.tsx	workspaceRoot={props.workspace || (Platform.OS === "ios" && Platform.isPad)}
 
 # Fork: iPad utilities expand upward above pinned Settings, with orientation-specific defaults.
-apps/mobile/src/features/workspace/IpadSidebarActions.tsx	Fork:
-apps/mobile/src/features/workspace/IpadSidebarActions.tsx	<IpadSidebarActionRows
+apps/mobile/src/features/layout/workspace/IpadSidebarActions.tsx	Fork:
+apps/mobile/src/features/layout/workspace/IpadSidebarActions.tsx	<IpadSidebarActionRows
 
 # Fork: iPad uses sidebar utilities instead of the native bottom tab bar.
-apps/mobile/src/features/workspace/WorkspaceNativeTabs.ios.tsx	use(WorkspaceSidebarFooterContext)
-apps/mobile/src/features/workspace/WorkspaceNativeTabs.ios.tsx	Fork:
+apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx	use(WorkspaceSidebarFooterContext)
+apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx	Fork:
 
 # Fork: iPad utility pages use plain titles and preserve a single selected destination.
-apps/mobile/src/features/workspace/WorkspaceRootScreen.tsx	Fork:
-apps/mobile/src/features/workspace/WorkspaceRootScreen.tsx	(sidebarNavigation || (!settingsOpen && state.selectedTab !== "usage"))
+apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx	Fork:
+apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx	(sidebarNavigation || (!settingsOpen && state.selectedTab !== "usage"))
 
 # Fork: iPad sidebar selection follows the visible destination rather than remembered tabs.
-apps/mobile/src/features/workspace/WorkspaceTabsContext.tsx	Fork:
-apps/mobile/src/features/workspace/WorkspaceTabsContext.tsx	isTabActive: (tab: WorkspaceTab) =>
+apps/mobile/src/features/layout/workspace/WorkspaceTabsContext.tsx	Fork:
+apps/mobile/src/features/layout/workspace/WorkspaceTabsContext.tsx	isTabActive: (tab: WorkspaceTab) =>
 
 # Fork: selecting an iPad thread clears the utility destination selection.
-apps/mobile/src/features/workspace/WorkspaceThreadSidebar.tsx	Fork:
-apps/mobile/src/features/workspace/WorkspaceThreadSidebar.tsx	<IpadSidebarActions
+apps/mobile/src/features/layout/workspace/WorkspaceThreadSidebar.tsx	Fork:
+apps/mobile/src/features/layout/workspace/WorkspaceThreadSidebar.tsx	<IpadSidebarActions
 
 # Fork: keep iPad sidebar destinations independent from phone tab history.
-apps/mobile/src/features/workspace/workspace-tab-navigation.test.ts	Fork:
-apps/mobile/src/features/workspace/workspace-tab-navigation.test.ts	sidebarNavigation: true,
+apps/mobile/src/features/layout/workspace/workspace-tab-navigation.test.ts	Fork:
+apps/mobile/src/features/layout/workspace/workspace-tab-navigation.test.ts	sidebarNavigation: true,
 
 # Fork: iPad utility destinations replace each other without a nested tab history.
-apps/mobile/src/features/workspace/workspace-tab-navigation.ts	Fork:
-apps/mobile/src/features/workspace/workspace-tab-navigation.ts	readonly sidebarNavigation?: boolean;
+apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts	Fork:
+apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts	readonly sidebarNavigation?: boolean;
 
 # Fork: retain real navigator coverage for nested native file-link paths.
 apps/mobile/src/lib/appLinking.test.ts	Fork:
@@ -607,10 +603,6 @@ apps/web/src/components/chat/useGitAccountGuard.ts	const ensureGitAccount = asyn
 # Fork: Use the fork release repository as the fallback when desktop update metadata does not specify one.
 apps/web/src/components/desktopUpdate.logic.ts	Fork:
 apps/web/src/components/desktopUpdate.logic.ts	const DEFAULT_DESKTOP_RELEASE_REPOSITORY = CLI_RELEASE_REPOSITORY;
-
-# Fork: Keep account-aware commit/push regressions; unwrap Effect Redacted env values when capturing child-process identity.
-apps/web/src/components/files/AttachmentFilePreview.browser.test.tsx	Fork:
-apps/web/src/components/files/AttachmentFilePreview.browser.test.tsx	await screen.getByRole("button", { name: "Next page", exact: true }).click();
 
 # Fork: Edit account identity and credentials without overwriting an unchanged redacted token.
 apps/web/src/components/settings/GitAccountDialog.tsx	Fork:
@@ -945,9 +937,9 @@ apps/mobile/src/native/createV5StackNavigator.ios.tsx	workspaceDetailSlot
 apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	slottedDetail
 
 # Fork: Compact iPad windows use bottom tabs; expanded iPads retain sidebar utilities until upstream makes navigation responsive.
-apps/mobile/src/features/workspace/workspace-tabs-state.ts	workspaceUsesSidebarNavigation
-apps/mobile/src/features/workspace/WorkspaceNativeTabs.ios.tsx	if (ipadSidebarNavigation)
-apps/mobile/src/features/workspace/useSystemWorkspaceTabBar.ts	deviceType !== "pad" || !layout.usesSplitView
+apps/mobile/src/features/layout/workspace/workspace-tabs-state.ts	workspaceUsesSidebarNavigation
+apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx	if (ipadSidebarNavigation)
+apps/mobile/src/features/layout/workspace/useSystemWorkspaceTabBar.ts	deviceType !== "pad" || !layout.usesSplitView
 
 # Fork: Subagent file drill-ins stay on the local inspector navigator, with Back returning to the subagent, until upstream scopes file navigation by pane.
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	<PreviewStack.Screen name="ThreadAttachment">
@@ -963,16 +955,16 @@ apps/mobile/src/features/mermaid/mermaid-document.ts	JSON.stringify({ source, da
 
 # Fork: Inspector file previews expand without replacing the parent thread or losing local file routes until upstream supports pane expansion.
 apps/mobile/src/features/files/file-preview-presentation.ts	FilePreviewExpandContext
-apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel="Expand file preview"
+apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel: "Expand file preview"
 apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	Expand file preview
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	<FilePreviewCloseContext value={expanded
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	previewState.state
 
 # Fork: Expanded previews use the existing file or subagent header until upstream supports a single-bar inspector presentation.
 apps/mobile/src/features/files/file-preview-presentation.ts	FilePreviewCloseContext
-apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel="Close expanded file preview"
+apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel: "Close expanded file preview"
 apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	Close expanded file preview
-apps/mobile/src/features/files/ZipArchiveView.tsx	accessibilityLabel="Close expanded file preview"
+apps/mobile/src/features/files/ZipArchiveView.tsx	accessibilityLabel: "Close expanded file preview"
 apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	saveState(returned)
 
 # Fork: Binary workspace artifacts offer byte downloads instead of text-reader failures until upstream supports download-only mobile file previews.
@@ -986,10 +978,23 @@ apps/mobile/src/features/files/preload-workspace-file.ts	isDownloadOnlyFile(inpu
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	key={targetKey}
 apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	expect(containerIdentity).not.toBe(previousContainer)
 
-# Fork: The mixed healthy/FIFO subprocess test uses live deadlines until its fixture can deterministically coordinate all child completions.
-apps/server/src/project/AgentSessionScanner.test.ts	it.live("still reads the git identity
-
 # Fork: Root files compose the thread renderer outside inspector file screens to keep both mobile dependency graphs acyclic until upstream separates these entry points.
 apps/mobile/src/Stack.tsx	screen: ThreadFilesTreeRouteScreen
 apps/mobile/src/features/files/ThreadFilesTreeRouteScreen.tsx	renderThread=
 apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	props.renderThread?.({
+
+# Fork: VirtualizedList calls renderScrollComponent as a function, so PR lists use the render helper instead of the compiled NativeScrollView component.
+apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx	Fork:
+apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx	renderScrollComponent={renderNativeScrollView}
+apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx	Fork:
+apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx	renderScrollComponent={renderNativeScrollView}
+apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx	Fork:
+apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx	renderScrollComponent={renderNativeScrollView}
+
+# Fork: AppBar owns headerBackVisible, so iPad root destinations that stay on the stack hide Back through a prop.
+apps/mobile/src/components/ui/AppBar.tsx	Fork:
+apps/mobile/src/components/ui/AppBar.tsx	!props.hideBack &&
+apps/mobile/src/components/ui/AppBar.types.ts	Fork:
+apps/mobile/src/components/ui/AppBar.types.ts	readonly hideBack?: boolean;
+apps/mobile/src/features/settings/components/SettingsScreen.tsx	Fork:
+apps/mobile/src/features/settings/components/SettingsScreen.tsx	hideBack={workspaceRoot}

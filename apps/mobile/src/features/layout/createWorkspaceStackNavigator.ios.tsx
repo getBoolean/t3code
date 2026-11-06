@@ -34,17 +34,18 @@ import { Split, type SplitHostCommands } from "react-native-screens";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { NATIVE_INSPECTOR_MIN_MAIN_WIDTH } from "../../lib/layout";
 import { scopedThreadKey } from "../../lib/scopedEntities";
-import { WorkspaceTabsProvider, useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
+import { WorkspaceTabsProvider, useWorkspaceTabs } from "./workspace/WorkspaceTabsContext";
 import {
   WorkspaceNativeTabs,
   WorkspaceSidebarTabsFooter,
-} from "../workspace/WorkspaceNativeTabs.ios";
-import { workspaceUsesColumns } from "../workspace/workspace-tabs-state";
-import { workspaceSidebarDestination } from "../workspace/workspace-tab-navigation";
+} from "./workspace/WorkspaceNativeTabs.ios";
+import { workspaceUsesColumns } from "./workspace/workspace-tabs-state";
+import { workspaceSidebarDestination } from "./workspace/workspace-tab-navigation";
 import { isSettingsRoute, settingsOpenIn } from "../settings/settings-navigation";
 import { workspaceRoutesOf } from "./workspace-overlay-routes";
-import { setNativelyPoppingWorkspaceRoute } from "../workspace/workspace-detail-selection";
+import { setNativelyPoppingWorkspaceRoute } from "./workspace/workspace-detail-selection";
 import { useDeviceType, useNativeLayoutMetrics } from "../../native/native-layout-metrics";
 
 import { useAdaptiveWorkspaceLayout } from "./AdaptiveWorkspaceLayout";
@@ -73,6 +74,7 @@ import {
   reconcileStackScreens,
   workspaceScreenSlots,
   type CollapsedSplitColumn,
+  isPresentedRoute,
 } from "../../native/workspace-stack-projection";
 import {
   NativePrimaryColumnContext,
@@ -412,7 +414,7 @@ function WorkspaceColumns(
         minimumPrimaryColumnWidth: 280,
         maximumPrimaryColumnWidth: Math.max(380, layout.listPaneWidth ?? 0),
         preferredPrimaryColumnWidthOrFraction: layout.listPaneWidth ?? 320,
-        minimumSecondaryColumnWidth: 320,
+        minimumSecondaryColumnWidth: NATIVE_INSPECTOR_MIN_MAIN_WIDTH,
         // UIKit can retain its automatic width despite a new preference; constrain both edges.
         minimumInspectorColumnWidth: inspectorWidth,
         maximumInspectorColumnWidth: inspectorWidth,
@@ -523,10 +525,7 @@ function WorkspaceStackView(props: ViewProps & { readonly nativeColumns: boolean
   const metrics = useNativeLayoutMetrics();
   const projection = projectWorkspaceStack(
     props.state,
-    (route) => {
-      const presentation = props.descriptors[route.key]?.options.presentation;
-      return presentation !== undefined && presentation !== "card";
-    },
+    (route) => isPresentedRoute(props.descriptors[route.key]?.options),
     deviceType === "pad",
   );
   // The root's willDisappear reaches JS frames into the push, so hide the dock in the commit that
@@ -594,8 +593,7 @@ function WorkspaceStackView(props: ViewProps & { readonly nativeColumns: boolean
     ),
   };
   const overlays = partitionStackPresentations(projection.overlays, (route) => {
-    const presentation = props.descriptors[route.key]?.options.presentation;
-    return presentation !== undefined && presentation !== "card";
+    return isPresentedRoute(props.descriptors[route.key]?.options);
   });
   const routes = [baseRoute, ...overlays.map((group) => group[0]!)];
   return (
@@ -675,8 +673,7 @@ function WorkspaceStackNavigator({
   if (!nativeWorkspaceColumnsReady) return null;
   const settingsOpen = settingsOpenIn(
     state.routes.slice(0, state.index + 1).filter((route) => {
-      const presentation = descriptors[route.key]?.options.presentation;
-      return presentation === undefined || presentation === "card";
+      return !isPresentedRoute(descriptors[route.key]?.options);
     }),
   );
   const sidebarDestination = workspaceSidebarDestination(state.routes.slice(0, state.index + 1));
