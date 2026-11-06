@@ -1,4 +1,4 @@
-// Fork: iPad uses sidebar utilities instead of the native bottom tab bar.
+// Fork: iPad uses sidebar utilities in split layouts and bottom tabs when compact until upstream makes navigation width-aware.
 import { IpadSidebarActions } from "./IpadSidebarActions";
 import {
   WORKSPACE_TAB_LABELS,
@@ -14,6 +14,7 @@ import {
   NATIVE_WORKSPACE_TAB_SLOTS,
   workspaceTabForNativeSlot,
   workspaceUsesColumns,
+  workspaceUsesSidebarNavigation,
   type WorkspaceTab,
 } from "./workspace-tabs-state";
 import {
@@ -89,6 +90,7 @@ export function WorkspaceNativeTabs(props: {
   const deviceType = useDeviceType();
   const compactTabs = useCompactWorkspaceTabs();
   const { layout, panes } = useAdaptiveWorkspaceLayout();
+  const ipadSidebarNavigation = workspaceUsesSidebarNavigation(deviceType, layout.usesSplitView);
   // The tabs belong to the sidebar; over a page with the sidebar hidden they'd cover the composer.
   const hiddenWithSidebar =
     deviceType === "pad" &&
@@ -105,13 +107,13 @@ export function WorkspaceNativeTabs(props: {
   };
   // Fork: before iOS 26 this navigator sits beside a JS sidebar, so left: 0 here is past the
   // sidebar's edge, over the thread composer. Draw the bar at the sidebar's foot instead.
-  const sidebarFooter = use(WorkspaceSidebarFooterContext);
+  const sidebarFooterSlot = use(WorkspaceSidebarFooterContext);
+  const sidebarFooter = layout.usesSplitView ? sidebarFooterSlot : null;
   const showSidebarTabs =
-    (deviceType === "pad" ||
-      compactTabs ||
+    (compactTabs ||
       (layout.variant === "medium" &&
         !workspaceUsesColumns(selectedTab, workspace.settingsOpen))) &&
-    deviceType !== "pad" &&
+    !ipadSidebarNavigation &&
     !props.hidden &&
     !props.tabsInSidebarColumn &&
     !hiddenWithSidebar;
@@ -141,7 +143,7 @@ export function WorkspaceNativeTabs(props: {
   });
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- clears the sidebar slot when this navigator unmounts or the sidebar column goes away
   useEffect(() => () => sidebarFooter?.set(null), [sidebarFooter]);
-  if (deviceType === "pad") return <View style={{ flex: 1 }}>{props.children}</View>;
+  if (ipadSidebarNavigation) return <View style={{ flex: 1 }}>{props.children}</View>;
   return (
     <View style={{ flex: 1 }}>
       <Tabs.Host
@@ -206,10 +208,11 @@ export function WorkspaceNativeTabs(props: {
 /** The workspace tabs at the foot of the sidebar. */
 export function WorkspaceSidebarTabsFooter() {
   const workspace = useWorkspaceTabs()!;
-  const { startNewTask } = useAdaptiveWorkspaceLayout();
+  const { startNewTask, layout } = useAdaptiveWorkspaceLayout();
   const compact = useFloatingWorkspaceTabs();
   const deviceType = useDeviceType();
-  if (deviceType === "pad") return <IpadSidebarActions />;
+  if (workspaceUsesSidebarNavigation(deviceType, layout.usesSplitView))
+    return <IpadSidebarActions />;
   return (
     <WorkspaceSidebarTabs
       compact={compact}

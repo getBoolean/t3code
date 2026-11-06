@@ -40,3 +40,5 @@ async function generateWebViewScript(feature: string, name: string) {
 
 export const generateDeviceStreamScript = () => generateWebViewScript("devices", "Device");
 export const generatePreviewStreamScript = () => generateWebViewScript("browser", "Preview");
+// Fork: Bundle the offline Mermaid renderer with the app until upstream ships native diagram rendering.
+export const generateMermaidScript = () => generateWebViewScript("mermaid", "Mermaid");

@@ -37,7 +37,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   case "$path" in
     pnpm-lock.yaml | .github/scripts/ios17-libcxx-exports.txt | \
       apps/server/src/provider/agentContextBudget.json | \
-      evals/mcp-tool-use/cases/projects.ndjson | packages/client-runtime/package.json) ;;
+      evals/mcp-tool-use/cases/projects.ndjson | packages/client-runtime/package.json | apps/mobile/package.json) ;;
     *)
       if [ -f "$path" ] && ! grep -qE '(#|//|/\*|<!--|--)[[:space:]]*Fork:' "$path"; then
         echo "::error file=$path::missing Fork: explanation in source"

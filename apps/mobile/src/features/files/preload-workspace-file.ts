@@ -9,7 +9,7 @@ import {
 
 import { appAtomRegistry } from "../../state/atom-registry";
 import { projectEnvironment } from "../../state/projects";
-import { isVideoPreviewFile } from "./filePath";
+import { isDownloadOnlyFile, isVideoPreviewFile } from "./filePath";
 import { prepareSourceFileDocument } from "./source-file-document";
 import { sourceHighlightAtom } from "./sourceHighlightingState";
 import type { HighlightScheme } from "../../lib/highlights";
@@ -35,7 +35,9 @@ export function preloadWorkspaceFileContents(input: {
     !readEnvironmentScope(input.environmentId, AuthFilesystemReadScope) ||
     isWorkspaceBrowserPreviewPath(input.relativePath) ||
     isWorkspaceImagePreviewPath(input.relativePath) ||
-    isVideoPreviewFile(input.relativePath)
+    isVideoPreviewFile(input.relativePath) ||
+    // Fork: Download-only artifacts must also bypass speculative text reads until upstream supports mobile binary downloads.
+    isDownloadOnlyFile(input.relativePath)
   ) {
     return;
   }

@@ -30,12 +30,8 @@ export function useCompactWorkspaceTabs() {
   const { layout } = useAdaptiveWorkspaceLayout();
   const deviceType = useDeviceType();
   // The compact glass picker reserves the trailing edge for a separate compose button.
-  return (
-    Platform.OS === "ios" &&
-    deviceType !== "pad" &&
-    !layout.usesSplitView &&
-    !isDuoDevice(deviceType)
-  );
+  // Fork: Compact iPad windows reuse phone tabs until upstream makes navigation width-aware.
+  return Platform.OS === "ios" && !layout.usesSplitView && !isDuoDevice(deviceType);
 }
 
 /** The workspace tab bar floats with compose beside it. Before iOS 26 UITabBar is opaque and
@@ -57,7 +53,8 @@ export function useSystemWorkspaceTabBar() {
   const compactTabs = useCompactWorkspaceTabs();
   return (
     Platform.OS === "ios" &&
-    deviceType !== "pad" &&
+    // Fork: A compact iPad uses phone navigation until upstream handles iPad window widths.
+    (deviceType !== "pad" || !layout.usesSplitView) &&
     layout.variant !== "medium" &&
     sidebarTabs === null &&
     !compactTabs

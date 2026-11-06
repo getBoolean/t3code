@@ -211,7 +211,7 @@ apps/mobile/src/features/layout/AdaptiveWorkspaceLayout.tsx	Fork:
 
 # Fork: iPad Settings stays beside the thread sidebar in native split columns.
 apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	Fork:
-apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	footer={deviceType === "pad" ? <WorkspaceSidebarTabsFooter /> : undefined}
+apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	deviceType === "pad" && layout.usesSplitView ? (
 
 # Fork: before iOS 26 the iPad sidebar is a JS column beside the navigator, outside the
 apps/mobile/src/features/layout/workspace-sidebar-footer.tsx	WorkspaceSidebarFooterHost
@@ -913,3 +913,75 @@ scripts/mobile-behavior/scenarios.ts	readonly out: string;
 # Fork: Emit t3-release.json migration metadata for servers updating from fork GitHub assets instead of npm.
 scripts/write-release-manifest.ts	Fork:
 scripts/write-release-manifest.ts	databaseMigration: yield* latestServerMigrationId()
+
+# Fork: Render closed mobile Mermaid fences offline with source fallback until upstream supports native diagrams; JSON manifests keep provenance here.
+apps/mobile/src/lib/markdownMermaid.ts	markdownWithMermaidBlocks
+apps/mobile/src/lib/markdownMermaid.test.ts	embeds completed Mermaid fences
+apps/mobile/src/features/mermaid/mermaid-stream.browser.ts	links: false
+apps/mobile/src/features/mermaid/mermaid-document.ts	default-src 'none'
+apps/mobile/src/features/mermaid/mermaid-document.test.ts	keeps diagram input inert
+apps/mobile/src/native/MermaidBlock.tsx	mermaidDocument
+apps/mobile/src/native/MermaidBlock.tsx	containerStyle={{ height, flex: 0 }}
+apps/mobile/src/native/MermaidBlock.tsx	"--pele-fg": themeVariables["--color-foreground"]
+apps/mobile/src/native/EnrichedMarkdownText.tsx	markdownWithMermaidBlocks
+apps/mobile/src/types/mobile-preview-stream.d.ts	@t3tools/mobile-mermaid-stream
+apps/mobile/scripts/generate-device-stream.mts	generateMermaidScript
+apps/mobile/metro.config.js	generateMermaidScript
+apps/mobile/package.json	"pele": "^1.8.0"
+pnpm-lock.yaml	pele:
+scripts/check-fork-manifest.sh	apps/mobile/package.json
+
+# Fork: Background work opens subagents in the parent inspector like response embeds until upstream unifies the entry points.
+apps/mobile/src/features/threads/ThreadBackgroundWorkSheet.tsx	if (openInspector(target,
+apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	ThreadBackgroundWork
+
+# Fork: Treat the Metro-bundled offline diagram runtime as an entry point until upstream supports native Mermaid rendering.
+knip.jsonc	src/features/mermaid/mermaid-stream.browser.ts!
+
+# Fork: iPad sidebar selections reuse the native detail root while pushed pages retain separate controllers; remove when upstream distinguishes selection from pushes.
+apps/mobile/src/native/workspace-stack-projection.ts	workspaceScreenSlots
+apps/mobile/src/native/workspace-stack-projection.test.ts	switches the native detail root in place
+apps/mobile/src/native/createV5StackNavigator.ios.tsx	workspaceDetailSlot
+apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	slottedDetail
+
+# Fork: Compact iPad windows use bottom tabs; expanded iPads retain sidebar utilities until upstream makes navigation responsive.
+apps/mobile/src/features/workspace/workspace-tabs-state.ts	workspaceUsesSidebarNavigation
+apps/mobile/src/features/workspace/WorkspaceNativeTabs.ios.tsx	if (ipadSidebarNavigation)
+apps/mobile/src/features/workspace/useSystemWorkspaceTabBar.ts	deviceType !== "pad" || !layout.usesSplitView
+
+# Fork: Subagent file drill-ins stay on the local inspector navigator, with Back returning to the subagent, until upstream scopes file navigation by pane.
+apps/mobile/src/features/threads/thread-inspector-preview.tsx	<PreviewStack.Screen name="ThreadAttachment">
+apps/mobile/src/features/threads/thread-inspector-preview.tsx	fileInspector: { supported: false, width: null }
+apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	opens attached and workspace files inside the subagent navigator
+
+# Fork: Mobile Mermaid diagrams can expand into a local full-screen zoom viewer until upstream supplies native diagram viewing.
+apps/mobile/src/native/MermaidBlock.tsx	accessibilityLabel="Expand diagram"
+apps/mobile/src/native/MermaidBlock.tsx	accessibilityLabel="Close diagram"
+apps/mobile/src/features/mermaid/mermaid-stream.browser.ts	zoom = enableZoom(container, { always: true })
+apps/mobile/src/features/mermaid/mermaid-document.ts	expandedMermaidFrame
+apps/mobile/src/features/mermaid/mermaid-document.ts	JSON.stringify({ source, dark, colors, expanded })
+
+# Fork: Inspector file previews expand without replacing the parent thread or losing local file routes until upstream supports pane expansion.
+apps/mobile/src/features/files/file-preview-presentation.ts	FilePreviewExpandContext
+apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel="Expand file preview"
+apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	Expand file preview
+apps/mobile/src/features/threads/thread-inspector-preview.tsx	<FilePreviewCloseContext value={expanded
+apps/mobile/src/features/threads/thread-inspector-preview.tsx	previewState.state
+
+# Fork: Expanded previews use the existing file or subagent header until upstream supports a single-bar inspector presentation.
+apps/mobile/src/features/files/file-preview-presentation.ts	FilePreviewCloseContext
+apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel="Close expanded file preview"
+apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	Close expanded file preview
+apps/mobile/src/features/files/ZipArchiveView.tsx	accessibilityLabel="Close expanded file preview"
+apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	saveState(returned)
+
+# Fork: Binary workspace artifacts offer byte downloads instead of text-reader failures until upstream supports download-only mobile file previews.
+apps/mobile/src/features/files/filePath.ts	isDownloadOnlyFile
+apps/mobile/src/features/files/filePath.test.ts	Mobile Documents/build.ipa
+apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	disposition: "attachment" as const
+apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	This file is available to download.
+apps/mobile/src/features/files/preload-workspace-file.ts	isDownloadOnlyFile(input.relativePath)
+
+# Fork: Switching subagent embeds resets the independent container, not just its child navigator, until upstream scopes inspector route state by target.
+apps/mobile/src/features/threads/thread-inspector-preview.tsx	key={targetKey}
+apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	expect(containerIdentity).not.toBe(previousContainer)

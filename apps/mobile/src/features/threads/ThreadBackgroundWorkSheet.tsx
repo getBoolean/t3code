@@ -19,6 +19,7 @@ import { NativeStackScreenOptions, nativeHeaderScrollEdgeEffects } from "../../n
 import { NativeHeader, NativeScreen } from "../../native/ThemedScreenStack";
 import { environmentThreadShells } from "../../state/threads";
 import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
+import { useOpenThreadInspector } from "./thread-inspector-navigation";
 
 const HEADER_SCROLL_EDGE_EFFECTS = nativeHeaderScrollEdgeEffects(Platform.OS, Platform.Version);
 const KIND_LABELS = {
@@ -33,6 +34,7 @@ type BackgroundWorkTarget = { readonly environmentId: EnvironmentId; readonly th
 export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<BackgroundWorkTarget>) {
   const { layout } = useAdaptiveWorkspaceLayout();
   const navigation = useNavigation();
+  const openInspector = useOpenThreadInspector();
   const insets = useSafeAreaInsets();
   const target = route.params;
   const thread = useAtomValue(
@@ -41,6 +43,9 @@ export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<Backgroun
   const presentation = presentPendingBackgroundWork(thread?.pendingBackgroundTasks ?? []);
   const openThread = (threadId: ThreadId) => {
     void Haptics.selectionAsync();
+    // Fork: Background work must reuse the parent inspector like response embeds until upstream unifies these entry points.
+    if (openInspector(target, { type: "thread", environmentId: target.environmentId, threadId }))
+      return;
     // A thread replaces the leaf sheet so workspace back navigation still works.
     navigation.dispatch(
       StackActions.replace("Thread", { environmentId: target.environmentId, threadId }),

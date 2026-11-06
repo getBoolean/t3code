@@ -11,7 +11,7 @@ import {
   markdownWithInlineFileLinks,
   markdownWithTableBreaks,
 } from "../lib/markdownDocument";
-import { isValidElement, useMemo, useState, type ReactNode } from "react";
+import { isValidElement, useCallback, useMemo, useState, type ReactNode } from "react";
 import { Platform, Share, StyleSheet, useWindowDimensions, View } from "react-native";
 import {
   EnrichedMarkdownText,
@@ -20,6 +20,8 @@ import {
   type MarkdownStyle,
 } from "react-native-enriched-markdown";
 import type { SelectableMarkdownTextProps } from "./SelectableMarkdownText.types";
+import { markdownWithMermaidBlocks } from "../lib/markdownMermaid";
+import { MermaidBlock } from "./MermaidBlock";
 
 import { useAppearancePreferences } from "../features/settings/appearance/AppearancePreferencesProvider";
 import { Menu } from "../components/ui/Menu";
@@ -274,18 +276,38 @@ export function MobileEnrichedMarkdownText(props: SelectableMarkdownTextProps) {
       linkVariants,
     };
   }, [props.textStyle, props.textAlign, themeAppearance, fontScale, linkVariants]);
-  const renderers = renderImage
-    ? {
-        image: (block: MarkdownImageBlock) => {
-          const element = renderImage({
-            href: block.url,
-            alt: block.altText || null,
-            title: block.title || null,
-          });
-          return isValidElement(element) ? element : undefined;
-        },
-      }
-    : undefined;
+  // Fork: Reuse native image slots for closed Mermaid fences until upstream exposes code block renderers.
+  const mermaid = useMemo(() => markdownWithMermaidBlocks(markdown), [markdown]);
+  const renderBlockImage = useCallback(
+    (block: MarkdownImageBlock) => {
+      const diagram = mermaid.diagrams.get(block.url);
+      if (diagram)
+        return (
+          <MermaidBlock
+            key={`${diagram.source}:${themeAppearance}`}
+            source={diagram.source}
+            dark={themeAppearance === "dark"}
+          >
+            <EnrichedMarkdownText
+              markdown={diagram.markdown}
+              markdownStyle={markdownStyle}
+              flavor="github"
+              selectable
+              enableCodeBlockWrapToggle
+            />
+          </MermaidBlock>
+        );
+      const element = renderImage?.({
+        href: block.url,
+        alt: block.altText || null,
+        title: block.title || null,
+      });
+      return isValidElement(element) ? element : undefined;
+    },
+    [mermaid.diagrams, themeAppearance, markdownStyle, renderImage],
+  );
+  const renderers =
+    renderImage || mermaid.diagrams.size > 0 ? { image: renderBlockImage } : undefined;
   const resolveNativeImageSource = useRetryingImageSource(resolveImageSource);
   const renderMarkdown = (openAndroidMenu?: () => void) => {
     const onLinkLongPress =
@@ -313,7 +335,7 @@ export function MobileEnrichedMarkdownText(props: SelectableMarkdownTextProps) {
         }}
       >
         <EnrichedMarkdownText
-          markdown={markdown}
+          markdown={mermaid.markdown}
           markdownStyle={markdownStyle}
           writingDirection={props.writingDirection}
           onLinksChange={onLinksChange}

@@ -12,6 +12,7 @@ import {
   projectWorkspaceStack,
   partitionStackPresentations,
   reconcileStackScreens,
+  workspaceScreenSlots,
   type CollapsedSplitColumn,
 } from "./workspace-stack-projection";
 
@@ -43,6 +44,38 @@ function history(
 }
 
 describe("workspace presentation envelope", () => {
+  // Fork: iPad sidebar destinations reuse one native root until upstream separates selection from stack pushes.
+  it("switches the native detail root in place while retaining drill-in screen identities", () => {
+    const before = workspaceScreenSlots([home, thread], 1);
+    for (const destination of [
+      settings,
+      { key: "usage", name: "SettingsUsage" },
+      { key: "prs", name: "PullRequests" },
+    ]) {
+      const next = workspaceScreenSlots([home, destination], 1, before);
+      expect(next[1]?.screenKey).toBe(before[1]?.screenKey);
+      expect(reconcileStackScreens(before, next, new Set(), (route) => route.screenKey)).toEqual(
+        next,
+      );
+      const drilled = workspaceScreenSlots([home, destination, files], 1);
+      expect(drilled[2]?.screenKey).toBe(files.key);
+    }
+    expect(workspaceScreenSlots([thread], 0)[0]?.screenKey).toBe(before[1]?.screenKey);
+    expect(workspaceScreenSlots([home, thread])[1]?.screenKey).toBe(thread.key);
+    const leaving = workspaceScreenSlots([home, settings], 1, before, thread.key);
+    expect(workspaceScreenSlots([home, thread], 1, before, thread.key)[1]?.screenKey).toBe(
+      before[1]?.screenKey,
+    );
+    expect(leaving[1]?.screenKey).not.toBe(before[1]?.screenKey);
+    expect(reconcileStackScreens(before, leaving, new Set(), (route) => route.screenKey)).toEqual([
+      leaving[0],
+      before[1],
+      leaving[1],
+    ]);
+    expect(workspaceScreenSlots([home, settings], 1, leaving)[1]?.screenKey).toBe(
+      leaving[1]?.screenKey,
+    );
+  });
   const isOverlay = (route: { name: string }) => route.name === "ReviewSheet";
 
   it("keeps card settings in the detail history and restores it after system Back closes a sheet", () => {

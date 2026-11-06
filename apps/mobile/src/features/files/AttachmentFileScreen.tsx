@@ -8,7 +8,7 @@ import {
   clampFileAttachmentUploadBytes,
   formatAttachmentSize,
 } from "@t3tools/client-runtime/state/attachments";
-import { useRef, useState } from "react";
+import { use, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 
 import { AndroidHeaderIconButton } from "../../components/ui/AndroidScreenHeader";
@@ -26,6 +26,7 @@ import { useRefreshAssetUrl } from "../../state/assets";
 import { scopedThreadKey } from "../../lib/scopedEntities";
 import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import { isZipFile, ZipArchiveView } from "./ZipArchiveView";
+import { FilePreviewCloseContext, FilePreviewExpandContext } from "./file-preview-presentation";
 import { AttachmentDocumentBody, nativeViewerKind } from "./AttachmentDocumentBody";
 
 export type AttachmentFileRouteParams = {
@@ -42,6 +43,9 @@ export type AttachmentFileRouteParams = {
 type AttachmentFileScreenProps = StaticScreenProps<AttachmentFileRouteParams>;
 
 export function AttachmentFileScreen(props: AttachmentFileScreenProps) {
+  // Fork: Attached files expand within their originating subagent until upstream preserves pane navigation during expansion.
+  const expandPreview = use(FilePreviewExpandContext);
+  const closePreview = use(FilePreviewCloseContext);
   const navigation = useNavigation();
   const { appearance, setCodeWordBreak } = useAppearancePreferences();
   const iconColor = useUniwindTheme()["--color-icon"];
@@ -257,6 +261,20 @@ export function AttachmentFileScreen(props: AttachmentFileScreenProps) {
         />
       ) : null}
       <Toolbar placement="right">
+        {closePreview ? (
+          <Toolbar.Button
+            icon="xmark"
+            accessibilityLabel="Close expanded file preview"
+            onPress={closePreview}
+          />
+        ) : null}
+        {expandPreview ? (
+          <Toolbar.Button
+            icon="arrow.up.left.and.arrow.down.right"
+            accessibilityLabel="Expand file preview"
+            onPress={expandPreview}
+          />
+        ) : null}
         <Toolbar.Menu accessibilityLabel="File actions" icon="ellipsis">
           {renderedMode ? (
             <Toolbar.Menu inline>
