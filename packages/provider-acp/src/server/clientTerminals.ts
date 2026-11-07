@@ -3,6 +3,7 @@ import {
   applyEnvironmentOverlay,
   type EnvironmentOverlay,
 } from "@t3tools/provider-core/server/instanceEnvironment";
+import * as Channel from "effect/Channel";
 import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -287,6 +288,9 @@ export const makeAcpClientTerminals = Effect.fn("makeAcpClientTerminals")(functi
 
           const pump = (stream: typeof child.stdout) =>
             stream.pipe(
+              // Keep each pipe's UTF-8 decoder independent and preserve literal BOMs.
+              Stream.pipeThroughChannel(Channel.decodeText("utf-8", { ignoreBOM: true })),
+              Stream.encodeText,
               Stream.runForEach((chunk) =>
                 Effect.sync(() => {
                   appendOutput(record.buffer, chunk);

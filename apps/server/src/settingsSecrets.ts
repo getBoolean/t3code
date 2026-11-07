@@ -2,6 +2,7 @@
 import {
   AntigravitySettings,
   ClaudeSettings,
+  CloudSpeechCredentials,
   CodexSettings,
   EasDeviceHostConfig,
   GitAccountConfig,
@@ -48,6 +49,7 @@ const providerSecretFields = new Map([
 ]);
 const usageLimitSecretFields = secretSettingsFields(UsageLimitSourceConfig);
 const gitAccountSecretFields = secretSettingsFields(GitAccountConfig);
+const voiceSecretFields = secretSettingsFields(CloudSpeechCredentials);
 const easDeviceHostSecretFields = secretSettingsFields(EasDeviceHostConfig);
 const simlockDeviceHostSecretFields = secretSettingsFields(SimlockDeviceHostConfig);
 const encode = (value: string) => Buffer.from(value, "utf8").toString("base64url");
@@ -248,6 +250,11 @@ function mapSecretFieldGroups(
 
   return {
     ...settings,
+    cloudSpeechCredentials: mapFields(
+      settings.cloudSpeechCredentials,
+      voiceSecretFields,
+      (provider) => `voice-cloud-${provider}`,
+    ) as ServerSettings["cloudSpeechCredentials"],
     providerInstances,
     sourceControlHosts,
     usageLimitSources,
