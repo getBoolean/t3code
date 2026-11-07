@@ -1010,3 +1010,43 @@ packages/shared/src/threadLinks.test.ts	keeps uncached scoped links navigable
 apps/web/src/components/chat/MarkdownThreadLink.tsx	thread === null && props.link.environmentId !== null
 apps/web/src/components/ThreadContextChip.tsx	Fork:
 apps/web/src/components/ThreadContextChip.tsx	: "Open thread"}
+
+# Fork: Bound initial paginated snapshots at SQL and transport layers, retain older-page budgets, and invalidate persisted larger opening windows; remove when upstream provides equivalent first-page limits.
+apps/server/src/orchestration-v2/threadHistoryPaging.ts	Fork:
+apps/server/src/orchestration-v2/threadHistoryPaging.ts	THREAD_INITIAL_HISTORY_POLICY
+apps/server/src/orchestration-v2/threadHistoryPaging.ts	turnItemLimit: THREAD_INITIAL_HISTORY_POLICY.maxTurnItems
+apps/server/src/orchestration-v2/ProjectionStore.ts	Fork:
+apps/server/src/orchestration-v2/ProjectionStore.ts	readonly turnItemLimit?: number | undefined;
+apps/server/src/orchestration-v2/ProjectionStore.ts	turnItemLimit: window.turnItemLimit
+apps/server/src/orchestration-v2/ProjectionStore.ts	turnItemLimit: options.turnItemLimit
+apps/server/src/orchestration-v2/ProjectionStore.ts	const turnItemLimit = window.turnItemLimit ?? THREAD_HISTORY_PAGE_POLICY.maxTurnItems
+apps/server/src/orchestration-v2/http.ts	Fork:
+apps/server/src/orchestration-v2/http.ts	? THREAD_INITIAL_SNAPSHOT_WINDOW
+apps/server/src/orchestration-v2/http.ts	policy: THREAD_INITIAL_HISTORY_POLICY
+apps/server/src/orchestration-v2/ThreadStream.ts	Fork:
+apps/server/src/orchestration-v2/ThreadStream.ts	readonly policy?: ThreadHistoryPagePolicy;
+apps/server/src/orchestration-v2/ThreadStream.ts	policy: input.policy
+apps/server/src/ws.ts	Fork:
+apps/server/src/ws.ts	...THREAD_INITIAL_SNAPSHOT_WINDOW
+apps/server/src/ws.ts	policy: THREAD_INITIAL_HISTORY_POLICY
+apps/server/src/orchestration-v2/ProjectionStore.test.ts	Fork:
+apps/server/src/orchestration-v2/ProjectionStore.test.ts	assert.lengthOf(opening.projection.visibleTurnItems, 27);
+apps/server/src/orchestration-v2/ProjectionStore.test.ts	policy: THREAD_INITIAL_HISTORY_POLICY
+apps/server/src/orchestration-v2/boundedSnapshotTransport.test.ts	Fork:
+apps/server/src/orchestration-v2/boundedSnapshotTransport.test.ts	Fork: Both initial transports fit a small first page
+packages/client-runtime/src/platform/orchestrationCache.ts	Fork:
+packages/client-runtime/src/platform/orchestrationCache.ts	ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION = 7
+packages/client-runtime/src/platform/threadCacheEncoding.ts	Fork:
+packages/client-runtime/src/platform/threadCacheEncoding.ts	COMPACT_THREAD_CACHE_SCHEMA_VERSION = 8
+packages/client-runtime/src/platform/orchestrationCache.test.ts	Fork:
+packages/client-runtime/src/platform/orchestrationCache.test.ts	const staleVersion of [3, 4, 5, 6]
+apps/mobile/src/connection/environment-cache-store.test.ts	Fork:
+apps/mobile/src/connection/environment-cache-store.test.ts	Fork: Compact cache assertions follow the first-page version
+apps/mobile/src/connection/environment-cache-store.test.ts	value.schemaVersion = 6;
+
+# Fork: Initial pages defer completed multi-item work groups until expansion, while normal history retains the existing inline threshold; remove with upstream lazy opening work.
+apps/server/src/orchestration-v2/threadHistoryPaging.ts	inlineWorkItemLimit: 1
+apps/server/src/orchestration-v2/ProjectionStore.ts	readonly inlineWorkItemLimit?: number | undefined;
+apps/server/src/orchestration-v2/ProjectionStore.ts	inlineWorkItemLimit: window.inlineWorkItemLimit
+apps/server/src/orchestration-v2/ProjectionStore.ts	inlineWorkItemLimit: options.inlineWorkItemLimit
+apps/server/src/orchestration-v2/ProjectionStore.test.ts	initialWork?.item.deferredWork?.itemCount, 150

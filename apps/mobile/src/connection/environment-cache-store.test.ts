@@ -1,3 +1,4 @@
+// Fork: Compact cache assertions follow the first-page version; remove with upstream opening cache invalidation.
 import {
   ORCHESTRATION_CACHE_SCHEMA_VERSION,
   ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION,
@@ -304,6 +305,9 @@ describe("mobile SQLite environment cache store", () => {
         invalidItem,
         ...[
           (value: typeof partial) => {
+            value.schemaVersion = 6;
+          },
+          (value: typeof partial) => {
             delete value.snapshot.turnItemCount;
           },
           (value: typeof partial) => {
@@ -431,8 +435,8 @@ describe("mobile SQLite environment cache store", () => {
       yield* store.saveThread(ENVIRONMENT_ID, snapshot);
       const id = cacheId(ENVIRONMENT_ID, "thread", THREAD_ID);
       const encoded = JSON.parse(memory.values.get(id)!);
-      expect(encoded.schemaVersion).toBe(6);
-      expect(memory.schemaVersions.get(id)).toBe(6);
+      expect(encoded.schemaVersion).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
+      expect(memory.schemaVersions.get(id)).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
       expect(encoded.snapshot.turnItemsOmitLocalVisible).toBe(true);
       expect(encoded.snapshot.turnItemCount).toBe(3);
       expect(encoded.snapshot.visibleTurnItemCount).toBe(4);
@@ -480,7 +484,7 @@ describe("mobile SQLite environment cache store", () => {
         yield* store.saveThread(ENVIRONMENT_ID, snapshot);
         const raw = memory.values.get(cacheId(ENVIRONMENT_ID, "thread", THREAD_ID))!;
         const encoded = JSON.parse(raw);
-        expect(encoded.schemaVersion).toBe(6);
+        expect(encoded.schemaVersion).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
         expect(encoded.snapshot.turnItemsOmitLocalVisible).toBe(false);
         expect(encoded.snapshot.turnItemCount).toBe(2);
         expect(encoded.snapshot.projection.turnItems).toHaveLength(2);

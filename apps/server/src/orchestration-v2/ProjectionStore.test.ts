@@ -51,6 +51,8 @@ import {
   encodeThreadHistoryCursor,
   selectHistoryPageFromCursor,
   THREAD_HISTORY_PAGE_POLICY,
+  THREAD_INITIAL_HISTORY_POLICY,
+  THREAD_INITIAL_SNAPSHOT_WINDOW,
   THREAD_HISTORY_TURN_SNAPSHOT_ROW_LIMIT,
 } from "./threadHistoryPaging.ts";
 import { limitRecoveryCommand } from "./UsageLimitRecoveryWorker.ts";
@@ -2830,6 +2832,14 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         (yield* humanWindow()).projection.turnItems,
         THREAD_HISTORY_TURN_SNAPSHOT_ROW_LIMIT,
       );
+      // Fork: Opening pages must not expand to the older-history turn budget; remove with upstream initial-page limits.
+      const opening = yield* projectionStore.getThreadSnapshotWindow(threadId, {
+        rowLimit: 27,
+        userTurnLimit: 1,
+        turnItemLimit: 25,
+      });
+      assert.lengthOf(opening.projection.visibleTurnItems, 27);
+      assert.strictEqual(opening.projection.visibleTurnItems.at(-1)?.item.ordinal, 1_000);
       // With the newest user turn 1,000 rows back, the window pages from inside it.
       const setNewestTurnType = (type: "command_execution" | "user_message") => sql`
         UPDATE orchestration_v2_projection_turn_items
@@ -3062,11 +3072,12 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
       );
 
       const sqlPageLimit = THREAD_HISTORY_PAGE_POLICY.maxItems + 2;
-      const initialSnapshot = yield* projectionStore.getThreadSnapshotWindow(threadId, {
-        rowLimit: sqlPageLimit,
-        userTurnLimit: THREAD_HISTORY_PAGE_POLICY.maxUserTurns,
-      });
+      const initialSnapshot = yield* projectionStore.getThreadSnapshotWindow(
+        threadId,
+        THREAD_INITIAL_SNAPSHOT_WINDOW,
+      );
       const initialPage = buildBoundedThreadProjection({
+        policy: THREAD_INITIAL_HISTORY_POLICY,
         projection: initialSnapshot.projection,
         snapshotSequence: initialSnapshot.snapshotSequence,
       });
@@ -3262,6 +3273,39 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         deferWork: true,
       });
       assert.isFalse(inlineWindow.projection.visibleTurnItems.some((row) => row.item.deferredWork));
+      // Fork: Opening summaries defer even small completed work groups; remove with upstream first-page lazy work.
+      const initialWorkWindow = yield* projectionStore.getThreadSnapshotWindow(threadId, {
+        ...THREAD_INITIAL_SNAPSHOT_WINDOW,
+        deferWork: true,
+      });
+      const initialWork = initialWorkWindow.projection.visibleTurnItems.find(
+        (row) => row.item.deferredWork,
+      );
+      assert.strictEqual(initialWork?.item.deferredWork?.itemCount, 150);
+      const initialWorkPage = yield* projectionStore.getThreadHistoryPage(
+        threadId,
+        initialWork!.item.deferredWork!.cursor,
+        initialWork!.sourceItemId,
+        false,
+        "work",
+      );
+      assert.strictEqual(initialWorkPage.items.length, 75);
+      assert.strictEqual(initialWorkPage.hasMoreHistory, true);
+      const remainingWorkPage = yield* projectionStore.getThreadHistoryPage(
+        threadId,
+        initialWorkPage.nextCursor!,
+        initialWork!.sourceItemId,
+        false,
+        "work",
+      );
+      assert.strictEqual(remainingWorkPage.nextCursor, null);
+      assert.strictEqual(
+        new Set(
+          [...initialWorkPage.items, ...remainingWorkPage.items].map((row) => row.sourceItemId),
+        ).size,
+        150,
+      );
+
       yield* sql`UPDATE orchestration_v2_projection_turn_items SET run_id = ${sharedRunId},
         payload_json = json_set(payload_json, '$.runId', ${sharedRunId})
         WHERE thread_id = ${threadId} AND ordinal = 850`;
