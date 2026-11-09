@@ -115,8 +115,6 @@
         "scripts/generate-device-stream.mts",
         "src/features/devices/device-stream.browser.ts!",
         "src/features/browser/preview-stream.browser.ts!",
-        // Fork: Metro bundles the offline Mermaid entry until upstream supports native diagrams.
-        "src/features/mermaid/mermaid-stream.browser.ts!",
       ],
       // Fonts are configured as asset paths; Expo autolinks the native packages.
       "ignoreDependencies": [

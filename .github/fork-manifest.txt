@@ -907,29 +907,9 @@ scripts/mobile-behavior/scenarios.ts	readonly out: string;
 scripts/write-release-manifest.ts	Fork:
 scripts/write-release-manifest.ts	databaseMigration: yield* latestServerMigrationId()
 
-# Fork: Render closed mobile Mermaid fences offline with source fallback until upstream supports native diagrams; JSON manifests keep provenance here.
-apps/mobile/src/lib/markdownMermaid.ts	markdownWithMermaidBlocks
-apps/mobile/src/lib/markdownMermaid.test.ts	embeds completed Mermaid fences
-apps/mobile/src/features/mermaid/mermaid-stream.browser.ts	links: false
-apps/mobile/src/features/mermaid/mermaid-document.ts	default-src 'none'
-apps/mobile/src/features/mermaid/mermaid-document.test.ts	keeps diagram input inert
-apps/mobile/src/native/MermaidBlock.tsx	mermaidDocument
-apps/mobile/src/native/MermaidBlock.tsx	containerStyle={{ height, flex: 0 }}
-apps/mobile/src/native/MermaidBlock.tsx	"--pele-fg": themeVariables["--color-foreground"]
-apps/mobile/src/native/EnrichedMarkdownText.tsx	markdownWithMermaidBlocks
-apps/mobile/src/types/mobile-preview-stream.d.ts	@t3tools/mobile-mermaid-stream
-apps/mobile/scripts/generate-device-stream.mts	generateMermaidScript
-apps/mobile/metro.config.js	generateMermaidScript
-apps/mobile/package.json	"pele": "^1.8.0"
-pnpm-lock.yaml	pele:
-scripts/check-fork-manifest.sh	apps/mobile/package.json
-
 # Fork: Background work opens subagents in the parent inspector like response embeds until upstream unifies the entry points.
 apps/mobile/src/features/threads/ThreadBackgroundWorkSheet.tsx	if (openInspector(target,
 apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	ThreadBackgroundWork
-
-# Fork: Treat the Metro-bundled offline diagram runtime as an entry point until upstream supports native Mermaid rendering.
-knip.jsonc	src/features/mermaid/mermaid-stream.browser.ts!
 
 # Fork: iPad sidebar selections reuse the native detail root while pushed pages retain separate controllers; remove when upstream distinguishes selection from pushes.
 apps/mobile/src/native/workspace-stack-projection.ts	workspaceScreenSlots
@@ -946,13 +926,6 @@ apps/mobile/src/features/layout/workspace/useSystemWorkspaceTabBar.ts	deviceType
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	<PreviewStack.Screen name="ThreadAttachment">
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	fileInspector: { supported: false, width: null }
 apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	opens attached and workspace files inside the subagent navigator
-
-# Fork: Mobile Mermaid diagrams can expand into a local full-screen zoom viewer until upstream supplies native diagram viewing.
-apps/mobile/src/native/MermaidBlock.tsx	accessibilityLabel="Expand diagram"
-apps/mobile/src/native/MermaidBlock.tsx	accessibilityLabel="Close diagram"
-apps/mobile/src/features/mermaid/mermaid-stream.browser.ts	zoom = enableZoom(container, { always: true })
-apps/mobile/src/features/mermaid/mermaid-document.ts	expandedMermaidFrame
-apps/mobile/src/features/mermaid/mermaid-document.ts	JSON.stringify({ source, dark, colors, expanded })
 
 # Fork: Inspector file previews expand without replacing the parent thread or losing local file routes until upstream supports pane expansion.
 apps/mobile/src/features/files/file-preview-presentation.ts	FilePreviewExpandContext
@@ -986,11 +959,11 @@ apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	props.renderThread?.({
 
 # Fork: VirtualizedList calls renderScrollComponent as a function, so PR lists use the render helper instead of the compiled NativeScrollView component.
 apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx	Fork:
-apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx	renderScrollComponent={renderNativeScrollView}
+apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx	? renderNativeScrollView : undefined
 apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx	Fork:
 apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx	renderScrollComponent={renderNativeScrollView}
 apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx	Fork:
-apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx	renderScrollComponent={renderNativeScrollView}
+apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx	? renderNativeScrollView : undefined
 
 # Fork: AppBar owns headerBackVisible, so iPad root destinations that stay on the stack hide Back through a prop.
 apps/mobile/src/components/ui/AppBar.tsx	Fork:
@@ -1007,7 +980,9 @@ apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	s.pl
 # Fork: preserve uncached scoped thread links on mobile, web, and desktop until navigation loads them; remove when upstream supports this.
 packages/shared/src/threadLinks.ts	if (written.environmentId !== null) return formatThreadLink(written, label || "Open thread");
 packages/shared/src/threadLinks.test.ts	keeps uncached scoped links navigable
-apps/web/src/components/chat/MarkdownThreadLink.tsx	thread === null && props.link.environmentId !== null
+apps/web/src/components/chat/MarkdownThreadLink.tsx	resolved === null && props.link.environmentId !== null
+apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	Fork:
+apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	name: "Thread, Open thread"
 apps/web/src/components/ThreadContextChip.tsx	Fork:
 apps/web/src/components/ThreadContextChip.tsx	: "Open thread"}
 
