@@ -977,6 +977,10 @@ apps/mobile/src/features/settings/components/SettingsScreen.tsx	hideBack={worksp
 apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	Fork:
 apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	s.platform = :ios, '17.0'
 
+# Fork: The iOS 17 app cannot link a pod raised to 18.0; the native WebSocket only uses URLSessionWebSocketTask (iOS 13+).
+apps/mobile/modules/t3-web-socket/ios/T3WebSocket.podspec	Fork:
+apps/mobile/modules/t3-web-socket/ios/T3WebSocket.podspec	s.platform = :ios, '17.0'
+
 # Fork: preserve uncached scoped thread links on mobile, web, and desktop until navigation loads them; remove when upstream supports this.
 packages/shared/src/threadLinks.ts	if (written.environmentId !== null) return formatThreadLink(written, label || "Open thread");
 packages/shared/src/threadLinks.test.ts	keeps uncached scoped links navigable
