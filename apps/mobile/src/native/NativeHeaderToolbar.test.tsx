@@ -259,3 +259,38 @@ it("isolates toolbar handlers and ignores retained actions after their toolbar u
   second.onPress?.();
   expect(onPress).not.toHaveBeenCalled();
 });
+
+// Fork: Retained file menu actions must survive preceding button removal; remove when upstream covers identity-based dispatch.
+it("keeps a retained Preview action attached to Preview after a preceding button disappears", () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  root = createRoot(document.createElement("div"));
+  const preview = vi.fn();
+  const source = vi.fn();
+  const render = (expanded: boolean) =>
+    act(() =>
+      root!.render(
+        <NativeHeaderToolbar placement="right">
+          {expanded ? null : <NativeHeaderToolbar.Button label="Expand" onPress={() => {}} />}
+          <NativeHeaderToolbar.Menu title="File actions">
+            <NativeHeaderToolbar.MenuAction onPress={preview}>
+              Preview
+            </NativeHeaderToolbar.MenuAction>
+            <NativeHeaderToolbar.MenuAction onPress={source}>Source</NativeHeaderToolbar.MenuAction>
+          </NativeHeaderToolbar.Menu>
+        </NativeHeaderToolbar>,
+      ),
+    );
+  render(false);
+  const menu = harness.renderedItems[1];
+  if (menu?.type !== "menu") throw new Error("Expected file menu");
+  const action = menu.menu.items[0];
+  if (action?.type !== "action") throw new Error("Expected Preview action");
+  render(true);
+  const updatedMenu = harness.renderedItems[0];
+  if (updatedMenu?.type !== "menu") throw new Error("Expected updated file menu");
+  expect(updatedMenu.identifier).toBe(menu.identifier);
+  expect(menu.identifier).toBeDefined();
+  action.onPress?.();
+  expect(preview).toHaveBeenCalledOnce();
+  expect(source).not.toHaveBeenCalled();
+});

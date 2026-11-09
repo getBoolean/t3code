@@ -1050,3 +1050,9 @@ apps/server/src/orchestration-v2/ProjectionStore.ts	readonly inlineWorkItemLimit
 apps/server/src/orchestration-v2/ProjectionStore.ts	inlineWorkItemLimit: window.inlineWorkItemLimit
 apps/server/src/orchestration-v2/ProjectionStore.ts	inlineWorkItemLimit: options.inlineWorkItemLimit
 apps/server/src/orchestration-v2/ProjectionStore.test.ts	initialWork?.item.deferredWork?.itemCount, 150
+
+# Fork: Retained native file menu actions dispatch by identity when preceding header buttons disappear; remove when upstream preserves this behavior.
+apps/mobile/src/native/NativeHeaderToolbar.tsx	Fork:
+apps/mobile/src/native/NativeHeaderToolbar.tsx	committedHandlers.current.get(key)
+apps/mobile/src/native/NativeHeaderToolbar.test.tsx	Fork:
+apps/mobile/src/native/NativeHeaderToolbar.test.tsx	keeps a retained Preview action attached to Preview

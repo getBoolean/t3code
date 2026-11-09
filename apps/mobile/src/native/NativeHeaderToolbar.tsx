@@ -61,7 +61,7 @@ function iconFromProp(icon: unknown): NativeStackHeaderIcon | undefined {
   return undefined;
 }
 
-type RegisterHandler = (handler: unknown) => () => void;
+type RegisterHandler = (handler: unknown, key: string) => () => void;
 
 type ToolbarElementProps = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -86,7 +86,7 @@ function convertMenuAction(
       description: typeof element.props.subtitle === "string" ? element.props.subtitle : undefined,
       disabled: Boolean(element.props.disabled),
       icon: iconFromProp(element.props.icon),
-      onPress: register(element.props.onPress),
+      onPress: register(element.props.onPress, String(element.key ?? label)),
       state: element.props.isOn === true ? "on" : undefined,
       destructive: Boolean(element.props.destructive),
       discoverabilityLabel:
@@ -105,7 +105,9 @@ function convertMenuAction(
           : labelFromChildren(element.props.children),
       icon: iconFromProp(element.props.icon),
       inline: Boolean(element.props.inline),
-      items: collectMenuItems(element.props.children, register),
+      items: collectMenuItems(element.props.children, (handler, key) =>
+        register(handler, `${String(element.key ?? element.props.title)}:${key}`),
+      ),
     };
   }
 
@@ -161,7 +163,10 @@ function convertToolbarChild(
       axisBehavior: child.props.axisBehavior as NativeStackHeaderAxisBehavior,
       disabled: Boolean(child.props.disabled),
       icon: iconFromProp(child.props.icon),
-      onPress: register(child.props.onPress),
+      onPress: register(
+        child.props.onPress,
+        `button:${String(child.key ?? child.props.label ?? child.props.accessibilityLabel)}`,
+      ),
       sharesBackground: !child.props.separateBackground,
       tintColor: child.props.tintColor as ColorValue | undefined,
       variant:
@@ -186,7 +191,9 @@ function convertToolbarChild(
       icon: iconFromProp(child.props.icon),
       menu: {
         title: typeof child.props.title === "string" ? child.props.title : undefined,
-        items: collectMenuItems(child.props.children, register),
+        items: collectMenuItems(child.props.children, (handler, key) =>
+          register(handler, `menu:${String(child.key ?? child.props.title)}:${key}`),
+        ),
       },
       sharesBackground: !child.props.separateBackground,
       tintColor: child.props.tintColor as ColorValue | undefined,
@@ -194,7 +201,11 @@ function convertToolbarChild(
         child.props.variant === "done" || child.props.variant === "prominent"
           ? child.props.variant
           : "plain",
-      identifier: typeof child.props.identifier === "string" ? child.props.identifier : undefined,
+      // Fork: Keep native menu event IDs stable when preceding buttons disappear.
+      identifier:
+        typeof child.props.identifier === "string"
+          ? child.props.identifier
+          : `menu:${String(child.key ?? child.props.title)}`,
     };
   }
 
@@ -232,13 +243,13 @@ function NativeHeaderToolbarRoot(props: {
   const route = useRoute();
   const tabActivity = use(NativeWorkspaceTabActivityContext);
   const isTabActive = tabActivity?.isActive;
-  const committedHandlers = useRef<(() => void)[]>([]);
+  // Fork: Native may retain menu actions across layout changes; bind by action identity rather than array position until upstream does the same.
+  const committedHandlers = useRef(new Map<string, () => void>());
   const { items, handlers } = useMemo(() => {
-    const handlers: (() => void)[] = [];
-    const register: RegisterHandler = (handler) => {
-      const index = handlers.length;
-      handlers.push(typeof handler === "function" ? (handler as () => void) : () => undefined);
-      return () => committedHandlers.current[index]?.();
+    const handlers = new Map<string, () => void>();
+    const register: RegisterHandler = (handler, key) => {
+      handlers.set(key, typeof handler === "function" ? (handler as () => void) : () => undefined);
+      return () => committedHandlers.current.get(key)?.();
     };
     return { items: collectToolbarItems(props.children, register), handlers };
   }, [props.children, committedHandlers]);
@@ -248,7 +259,7 @@ function NativeHeaderToolbarRoot(props: {
   useLayoutEffect(() => {
     committedHandlers.current = handlers;
     return () => {
-      committedHandlers.current = [];
+      committedHandlers.current = new Map();
     };
   }, [handlers, committedHandlers]);
   // UIKit's search placement item belongs to the toolbar, never a header group.
