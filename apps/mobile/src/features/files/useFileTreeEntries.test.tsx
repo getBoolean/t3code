@@ -145,7 +145,10 @@ vi.mock("../../native/NativeScrollViewMarker", () => ({
   renderNativeScrollView: Nothing,
 }));
 vi.mock("../../native/native-layout-metrics", () => ({ useNativeColumnLayoutMetrics: () => null }));
-vi.mock("../../components/ui/useBarInset", () => ({ useContentTopInset: () => 0 }));
+vi.mock("../../components/ui/useBarInset", () => ({
+  useContentTopInset: () => 0,
+  useContentBottomInset: () => 0,
+}));
 vi.mock("@legendapp/list/react-native", () => ({
   LegendList: <T,>(props: {
     data: ReadonlyArray<T>;
