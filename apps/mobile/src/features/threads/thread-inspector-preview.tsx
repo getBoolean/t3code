@@ -24,7 +24,10 @@ import { ThreadFileScreen, ThreadFilesTreeScreen } from "../files/ThreadFilesRou
 import { useMobileNavigationTheme } from "../../lib/useMobileNavigationTheme";
 import { createV5StackNavigator } from "../../native/createV5StackNavigator";
 import { WorkspaceSlotOptionsContext } from "../../native/v5-workspace-context";
-import { AdaptiveWorkspaceContext } from "../layout/adaptive-workspace-context";
+import {
+  AdaptiveWorkspaceContext,
+  WorkspacePaneStateContext,
+} from "../layout/adaptive-workspace-context";
 import { InspectorCloseContext } from "../layout/inspector-bar-store";
 import { pageRoute } from "../layout/route-options";
 import {
@@ -72,16 +75,20 @@ const PreviewStack = createV5StackNavigator<
 // Fork: File drill-ins stay within the subagent pane without registering a replacement main inspector until upstream scopes inspector navigation.
 function InspectorFileScope({ children }: { readonly children: ReactNode }) {
   const workspace = use(AdaptiveWorkspaceContext);
+  const paneState = use(WorkspacePaneStateContext);
   return (
     <AdaptiveWorkspaceContext
-      value={{
-        ...workspace,
-        layout: { ...workspace.layout, usesSplitView: false },
-        fileInspector: { supported: false, width: null },
-        sidebarToggleable: false,
-      }}
+      value={{ ...workspace, layout: { ...workspace.layout, usesSplitView: false } }}
     >
-      {children}
+      <WorkspacePaneStateContext
+        value={{
+          ...paneState,
+          fileInspector: { supported: false, width: null },
+          sidebarToggleable: false,
+        }}
+      >
+        {children}
+      </WorkspacePaneStateContext>
     </AdaptiveWorkspaceContext>
   );
 }
