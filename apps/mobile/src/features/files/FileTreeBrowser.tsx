@@ -216,6 +216,7 @@ export function FileTreeBrowser(props: {
   return (
     <LegendList
       renderScrollComponent={renderNativeScrollView}
+      nestedScrollEnabled={false}
       contentInset={{ top: headerInset, bottom: bottomInset }}
       alwaysBounceVertical
       className="flex-1"

@@ -117,11 +117,6 @@ each marked `Fork:`. Keep them all when merging upstream:
   The hosted relay rejects devices reporting iOS below 18, so iOS 17 devices report 18. They show
   as iOS 18 in the device list. This gets registration accepted. Push delivery still needs a build
   signed with the relay's APNs team and bundle ID.
-- `patches/react-native-nitro-modules@0.37.1.patch`. Swift's explicit module builds import libc++
-  headers at the SDK version, not the deployment target. Nitro's Swift-visible `make_exception_ptr`
-  calls then link `std::exception_ptr::__from_native_exception_pointer`, which only iOS 18 exports,
-  and dyld kills the app at launch on iOS 17. The patch mirrors upstream nitro#1824. Drop it once a
-  stable Nitro release includes that fix.
 - `buildReactNativeFromSource` in `apps/mobile/app.config.ts`. React Native's prebuilt
   `ReactNativeDependencies.framework` was linked with the iOS 18.5 SDK and binds folly's
   `__cxa_increment_exception_refcount` and `__cxa_decrement_exception_refcount` to libc++. iOS 17.0
@@ -132,10 +127,6 @@ each marked `Fork:`. Keep them all when merging upstream:
   11.5 to 13 minutes instead of 8.2 on an M1 (13 with Xcode 26.6), and about 45 instead of 28
   minutes on GitHub's `macos-26` runner.
   Drop it once React Native's prebuilt dependencies pass the libc++ check below.
-- The `AsyncFunctionDefinition.swift` hunk in `patches/expo-modules-core@58.0.22.patch`. Building
-  ExpoModulesCore from source crashes Xcode 27's Swift 6.4 compiler on a cast pattern inside a
-  consuming `switch`. The hunk drops the cast; `reject` takes `any Error` either way. When upstream
-  bumps expo-modules-core, carry the hunk to the new patch file if the cast is still there.
 - `pinnedToTop` in `apps/mobile/modules/t3-review-diff/ios/T3ReviewDiffView.swift`. On iOS 17 the
   native code view (file viewer, review diff) could keep the offset of an earlier, smaller top inset,
   so a file opened with its first lines under the header. Until the view is scrolled it now stays at
@@ -150,12 +141,13 @@ each marked `Fork:`. Keep them all when merging upstream:
   utility group in that sidebar: Settings stays pinned while Pull Requests and Usage expand above
   it. Settings opens its landing page, and selecting a thread clears the utility selection. Keep
   the navigation and stack-projection overrides listed in the manifest with this layout.
-- The iOS initialization guards in `patches/react-native-keyboard-controller@1.22.8.patch` avoid
+- The iOS initialization guards in `patches/react-native-keyboard-controller@1.23.0.patch` avoid
   synchronous UI-thread reads when a thread's scroll view mounts. Keep the initial content offset
   and static insets with them; omitting the offset opens a short transcript at its top.
-- `patches/expo-modules-autolinking@58.0.13.patch`. Building Expo's modules from source makes the
+- `patches/expo-modules-autolinking@58.0.17.patch`, pinned by an override in `pnpm-workspace.yaml`. Building Expo's modules from source makes the
   app's `[Expo] Configure project` phase scan their Swift sources, and autolinking gives that scan
   5 seconds. On a busy CI runner it times out and the Release build fails. The patch allows 60.
+  Move the pin and the patch when upstream bumps Expo.
 
 Set `T3CODE_IOS17_CHECK` to `true` to run `mobile-ios17-compile.yml`. It compiles the app for the
 iOS Simulator SDK at the 17.0 target on mobile changes, which catches unguarded iOS 18+ APIs. It then
