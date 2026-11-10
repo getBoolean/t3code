@@ -3041,7 +3041,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       // Non-deferrable types always keep their own row, so the window stays above the newest
       // `tailRows` of them. Start at the latest segment start of each run that reaches that
       // point, clamped to it so runless rows below stay in the scan.
-      const tailRows = Math.max(window.rowLimit, THREAD_HISTORY_TURN_SNAPSHOT_ROW_LIMIT);
+      const tailRows = Math.max(window.rowLimit, turnItemLimit + 2); // Fork: per-window turn limit.
       const tailWorkStart = sql<{ readonly ordinal: number | null }>`
                 ${eligible}, visible_tail AS (
                   SELECT ordinal FROM eligible
