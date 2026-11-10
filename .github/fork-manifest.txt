@@ -70,6 +70,10 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 .github/workflows/mobile-android-apk.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-2vcpu-ubuntu-2404' }}
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
+.github/workflows/mobile-dev-client.yml	Fork:
+.github/workflows/mobile-dev-client.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+
+# Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-eas-preview-fork.yml	Fork:
 .github/workflows/mobile-eas-preview-fork.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
 
@@ -844,27 +848,20 @@ packages/source-control-gitlab/src/server/GitLabCli.ts	Fork:
 packages/source-control-gitlab/src/server/GitLabCli.ts	Effect.flatMap(Effect.service(SourceControlHost.AccountCredential), (account) =>
 
 # Fork: Allow 60 seconds for the Swift module scan required by source-built Expo modules on busy CI runners.
-patches/expo-modules-autolinking@58.0.13.patch	timeout: 60000
-patches/expo-modules-autolinking@58.0.13.patch	Fork:
-
-# Fork: Avoid the consuming-switch cast that crashes the Swift 6.4 compiler when building ExpoModulesCore from source.
-patches/expo-modules-core@58.0.22.patch	case .failure(let error):
-patches/expo-modules-core@58.0.22.patch	Fork:
+patches/expo-modules-autolinking@58.0.17.patch	timeout: 60000
+patches/expo-modules-autolinking@58.0.17.patch	Fork:
 
 # Fork: Avoid synchronous iOS UI-thread reads during JS initialization while preserving static initial insets and the initial content offset.
-patches/react-native-keyboard-controller@1.22.8.patch	Fork:
-patches/react-native-keyboard-controller@1.22.8.patch	+          contentInset: {
+patches/react-native-keyboard-controller@1.23.0.patch	Fork:
+patches/react-native-keyboard-controller@1.23.0.patch	+          contentInset: {
 
-# Fork: Avoid Swift-visible exception helpers linking iOS 18-only libc++ symbols; remove when a stable Nitro release includes the upstream fix.
-patches/react-native-nitro-modules@0.37.1.patch	Fork:
-patches/react-native-nitro-modules@0.37.1.patch	+  // Fork: Swift explicit modules import libc++ at the SDK version, so make_exception_ptr
+# Fork: Keep generated patch hashes for the Expo autolinking and keyboard initialization overrides synchronized with the patch files; regenerate with pnpm instead of hand-editing.
+pnpm-lock.yaml	expo-modules-autolinking@58.0.17(patch_hash=
+pnpm-lock.yaml	react-native-keyboard-controller@1.23.0
 
-# Fork: Keep generated patch hashes for the Nitro, Expo, and keyboard initialization overrides synchronized with the patch files; regenerate with pnpm instead of hand-editing.
-pnpm-lock.yaml	react-native-keyboard-controller@1.22.8
-
-# Fork: Register the Nitro iOS 17 ABI and Expo scan-timeout patches so dependency installs retain the native workarounds.
-pnpm-workspace.yaml	expo-modules-autolinking@58.0.13: patches/expo-modules-autolinking@58.0.13.patch
-pnpm-workspace.yaml	react-native-nitro-modules@0.37.1
+# Fork: Pin and register the Expo scan-timeout patch so dependency installs retain the from-source iOS 17 build workaround.
+pnpm-workspace.yaml	expo-modules-autolinking@58.0.17: patches/expo-modules-autolinking@58.0.17.patch
+pnpm-workspace.yaml	expo-modules-autolinking: 58.0.17
 pnpm-workspace.yaml	Fork:
 
 # Fork: Export migration discovery so fork GitHub releases carry the same compatibility metadata as npm releases.

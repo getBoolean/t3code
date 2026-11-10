@@ -29,7 +29,7 @@ import {
 import { useControlTheme } from "../../../components/ui/useControlTheme";
 import { useDeviceType } from "../../../native/native-layout-metrics";
 import { WorkspaceSidebarTabs } from "./WorkspaceSidebarTabs";
-import { useAdaptiveWorkspaceLayout } from "../AdaptiveWorkspaceLayout";
+import { useAdaptiveWorkspaceLayout, useWorkspacePaneState } from "../AdaptiveWorkspaceLayout";
 import { WorkspaceSidebarFooterContext } from "../workspace-sidebar-footer";
 import { useSelectWorkspaceTab } from "./useSelectWorkspaceTab";
 
@@ -89,7 +89,8 @@ export function WorkspaceNativeTabs(props: {
   const systemTabBar = useSystemWorkspaceTabBar();
   const deviceType = useDeviceType();
   const compactTabs = useCompactWorkspaceTabs();
-  const { layout, panes } = useAdaptiveWorkspaceLayout();
+  const { layout } = useAdaptiveWorkspaceLayout();
+  const { panes } = useWorkspacePaneState();
   const ipadSidebarNavigation = workspaceUsesSidebarNavigation(deviceType, layout.usesSplitView);
   // The tabs belong to the sidebar; over a page with the sidebar hidden they'd cover the composer.
   const hiddenWithSidebar =
