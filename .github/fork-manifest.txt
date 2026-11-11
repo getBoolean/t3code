@@ -7,12 +7,6 @@ apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(para
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	Fork:
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	reuses the iPad PR screen without losing the originating thread
 
-# Fork: Normalize native BigInt upload counters before progress arithmetic so attaching images does not throw.
-apps/mobile/src/lib/attachmentUpload.ts	Fork:
-apps/mobile/src/lib/attachmentUpload.ts	if (total > 0) onProgress(Number(bytesSent) / total);
-apps/mobile/src/lib/attachmentUpload.test.ts	Fork:
-apps/mobile/src/lib/attachmentUpload.test.ts	{ bytesSent: 1n, totalBytes: 4n }
-
 # Fork: Decorative tiny empty-alt review icons must not expand into blank full-size media blocks on mobile.
 apps/mobile/src/lib/markdownDocument.ts	width <= 24 && height > 0 && height <= 24
 apps/mobile/src/lib/markdownHtml.test.ts	Fork:

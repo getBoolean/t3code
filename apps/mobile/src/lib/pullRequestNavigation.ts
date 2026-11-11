@@ -1,4 +1,5 @@
 // Fork: iPad PR entry points reuse the detail screen while phone links retain drill-in history.
+import { parsePullRequestAnchor } from "@t3tools/shared/pullRequestAnchor";
 import { resolveChangeRequestLinkTarget } from "@t3tools/client-runtime/change-request-links";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import { EnvironmentId, ProjectId } from "@t3tools/contracts";
@@ -25,6 +26,7 @@ export function nativePullRequestDestination(
     projectId: String(target.project.id),
     repository: target.repository,
     number: target.number,
+    ...(parsePullRequestAnchor(url) ? { navigationUrl: url } : {}),
     ...(target.host === undefined ? {} : { host: target.host }),
   };
 }
