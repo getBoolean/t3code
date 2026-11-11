@@ -15,6 +15,9 @@ import { withKnownPullRequestSummary } from "../state/use-thread-pr";
 
 import { useDeviceType } from "./native-layout-metrics";
 
+let linkNavigationId = 0;
+const nextLinkNavigationId = () => ++linkNavigationId;
+
 type PullRequestContext = { readonly environmentId: string; readonly projectId: string };
 
 // Avoid useRoute so layouts without route context can open any thread's pull requests.
@@ -31,7 +34,11 @@ export function useNavigateToPullRequest(options?: { readonly replace?: boolean 
       serverConfigs.has(environmentId),
     );
     if (!destination) return tryOpenExternalUrl(url, "pull-request");
-    const params = withKnownPullRequestSummary(destination);
+    const params = withKnownPullRequestSummary({
+      ...destination,
+      ...(destination.navigationUrl ? { navigationId: nextLinkNavigationId() } : {}),
+    });
+    // Android shows one page at a time; iPhone pushes over the current page, so Back returns.
     if (Platform.OS === "android") selectDetail({ name: "PullRequest", params });
     else navigation.dispatch(iosPullRequestNavigationAction(params, deviceType === "pad", replace));
     return true;
