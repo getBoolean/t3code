@@ -3768,7 +3768,7 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         (row) => row.item.deferredWork,
       );
       assert.strictEqual(initialWork?.item.deferredWork?.itemCount, 150);
-      const initialWorkPage = yield* projectionStore.getThreadHistoryPage(
+      const initialWorkPage = yield* historyPage(
         threadId,
         initialWork!.item.deferredWork!.cursor,
         initialWork!.sourceItemId,
@@ -3777,7 +3777,7 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
       );
       assert.strictEqual(initialWorkPage.items.length, 75);
       assert.strictEqual(initialWorkPage.hasMoreHistory, true);
-      const remainingWorkPage = yield* projectionStore.getThreadHistoryPage(
+      const remainingWorkPage = yield* historyPage(
         threadId,
         initialWorkPage.nextCursor!,
         initialWork!.sourceItemId,

@@ -55,8 +55,9 @@ export function MarkdownThreadLink(props: {
     : null;
   const remote = useThreadShell(remoteRef);
   const resolved = target ?? (remoteRef && remote ? { ref: remoteRef, metadata: remote } : null);
-  // Fork: scoped links can name subagent children without a thread record; let navigation load them (remove when upstream supports this).
-  if (missing && resolved === null && props.link.environmentId !== null) {
+  // Fork: scoped links on a connected machine can name subagent children without a thread record;
+  // let navigation load them (remove when upstream supports this).
+  if (missing && resolved === null && props.link.environmentId !== null && reachable) {
     return <ThreadContextChip record={{ ...writtenRef, title: props.label || "Open thread" }} />;
   }
   if (missing && resolved === null) {

@@ -958,6 +958,10 @@ packages/shared/src/threadLinks.test.ts	keeps uncached scoped links navigable
 apps/web/src/components/chat/MarkdownThreadLink.tsx	resolved === null && props.link.environmentId !== null
 apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	Fork:
 apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	name: "Thread, Open thread"
+
+# Fork: The fake environment answers the git-account check that sends wait on, so composer send tests do not hang on an unanswered RPC.
+apps/web/test/fakeEnvironment.ts	Fork:
+apps/web/test/fakeEnvironment.ts	[WS_METHODS.gitAccountsThreadStatus]: () =>
 apps/web/src/components/ThreadContextChip.tsx	Fork:
 apps/web/src/components/ThreadContextChip.tsx	: "Open thread"}
 

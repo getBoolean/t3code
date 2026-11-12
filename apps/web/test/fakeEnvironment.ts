@@ -452,6 +452,15 @@ const handlers: Record<string, (input: never) => unknown> = {
         if (vcsStatusSubscriber === queue) vcsStatusSubscriber = null;
       };
     }),
+  // Fork: Sends wait on the project git-account check; a project without an account answers "none".
+  [WS_METHODS.gitAccountsThreadStatus]: () =>
+    Effect.succeed({
+      state: "none" as const,
+      accountId: null,
+      accountLabel: null,
+      reason: null,
+      machine: null,
+    }),
   [WS_METHODS.subscribeServerConfig]: () =>
     subscribe([{ version: 1 as const, type: "snapshot" as const, config: serverConfig() }]),
 };
