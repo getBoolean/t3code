@@ -1,8 +1,8 @@
-// Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
+import { LegendList } from "@legendapp/list/react-native";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { AppBar } from "../../components/ui/AppBar";
@@ -11,7 +11,6 @@ import type { ReviewSectionItem } from "./reviewModel";
 import { useReviewHeaderPresentation } from "./useReviewHeaderPresentation";
 import { type Ref, type ReactElement, useImperativeHandle, useRef, useState } from "react";
 import {
-  FlatList,
   Platform,
   Pressable,
   RefreshControl,
@@ -24,7 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReduceMotionEnabled } from "../../lib/appState";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
 import { useContentTopInset } from "../../components/ui/useBarInset";
-import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
+import { NativeScrollView } from "../../native/NativeScrollViewMarker";
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { SymbolView } from "../../components/ui/AppSymbol";
@@ -342,11 +341,14 @@ function ReviewFileNavigator({ files, sectionId, onSelectFile, ref }: ReviewFile
         hideBottomBorder
       />
       <ScreenContent insetHorizontal>
-        <FlatList
-          renderScrollComponent={renderNativeScrollView}
+        <LegendList
+          renderScrollComponent={NativeScrollView}
           data={files}
-          extraData={selectedFileId}
+          // Rows keep their callback until extraData changes; it reads collapsed files.
+          extraData={[selectedFileId, handleSelectFile]}
           keyExtractor={(file) => file.id}
+          estimatedItemSize={64}
+          recycleItems
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={{ paddingHorizontal: 8, paddingVertical: 8 }}
           renderItem={renderFile}
