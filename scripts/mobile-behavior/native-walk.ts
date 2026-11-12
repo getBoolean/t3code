@@ -34,6 +34,8 @@ export interface NativeWalkStep {
     readonly optional?: boolean;
     /** A label that must be on screen after the tap, or `navigates` for a new route. */
     readonly expect?: { readonly label: string } | "navigates";
+    /** The control can sit below the fold on a phone, so scroll down to find it. */
+    readonly scroll?: boolean;
   };
 }
 
@@ -109,7 +111,7 @@ export const NATIVE_WALK_STEPS: ReadonlyArray<NativeWalkStep> = [
     path: "settings/source-control",
     route: "SettingsEnvironmentSourceControl",
     native: "Menu, git accounts form",
-    press: { label: "Add account", expect: { label: "Author email" } },
+    press: { label: "Add account", expect: { label: "Author email" }, scroll: true },
   },
   {
     id: "agent-behavior",
@@ -280,9 +282,24 @@ const runStep = Effect.fn("nativeWalk.step")(function* (
     // A control's label repeats on its containers, so tap the smallest node that carries it.
     const labels = typeof step.press.label === "string" ? [step.press.label] : step.press.label;
     const label = labels.join(" or ");
-    const target = (yield* ctx.device.nodes.pipe(Effect.orElseSucceed(() => [])))
-      .filter((node) => labels.includes(node.label ?? "") && node.rect && node.rect.width > 0)
-      .sort((a, b) => a.rect!.width * a.rect!.height - b.rect!.width * b.rect!.height)[0];
+    const find = ctx.device.nodes.pipe(
+      Effect.orElseSucceed(() => []),
+      Effect.map((nodes) => ({
+        screen: nodes[0]?.rect,
+        target: nodes
+          .filter((node) => labels.includes(node.label ?? "") && node.rect && node.rect.width > 0)
+          .sort((a, b) => a.rect!.width * a.rect!.height - b.rect!.width * b.rect!.height)[0],
+      })),
+    );
+    let { screen, target } = yield* find;
+    for (let swipes = 0; !target && step.press.scroll && swipes < 3; swipes += 1) {
+      const { width, height } = screen ?? { width: 390, height: 844 };
+      yield* ctx.device
+        .swipe(Math.round(width / 2), Math.round(height * 0.7), Math.round(height * 0.3))
+        .pipe(Effect.ignore);
+      yield* Effect.sleep("1 second");
+      ({ screen, target } = yield* find);
+    }
     const tapped = target
       ? yield* ctx.device
           .pressAt(ctx.device.center(target).x, ctx.device.center(target).y)
