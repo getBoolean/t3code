@@ -38,6 +38,13 @@ vi.mock("../../components/ui/AppBar", () => ({
     />
   ),
 }));
+// Fork: the pane reads the docked-inspector close contexts, whose modules load react-native.
+vi.mock("../layout/inspector-bar-store", async () => ({
+  InspectorCloseContext: (await import("react")).createContext(null),
+}));
+vi.mock("../layout/workspace-inspector-sheet", async () => ({
+  InspectorSheetContext: (await import("react")).createContext(null),
+}));
 
 import { ThreadFileNavigatorPane } from "./thread-file-navigator-pane";
 

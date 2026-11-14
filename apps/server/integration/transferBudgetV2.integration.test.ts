@@ -512,13 +512,19 @@ it.live("reports V2 thread HTTP and WebSocket transfer budgets", () =>
           // Once it finishes, its work stays on the server until a group is expanded.
           yield* sink.write({ events: finishLongTurn! });
           const longTurnColdOpen = yield* readColdOpen(CLIENT_BOUNDED_QUERY);
+          // Fork: the fork's 25-row opening page ends inside a long finished turn, so the turn's
+          // folded-work anchor is off the page and a client reaches its work through the next older
+          // page instead. Measure that page (remove with the fork's opening limits).
           const { workAnchor } = longTurnColdOpen;
-          if (workAnchor?.item.deferredWork === undefined)
-            return yield* Effect.die("Expected the finished long turn to defer its work");
-          const longTurnWorkPage = yield* readHistoryPage(
-            workAnchor.item.deferredWork.cursor,
-            `view=work&throughEntryId=${encodeURIComponent(workAnchor.sourceItemId)}&compactIds=1`,
-          );
+          const longTurnWorkPage =
+            workAnchor?.item.deferredWork === undefined
+              ? longTurnColdOpen.cursor === null
+                ? yield* Effect.die("Expected the finished long turn to defer its work")
+                : yield* readHistoryPage(longTurnColdOpen.cursor, CLIENT_HISTORY_QUERY)
+              : yield* readHistoryPage(
+                  workAnchor.item.deferredWork.cursor,
+                  `view=work&throughEntryId=${encodeURIComponent(workAnchor.sourceItemId)}&compactIds=1`,
+                );
           // Mobile opens a thread over the socket alone.
           const socketOpen = yield* open({ thread: LONG_TURN_THREAD_ID });
           const socketSnapshot = socketOpen.items.find(

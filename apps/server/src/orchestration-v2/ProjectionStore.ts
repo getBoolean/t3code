@@ -3393,7 +3393,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                 ), turn AS (
                   SELECT (
                     SELECT COUNT(*) FROM visible_tail WHERE ordinal >= ${boundary.latest}
-                  ) > ${turnItemLimit} AS long_turn -- Fork: per-window turn limit.
+                  ) > ${THREAD_HISTORY_PAGE_POLICY.maxTurnItems} AS long_turn
                 ), tail AS (
                   SELECT visible_tail.ordinal FROM visible_tail
                   ORDER BY visible_tail.ordinal DESC

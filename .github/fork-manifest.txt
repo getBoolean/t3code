@@ -1010,3 +1010,14 @@ apps/mobile/src/native/NativeHeaderToolbar.tsx	Fork:
 apps/mobile/src/native/NativeHeaderToolbar.tsx	committedHandlers.current.get(key)
 apps/mobile/src/native/NativeHeaderToolbar.test.tsx	Fork:
 apps/mobile/src/native/NativeHeaderToolbar.test.tsx	keeps a retained Preview action attached to Preview
+
+# Fork: Mock the docked-inspector close contexts the fork's files pane reads, so upstream's pane test does not load react-native.
+apps/mobile/src/features/files/thread-file-navigator-pane.test.tsx	Fork:
+apps/mobile/src/features/files/thread-file-navigator-pane.test.tsx	vi.mock("../layout/workspace-inspector-sheet"
+
+# Fork: The fork's 25-row opening page ends inside a long finished turn, leaving its folded-work anchor off the page; measure the older page clients load instead.
+apps/server/integration/transferBudgetV2.integration.test.ts	Fork:
+apps/server/integration/transferBudgetV2.integration.test.ts	: yield* readHistoryPage(longTurnColdOpen.cursor, CLIENT_HISTORY_QUERY)
+
+# Fork: The fork runs setup-script tests on macOS too, where a syntax error exits 1 rather than dash's 2.
+apps/server/src/project/ProjectSetupScriptRunner.test.ts	if (exitCode === null) assert.notEqual(result.exitCode, 0);

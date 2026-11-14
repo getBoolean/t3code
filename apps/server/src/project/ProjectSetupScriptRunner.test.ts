@@ -337,11 +337,14 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")("POSIX setup co
 
   it.live.each([
     { name: "an explicit exit", command: "exit 7", exitCode: 7 },
-    { name: "a syntax error", command: "if then", exitCode: 2 },
+    // Fork: shells disagree on a syntax error's code (dash 2, zsh and macOS sh 1), and the fork
+    // runs this file on macOS too, so only nonzero is asserted for it.
+    { name: "a syntax error", command: "if then", exitCode: null },
   ])("reports a nonzero completion for $name", ({ command, exitCode }) =>
     Effect.gen(function* () {
       const result = yield* runObservedSetup(command);
-      assert.equal(result.exitCode, exitCode);
+      if (exitCode === null) assert.notEqual(result.exitCode, 0);
+      else assert.equal(result.exitCode, exitCode);
     }),
   );
 });
