@@ -3,7 +3,7 @@
 apps/mobile/src/lib/pullRequestNavigation.ts	Fork:
 apps/mobile/src/lib/pullRequestNavigation.ts	payload: { ...payload, pop: true }
 apps/mobile/src/native/useOpenPullRequest.ts	Fork:
-apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(params, deviceType === "pad", replace)
+apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(params, isPad, replace)
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	Fork:
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	reuses the iPad PR screen without losing the originating thread
 
@@ -65,7 +65,7 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-dev-client.yml	Fork:
-.github/workflows/mobile-dev-client.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+.github/workflows/mobile-dev-client.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-27' }}
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-eas-preview-fork.yml	Fork:
@@ -89,7 +89,7 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-showcase-screenshots.yml	Fork:
-.github/workflows/mobile-showcase-screenshots.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+.github/workflows/mobile-showcase-screenshots.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-27' }}
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/publish-aur.yml	Fork:
@@ -219,10 +219,6 @@ apps/mobile/src/features/pull-requests/PullRequestFiles.tsx	Fork:
 apps/mobile/src/features/pull-requests/PullRequestFiles.tsx	renderScrollComponent={renderNativeScrollView}
 
 # Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
-apps/mobile/src/features/review/ReviewSheet.tsx	Fork:
-apps/mobile/src/features/review/ReviewSheet.tsx	renderScrollComponent={renderNativeScrollView}
-
-# Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx	Fork:
 apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx	renderScrollComponent={renderNativeScrollView}
 
@@ -265,8 +261,6 @@ apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx	Fork:
 # Fork: Show account bypass in the mobile git panel and let the user restore the selected account.
 apps/mobile/src/features/threads/git/GitOverviewSheet.tsx	Fork:
 apps/mobile/src/features/threads/git/GitOverviewSheet.tsx	{gitAccountStatus?.state === "bypassed" ? (
-
-# Fork: iPad Settings lives in the pinned utility group, avoiding a duplicate header target.
 
 # Fork: active iPad rows retain readable contrast and expose their status to accessibility.
 apps/mobile/src/features/threads/thread-list-v2-items.tsx	Fork:
@@ -384,7 +378,7 @@ apps/server/src/cloud/npmRelease.ts	Fork:
 apps/server/src/git/GitManager.test.ts	Fork:
 apps/server/src/git/GitManager.test.ts	gitAccounts: workAccounts(),
 
-# Fork: Resolve and validate the project account before commit/push/PR operations; also tolerate Git 2.56 invalid-gitfile diagnostics for missing repositories.
+# Fork: Resolve and validate the project account before commit/push/PR operations.
 apps/server/src/git/GitManager.ts	GitAccounts
 apps/server/src/git/GitManager.ts	Fork:
 
@@ -531,10 +525,6 @@ apps/server/src/settingsSecrets.ts	gitAccountSecretFields
 apps/server/src/sourceControl/ServerSourceControlHost.ts	Fork:
 apps/server/src/sourceControl/ServerSourceControlHost.ts	export const withGitAccount =
 
-# Fork: Reuse the Git 2.56 missing-repository classifier so stale gitfiles do not abort cleanup.
-apps/server/src/storageCleanup.ts	Fork:
-apps/server/src/storageCleanup.ts	if (isNonRepositoryGitStderr(result.stderr)) return null;
-
 # Fork: Keep regression coverage for run each project as its own git account (#1).
 apps/server/src/terminal/Manager.test.ts	Fork:
 apps/server/src/terminal/Manager.test.ts	gitAccountShims: true,
@@ -555,17 +545,9 @@ apps/server/src/vcs/GitVcsDriver.ts	readonly env?: NodeJS.ProcessEnv;
 apps/server/src/vcs/GitVcsDriverCore.test.ts	Fork:
 apps/server/src/vcs/GitVcsDriverCore.test.ts	yield* initRepoWithCommit(cwd);
 
-# Fork: Pass the account environment to commits/pushes and recognize Git 2.56 invalid-gitfile diagnostics as a missing repository.
+# Fork: Pass the account environment to commits/pushes.
 apps/server/src/vcs/GitVcsDriverCore.ts	Fork:
-apps/server/src/vcs/GitVcsDriverCore.ts	yield* runGit("GitVcsDriver.pushCurrentBranch.push", cwd, ["push"], pushOptions);
-
-# Fork: Keep regression coverage for treat Git 2.56's invalid gitfile message as no repository.
-apps/server/src/vcs/gitNonRepository.test.ts	Fork:
-apps/server/src/vcs/gitNonRepository.test.ts	expect(isNonRepositoryGitStderr(stderr)).toBe(expected);
-
-# Fork: Treat Git 2.56 invalid-gitfile diagnostics as a missing repository alongside the older not-a-repository wording.
-apps/server/src/vcs/gitNonRepository.ts	Fork:
-apps/server/src/vcs/gitNonRepository.ts	export function isNonRepositoryGitStderr(stderr: string): boolean {
+apps/server/src/vcs/GitVcsDriverCore.ts	...(options?.env !== undefined ? { env: options.env } : {}),
 
 # Fork: Keep regression coverage for run each project as its own git account (#1).
 apps/server/src/ws.test.ts	Fork:
@@ -951,8 +933,6 @@ apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	props.renderThread?.({
 # Fork: VirtualizedList calls renderScrollComponent as a function, so PR lists use the render helper instead of the compiled NativeScrollView component.
 apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx	Fork:
 apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx	? renderNativeScrollView : undefined
-apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx	Fork:
-apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx	renderScrollComponent={renderNativeScrollView}
 apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx	Fork:
 apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx	? renderNativeScrollView : undefined
 
@@ -978,6 +958,10 @@ packages/shared/src/threadLinks.test.ts	keeps uncached scoped links navigable
 apps/web/src/components/chat/MarkdownThreadLink.tsx	resolved === null && props.link.environmentId !== null
 apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	Fork:
 apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	name: "Thread, Open thread"
+
+# Fork: The fake environment answers the git-account check that sends wait on, so composer send tests do not hang on an unanswered RPC.
+apps/web/test/fakeEnvironment.ts	Fork:
+apps/web/test/fakeEnvironment.ts	[WS_METHODS.gitAccountsThreadStatus]: () =>
 apps/web/src/components/ThreadContextChip.tsx	Fork:
 apps/web/src/components/ThreadContextChip.tsx	: "Open thread"}
 
@@ -1026,3 +1010,14 @@ apps/mobile/src/native/NativeHeaderToolbar.tsx	Fork:
 apps/mobile/src/native/NativeHeaderToolbar.tsx	committedHandlers.current.get(key)
 apps/mobile/src/native/NativeHeaderToolbar.test.tsx	Fork:
 apps/mobile/src/native/NativeHeaderToolbar.test.tsx	keeps a retained Preview action attached to Preview
+
+# Fork: Mock the docked-inspector close contexts the fork's files pane reads, so upstream's pane test does not load react-native.
+apps/mobile/src/features/files/thread-file-navigator-pane.test.tsx	Fork:
+apps/mobile/src/features/files/thread-file-navigator-pane.test.tsx	vi.mock("../layout/workspace-inspector-sheet"
+
+# Fork: The fork's 25-row opening page ends inside a long finished turn, leaving its folded-work anchor off the page; measure the older page clients load instead.
+apps/server/integration/transferBudgetV2.integration.test.ts	Fork:
+apps/server/integration/transferBudgetV2.integration.test.ts	: yield* readHistoryPage(longTurnColdOpen.cursor, CLIENT_HISTORY_QUERY)
+
+# Fork: The fork runs setup-script tests on macOS too, where a syntax error exits 1 rather than dash's 2.
+apps/server/src/project/ProjectSetupScriptRunner.test.ts	if (exitCode === null) assert.notEqual(result.exitCode, 0);

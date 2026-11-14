@@ -29,7 +29,8 @@ import {
   usageSourceMessages,
 } from "@t3tools/shared/usageFormat";
 import { useRef, useState, type ReactNode } from "react";
-import { RefreshControl, View, Platform } from "react-native";
+import { View, Platform } from "react-native";
+import { RefreshControl } from "../../components/ui/RefreshControl";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

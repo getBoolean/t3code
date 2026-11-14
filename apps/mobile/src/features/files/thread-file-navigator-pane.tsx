@@ -5,7 +5,7 @@ import type { EnvironmentId } from "@t3tools/contracts";
 import { AppBar } from "../../components/ui/AppBar";
 import { ScreenContent } from "../../components/ui/ScreenContent";
 import { use, useState } from "react";
-import { View } from "react-native";
+import { SheetPane } from "../../components/ui/SheetPane";
 
 import { useEnvironmentQuery } from "../../state/query";
 import { useEnvironmentPresentation } from "../../state/presentation";
@@ -23,7 +23,11 @@ export function ThreadFileNavigatorPane(props: {
   readonly selectedPath: string | null;
   readonly onSelectFile: (path: string) => void;
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const workspaceKey = JSON.stringify([props.environmentId, props.cwd]);
+  // The pane stays mounted across thread switches; a query only filters the workspace it was typed in.
+  const [search, setSearch] = useState({ workspaceKey, query: "" });
+  const searchQuery = search.workspaceKey === workspaceKey ? search.query : "";
+  const setSearchQuery = (query: string) => setSearch({ workspaceKey, query });
   const closeInspector = use(InspectorCloseContext);
   const closeSheet = use(InspectorSheetContext);
   const { themeAppearance: highlightTheme } = useAppearancePreferences();
@@ -53,7 +57,7 @@ export function ThreadFileNavigatorPane(props: {
   };
   const fileTree = (
     <FileTreeBrowser
-      key={JSON.stringify([props.environmentId, props.cwd])}
+      key={workspaceKey}
       revealSelection={entriesQuery.revealSelection}
       expandedPaths={entriesQuery.expandedPaths}
       setExpandedPaths={entriesQuery.setExpandedPaths}
@@ -83,9 +87,7 @@ export function ThreadFileNavigatorPane(props: {
   );
 
   return (
-    // Material drags target the first scroll view, so place content before the header.
-    <View className="flex-1 ios:bg-sheet android:bg-header android:flex-col-reverse">
-      <ScreenContent insetHorizontal>{fileTree}</ScreenContent>
+    <SheetPane>
       <InspectorCloseContext value={closeSheet ? closeInspector : null}>
         <AppBar
           title="Files"
@@ -98,6 +100,7 @@ export function ThreadFileNavigatorPane(props: {
           refresh={{ accessibilityLabel: "Refresh files", onPress: entriesQuery.refresh }}
         />
       </InspectorCloseContext>
-    </View>
+      <ScreenContent insetHorizontal>{fileTree}</ScreenContent>
+    </SheetPane>
   );
 }
