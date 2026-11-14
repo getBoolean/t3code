@@ -3421,6 +3421,8 @@ it.layer(layerGitManagerTest)("GitManager", (it) => {
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
       const hook = NodePath.join(repoDir, ".git", "hooks", "pre-push");
+      // Template-cloned fixture repos have no hooks directory.
+      NodeFS.mkdirSync(NodePath.dirname(hook), { recursive: true });
       NodeFS.writeFileSync(
         hook,
         "#!/bin/sh\necho \"fatal: Authentication failed for 'https://github.com/acme/web.git/'\" >&2\nexit 1\n",
