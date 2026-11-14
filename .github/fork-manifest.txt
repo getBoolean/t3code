@@ -3,7 +3,7 @@
 apps/mobile/src/lib/pullRequestNavigation.ts	Fork:
 apps/mobile/src/lib/pullRequestNavigation.ts	payload: { ...payload, pop: true }
 apps/mobile/src/native/useOpenPullRequest.ts	Fork:
-apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(params, deviceType === "pad", replace)
+apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(params, isPad, replace)
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	Fork:
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	reuses the iPad PR screen without losing the originating thread
 
@@ -65,7 +65,7 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-dev-client.yml	Fork:
-.github/workflows/mobile-dev-client.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+.github/workflows/mobile-dev-client.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-27' }}
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-eas-preview-fork.yml	Fork:
@@ -89,7 +89,7 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-showcase-screenshots.yml	Fork:
-.github/workflows/mobile-showcase-screenshots.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-26' }}
+.github/workflows/mobile-showcase-screenshots.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-27' }}
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/publish-aur.yml	Fork:
@@ -547,7 +547,7 @@ apps/server/src/vcs/GitVcsDriverCore.test.ts	yield* initRepoWithCommit(cwd);
 
 # Fork: Pass the account environment to commits/pushes.
 apps/server/src/vcs/GitVcsDriverCore.ts	Fork:
-apps/server/src/vcs/GitVcsDriverCore.ts	yield* runGit("GitVcsDriver.pushCurrentBranch.push", cwd, ["push"], pushOptions);
+apps/server/src/vcs/GitVcsDriverCore.ts	...(options?.env !== undefined ? { env: options.env } : {}),
 
 # Fork: Keep regression coverage for run each project as its own git account (#1).
 apps/server/src/ws.test.ts	Fork:

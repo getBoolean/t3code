@@ -5,7 +5,6 @@ import {
   nativePullRequestDestination,
 } from "../lib/pullRequestNavigation";
 import { Platform } from "react-native";
-import { useSelectWorkspaceDetail } from "../features/layout/workspace/useSelectWorkspaceDetail";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { useProjects, useThreadShell } from "../state/entities";
 import { tryOpenExternalUrl } from "../lib/openExternalUrl";
@@ -23,7 +22,6 @@ type PullRequestContext = { readonly environmentId: string; readonly projectId: 
 // Avoid useRoute so layouts without route context can open any thread's pull requests.
 export function useNavigateToPullRequest(options?: { readonly replace?: boolean }) {
   const navigation = useNavigation();
-  const selectDetail = useSelectWorkspaceDetail();
   const projects = useProjects();
   const deviceType = useDeviceType();
   const replace = options?.replace;
@@ -38,9 +36,8 @@ export function useNavigateToPullRequest(options?: { readonly replace?: boolean 
       ...destination,
       ...(destination.navigationUrl ? { navigationId: nextLinkNavigationId() } : {}),
     });
-    // Android shows one page at a time; iPhone pushes over the current page, so Back returns.
-    if (Platform.OS === "android") selectDetail({ name: "PullRequest", params });
-    else navigation.dispatch(iosPullRequestNavigationAction(params, deviceType === "pad", replace));
+    const isPad = deviceType === "pad" && Platform.OS === "ios";
+    navigation.dispatch(iosPullRequestNavigationAction(params, isPad, replace));
     return true;
   };
 }
