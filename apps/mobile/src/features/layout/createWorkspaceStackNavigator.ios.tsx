@@ -110,7 +110,10 @@ function ColumnScreen(props: {
   readonly selectedThreadKey?: string | null;
   readonly selectedPullRequestKey?: string | null;
   readonly onDismiss: (routeKey: string, native: boolean) => void;
-  readonly onAppearance: (type: "willAppear" | "didAppear" | "willDisappear", key: string) => void;
+  readonly onAppearance: (
+    type: "willAppear" | "didAppear" | "willDisappear" | "didDisappear",
+    key: string,
+  ) => void;
   readonly onCompose?: () => void;
   readonly navigation: ViewProps["navigation"];
   readonly footer?: ReactNode;
@@ -155,9 +158,10 @@ function ColumnScreen(props: {
         props.onAppearance("willDisappear", key);
         props.navigation.emit({ type: "transitionStart", target: key, data: { closing: true } });
       }}
-      onDidDisappear={() =>
-        props.navigation.emit({ type: "transitionEnd", target: key, data: { closing: true } })
-      }
+      onDidDisappear={() => {
+        props.onAppearance("didDisappear", key);
+        props.navigation.emit({ type: "transitionEnd", target: key, data: { closing: true } });
+      }}
     >
       <PaneContext value={sidebar ? "sidebar" : "content"}>
         <NavigationContext value={descriptor.navigation}>
@@ -328,7 +332,7 @@ function WorkspaceColumns(
     }
   };
   const followCollapsedSplit = (
-    type: "willAppear" | "didAppear" | "willDisappear",
+    type: "willAppear" | "didAppear" | "willDisappear" | "didDisappear",
     key: string,
   ) => {
     if (!collapsed.current || layout.usesSplitView) return;
@@ -558,7 +562,6 @@ function WorkspaceStackView(props: ViewProps & { readonly nativeColumns: boolean
           props.nativeColumns && layout.usesSplitView && !workspacePage && deviceType === "pad"
         }
         hidden={
-          !workspacePage &&
           projection.detail.length > 0 &&
           // Fork: Keep compact iPad destination navigation visible until upstream makes sidebar utilities width-aware.
           !(deviceType === "pad" && projection.detail.length === 1) &&
