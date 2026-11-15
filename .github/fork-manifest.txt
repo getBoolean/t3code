@@ -745,7 +745,7 @@ packages/source-control-azure-devops/src/server/AzureDevOpsCli.test.ts	Effect.pr
 
 # Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
 packages/source-control-azure-devops/src/server/AzureDevOpsCli.ts	Fork:
-packages/source-control-azure-devops/src/server/AzureDevOpsCli.ts	Effect.flatMap(Effect.service(SourceControlHost.AccountCredential), (account) =>
+packages/source-control-azure-devops/src/server/AzureDevOpsCli.ts	const account = yield* Effect.service(SourceControlHost.AccountCredential);
 
 # Fork: Use the project account credential for forge requests instead of the machine login; preserve account-scoped authorization and commit identity.
 packages/source-control-bitbucket/src/server/BitbucketApi.test.ts	Fork:
