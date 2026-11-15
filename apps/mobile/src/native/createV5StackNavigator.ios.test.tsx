@@ -28,6 +28,8 @@ vi.mock("@react-navigation/native", () => ({
 vi.mock("@react-navigation/native-stack", () => ({ NativeStackView: () => null }));
 vi.mock("./V5StackHeader.ios", () => ({ V5StackHeader: () => null }));
 vi.mock("./NativeColumnContent.ios", () => ({ NativeColumnContent: () => null }));
+// Fork: the fork's navigator reads the device type for iPad pops; this keeps the suite on the phone path.
+vi.mock("./native-layout-metrics", () => ({ useDeviceType: () => "phone" }));
 vi.mock("./NativeScrollViewMarker", () => ({
   NativeScrollEdgeEffectsContext: createContext(undefined),
 }));

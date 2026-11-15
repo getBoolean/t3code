@@ -337,6 +337,8 @@ apps/mobile/src/native/NativeScrollViewMarker.tsx	export function renderNativeSc
 # Fork: legacy iPad navigation preserves sidebar destinations and native pop state.
 apps/mobile/src/native/createV5StackNavigator.ios.tsx	Fork:
 apps/mobile/src/native/createV5StackNavigator.ios.tsx	deviceType === "pad",
+apps/mobile/src/native/createV5StackNavigator.ios.test.tsx	Fork:
+apps/mobile/src/native/createV5StackNavigator.ios.test.tsx	vi.mock("./native-layout-metrics"
 
 # Fork: preserve iPad Settings detail projection and native Back reconciliation.
 apps/mobile/src/native/workspace-stack-projection.test.ts	Fork:
