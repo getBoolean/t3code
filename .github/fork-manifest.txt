@@ -209,6 +209,7 @@ apps/mobile/src/features/layout/AdaptiveWorkspaceLayout.tsx	Fork:
 # Fork: iPad Settings stays beside the thread sidebar in native split columns.
 apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	Fork:
 apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	deviceType === "pad" && layout.usesSplitView ? (
+apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	(deviceType === "pad" ||
 
 # Fork: before iOS 26 the iPad sidebar is a JS column beside the navigator, outside the
 apps/mobile/src/features/layout/workspace-sidebar-footer.tsx	WorkspaceSidebarFooterHost
@@ -895,6 +896,7 @@ apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx	slottedDet
 # Fork: Compact iPad windows use bottom tabs; expanded iPads retain sidebar utilities until upstream makes navigation responsive.
 apps/mobile/src/features/layout/workspace/workspace-tabs-state.ts	workspaceUsesSidebarNavigation
 apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx	if (ipadSidebarNavigation)
+apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx	props.children(workspace, false)
 apps/mobile/src/features/layout/workspace/useSystemWorkspaceTabBar.ts	deviceType !== "pad" || !layout.usesSplitView
 
 # Fork: Subagent file drill-ins stay on the local inspector navigator, with Back returning to the subagent, until upstream scopes file navigation by pane.
