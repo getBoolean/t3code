@@ -480,7 +480,7 @@ jobs:
     name: iOS preview client
     needs: ios
     if: needs.ios.outputs.build == 'true'
-    runs-on: blacksmith-12vcpu-macos-27
+    runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-27' }}
     timeout-minutes: 60
     concurrency:
       # One build per fingerprint; a second PR with the same one finds the tag.
@@ -653,7 +653,7 @@ jobs:
     name: Mobile preview comment
     needs: [android, ios, android-build, ios-build]
     if: always() && !cancelled() && (needs.android.result == 'success' || needs.ios.result == 'success')
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-2vcpu-ubuntu-2404' }}
     concurrency:
       group: mobile-preview-comment-${{ github.event.pull_request.number }}
       cancel-in-progress: false

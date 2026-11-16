@@ -70,10 +70,12 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-eas-preview-fork.yml	Fork:
 .github/workflows/mobile-eas-preview-fork.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+.github/workflows/mobile-eas-preview-fork.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-27' }}
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-eas-preview.yml	Fork:
 .github/workflows/mobile-eas-preview.yml	runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'blacksmith-8vcpu-ubuntu-2404' }}
+.github/workflows/mobile-eas-preview.yml	runs-on: ${{ vars.T3CODE_MACOS_RUNNER || 'blacksmith-12vcpu-macos-27' }}
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/mobile-eas-production.yml	Fork:
