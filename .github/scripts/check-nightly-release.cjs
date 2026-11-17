@@ -1,4 +1,4 @@
-const MINIMUM_RELEASE_GAP_MS = 6 * 60 * 60 * 1000;
+const DEFAULT_RELEASE_GAP_HOURS = 6;
 
 function repositoryDefaultBranch(context) {
   const branch = context.payload.repository?.default_branch;
@@ -74,8 +74,20 @@ async function findLatestNightly({ github, context, isSettled = () => false }) {
   return latest;
 }
 
-async function shouldReleaseNightly({ github, context, core, now = Date.now() }) {
-  const isInGap = (release) => now - Date.parse(release.publishedAt) < MINIMUM_RELEASE_GAP_MS;
+// Fork: `gapHours` comes from the T3CODE_NIGHTLY_GAP_HOURS variable so a fork on hosted macOS
+// runners can publish fewer nightlies than upstream's six-hour cadence. Unset keeps upstream's gap.
+async function shouldReleaseNightly({
+  github,
+  context,
+  core,
+  now = Date.now(),
+  gapHours = DEFAULT_RELEASE_GAP_HOURS,
+}) {
+  if (!Number.isFinite(gapHours) || gapHours <= 0) {
+    throw new Error(`Nightly release gap must be a positive number of hours, got ${gapHours}.`);
+  }
+  const gapMs = gapHours * 60 * 60 * 1000;
+  const isInGap = (release) => now - Date.parse(release.publishedAt) < gapMs;
   // Any nightly inside the gap means the newest one is too, so stop reading.
   const lastNightly = await findLatestNightly({ github, context, isSettled: isInGap });
 
@@ -86,7 +98,7 @@ async function shouldReleaseNightly({ github, context, core, now = Date.now() })
 
   const tag = lastNightly.tagName;
   if (isInGap(lastNightly)) {
-    core.info(`Nightly ${tag} was published less than six hours ago. Skipping.`);
+    core.info(`Nightly ${tag} was published less than ${gapHours} hours ago. Skipping.`);
     return false;
   }
 
@@ -100,7 +112,7 @@ async function shouldReleaseNightly({ github, context, core, now = Date.now() })
     return false;
   }
 
-  core.info(`New commits since ${tag}, and the six-hour gap has passed.`);
+  core.info(`New commits since ${tag}, and the ${gapHours}-hour gap has passed.`);
   return true;
 }
 

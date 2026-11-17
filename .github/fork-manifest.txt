@@ -111,10 +111,20 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 .github/workflows/release-mobile-ios.yml	T3CODE_IOS_PERSONAL_TEAM: "1"
 
 # Fork: Keep fork opt-in releases, repository identity, hosted runner overrides, Intel macOS builds, and the unsigned iOS release dependency.
+# Fork: Cut hosted macOS minutes: a configurable nightly gap, and macOS/iOS builds that wait for the release tests.
 .github/workflows/release.yml	vars.T3CODE_RELEASES
 .github/workflows/release.yml	vars.T3CODE_MOBILE_RELEASE
 .github/workflows/release.yml	Fork:
 .github/workflows/release.yml	vars.T3CODE_TEST_WEB_TIMEOUT_MINUTES
+.github/workflows/release.yml	NIGHTLY_GAP_HOURS: ${{ vars.T3CODE_NIGHTLY_GAP_HOURS }}
+.github/workflows/release.yml	needs: [preflight, relay_public_config, build_bundle, quality, test, test_web, test_server]
+.github/workflows/release.yml	needs: [preflight, relay_public_config, quality, test, test_web, test_server]
+
+# Fork: The nightly gap reads T3CODE_NIGHTLY_GAP_HOURS so a fork on hosted macOS runners can publish fewer nightlies.
+.github/scripts/check-nightly-release.cjs	Fork:
+.github/scripts/check-nightly-release.cjs	gapHours = DEFAULT_RELEASE_GAP_HOURS
+.github/scripts/check-nightly-release.test.cjs	Fork:
+.github/scripts/check-nightly-release.test.cjs	a configured gap replaces the six-hour default
 
 # Fork: Honor fork runner variables so CI can use GitHub-hosted runners without the upstream Blacksmith installation.
 .github/workflows/web-preview.yml	Fork:

@@ -134,6 +134,15 @@ test("the six-hour gap ends exactly six hours after publication", async () => {
   assert.equal(justInside.calls.length, 0);
 });
 
+// Fork: T3CODE_NIGHTLY_GAP_HOURS widens the gap to publish fewer nightlies.
+test("a configured gap replaces the six-hour default", async () => {
+  const { options } = fixture({ releases: [nightly(7)] });
+  assert.equal(await shouldReleaseNightly({ ...options, gapHours: 24 }), false);
+  const passed = fixture({ releases: [nightly(24)] });
+  assert.equal(await shouldReleaseNightly({ ...passed.options, gapHours: 24 }), true);
+  await assert.rejects(shouldReleaseNightly({ ...options, gapHours: Number.NaN }), /positive/);
+});
+
 test("stops reading releases once a nightly inside the gap is seen", async () => {
   const { options, cursors } = fixture({ pages: [[nightly(10), nightly(2)], [nightly(30)]] });
   assert.equal(await shouldReleaseNightly(options), false);
