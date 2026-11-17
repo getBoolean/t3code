@@ -46,9 +46,11 @@ and `T3CODE_IOS_RUNNER` for the unsigned IPA to use the Intel pool when ARM capa
 Each falls back to `T3CODE_MACOS_RUNNER` when unset; the arm64 desktop build keeps that variable.
 The IPA cross-compiles for arm64 on either host. Its build skips index stores and dSYM bundles,
 and reports elapsed build time in the job log. Hosted runners start with fresh DerivedData,
-but restore Xcode's content-addressed compilation cache for the same Xcode build, host architecture,
-and dependency inputs. A native change can still reuse unchanged dependency compilations. Cold
-builds populate the cache; only a measured warm job can establish the end-to-end build time.
+but restore Xcode's content-addressed compilation cache for the same Xcode build and host
+architecture. Entries are saved once per dependency change, not per commit, and a dependency change
+restores the previous entry, so only the changed dependencies recompile. A per-commit key filled
+the repository's 10 GB cache and evicted itself, turning ~13-minute builds into ~80-minute cold
+ones. A restored cache over 3 GB is dropped so it cannot crowd out the other caches.
 The `mobile-ios-build-log` artifact includes compilation-cache diagnostics and Xcode task timings.
 
 ## Releases

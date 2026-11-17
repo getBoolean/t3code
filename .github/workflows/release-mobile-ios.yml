@@ -108,13 +108,32 @@ jobs:
           restore-keys: |
             ios-downloads-v1-${{ runner.os }}-${{ runner.arch }}-
 
+      # Keyed by dependency inputs, not commit: a per-commit 1.6 GB entry filled the 10 GB repository
+      # cache and evicted itself, and a cold build takes ~80 min against ~13 warm. The store is
+      # content-addressed, so an older lockfile's entry is safe to restore and still covers
+      # every unchanged dependency.
       - name: Cache native compilation
+        id: ios_cas
         uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.ios-compilation-cache
-          key: ios-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'patches/**') }}-${{ github.sha }}
+          key: ios-cas-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'patches/**') }}
           restore-keys: |
-            ios-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'patches/**') }}-
+            ios-cas-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-
+
+      # Restoring across lockfiles keeps stale objects; start over before the saved entry crowds
+      # out the repository's other caches. An exact hit is never saved again, so it stays.
+      - name: Bound the compilation cache
+        if: steps.ios_cas.outputs.cache-hit != 'true'
+        run: |
+          cas="$GITHUB_WORKSPACE/.ios-compilation-cache"
+          [ -d "$cas" ] || exit 0
+          size_mb=$(du -sm "$cas" | cut -f1)
+          echo "compilation cache: ${size_mb} MB"
+          if [ "$size_mb" -gt 3072 ]; then
+            echo "::notice::compilation cache is ${size_mb} MB; starting a fresh one"
+            rm -rf "$cas"
+          fi
 
       - name: Generate the iOS project
         run: |

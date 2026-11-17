@@ -109,6 +109,8 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 # Fork: Keep unsigned Personal Team IPA packaging, fork OTA isolation, iOS 17 checks, concurrency, and hosted compilation/dependency caches.
 .github/workflows/release-mobile-ios.yml	Fork:
 .github/workflows/release-mobile-ios.yml	T3CODE_IOS_PERSONAL_TEAM: "1"
+.github/workflows/release-mobile-ios.yml	key: ios-cas-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'patches/**') }}
+.github/workflows/release-mobile-ios.yml	name: Bound the compilation cache
 
 # Fork: Keep fork opt-in releases, repository identity, hosted runner overrides, Intel macOS builds, and the unsigned iOS release dependency.
 # Fork: Cut hosted macOS minutes: a configurable nightly gap, and macOS/iOS builds that wait for the release tests.
