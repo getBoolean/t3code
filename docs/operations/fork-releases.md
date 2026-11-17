@@ -46,9 +46,11 @@ and `T3CODE_IOS_RUNNER` for the unsigned IPA to use the Intel pool when ARM capa
 Each falls back to `T3CODE_MACOS_RUNNER` when unset; the arm64 desktop build keeps that variable.
 The IPA cross-compiles for arm64 on either host. Its build skips index stores and dSYM bundles,
 and reports elapsed build time in the job log. Hosted runners start with fresh DerivedData,
-but restore Xcode's content-addressed compilation cache for the same Xcode build, host architecture,
-and dependency inputs. A native change can still reuse unchanged dependency compilations. Cold
-builds populate the cache; only a measured warm job can establish the end-to-end build time.
+but restore Xcode's content-addressed compilation cache for the same Xcode build and host
+architecture. Entries are saved once per dependency change, not per commit, and a dependency change
+restores the previous entry, so only the changed dependencies recompile. A per-commit key filled
+the repository's 10 GB cache and evicted itself, turning ~13-minute builds into ~80-minute cold
+ones. A restored cache over 3 GB is dropped so it cannot crowd out the other caches.
 The `mobile-ios-build-log` artifact includes compilation-cache diagnostics and Xcode task timings.
 
 ## Releases
@@ -79,6 +81,17 @@ only when the fork opts in:
 | `T3CODE_WEB_DEPLOY`     | Building and deploying the hosted web app to Vercel (`VERCEL_*` secrets).                                                                                                 |
 | `T3CODE_RELEASE_APP`    | The stable-release version bump pushed to `main` by a GitHub App (`RELEASE_APP_ID`, `RELEASE_APP_PRIVATE_KEY`). Without it, bump versions by hand after a stable release. |
 | `T3CODE_MOBILE_RELEASE` | An unsigned iOS IPA on every release (see [iOS sideload build](#ios-sideload-build)). A failed build blocks the release.                                                  |
+
+Hosted macOS minutes are the release's main cost: the two macOS desktop builds and the IPA take
+roughly 40 to 60 minutes per release. Two settings keep that down:
+
+- `T3CODE_NIGHTLY_GAP_HOURS` sets the minimum hours between automatic nightlies. Upstream uses 6,
+  which can mean four nightlies a day; this fork sets `24`.
+- The macOS and iOS builds start only after the release tests pass, so a failing run spends no
+  macOS time. This applies to nightlies, dispatched releases, and tag pushes, and adds the test
+  time (about 7 minutes) to every release.
+
+`PAUSE_NIGHTLY` set to `true` stops automatic nightlies entirely; dispatched releases still run.
 
 Builds are unsigned unless the signing secrets in [release](./release.md) are set. Unsigned
 Windows and Linux builds install and update; macOS needs signing and notarization before it can

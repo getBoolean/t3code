@@ -74,6 +74,8 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         env:
           DISPATCH_CHANNEL: ${{ inputs.channel }}
+          # Fork: hours between automatic nightlies; unset keeps upstream's six.
+          NIGHTLY_GAP_HOURS: ${{ vars.T3CODE_NIGHTLY_GAP_HOURS }}
         with:
           # Every call here is a read; retry GitHub's transient 5xx and dropped connections.
           retries: 3
@@ -95,7 +97,8 @@ jobs:
             await assertReleaseSource({ github, context, releaseChannel });
 
             if (context.eventName === 'schedule') {
-              core.setOutput('has_changes', await shouldReleaseNightly({ github, context, core }));
+              const gapHours = process.env.NIGHTLY_GAP_HOURS ? Number(process.env.NIGHTLY_GAP_HOURS) : undefined;
+              core.setOutput('has_changes', await shouldReleaseNightly({ github, context, core, gapHours }));
               core.setOutput('ref', context.sha);
             } else if (context.eventName === 'workflow_dispatch' && dispatchChannel === 'stable') {
               const { tag, sha, version } = await resolveLatestNightlyCommit({ github, context, core });
@@ -654,8 +657,10 @@ jobs:
   # not at all.
   desktop_mac_arm64:
     name: Desktop macOS arm64
-    needs: [preflight, relay_public_config, build_bundle]
-    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.build_bundle.result == 'success' }}
+    # Fork: hosted macOS minutes are the release's main cost, so on every trigger (nightly, dispatch,
+    # tag) macOS builds wait for the release tests; a failing run then spends no macOS time.
+    needs: [preflight, relay_public_config, build_bundle, quality, test, test_web, test_server]
+    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.build_bundle.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' }}
     uses: ./.github/workflows/release-desktop.yml
     secrets: inherit
     with:
@@ -680,8 +685,10 @@ jobs:
 
   desktop_mac_x64:
     name: Desktop macOS x64
-    needs: [preflight, relay_public_config, build_bundle]
-    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.build_bundle.result == 'success' }}
+    # Fork: hosted macOS minutes are the release's main cost, so on every trigger (nightly, dispatch,
+    # tag) macOS builds wait for the release tests; a failing run then spends no macOS time.
+    needs: [preflight, relay_public_config, build_bundle, quality, test, test_web, test_server]
+    if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.build_bundle.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' }}
     uses: ./.github/workflows/release-desktop.yml
     secrets: inherit
     with:
@@ -809,8 +816,9 @@ jobs:
   # Fork: an unsigned iOS IPA for sideloading, only when the fork sets T3CODE_MOBILE_RELEASE.
   mobile_ios_unsigned:
     name: Mobile iOS (unsigned)
-    needs: [preflight, relay_public_config]
-    if: ${{ !cancelled() && vars.T3CODE_MOBILE_RELEASE == 'true' && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' }}
+    # Waits for the release tests for the same reason as the macOS desktop builds.
+    needs: [preflight, relay_public_config, quality, test, test_web, test_server]
+    if: ${{ !cancelled() && vars.T3CODE_MOBILE_RELEASE == 'true' && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' }}
     uses: ./.github/workflows/release-mobile-ios.yml
     with:
       version: ${{ needs.preflight.outputs.version }}
