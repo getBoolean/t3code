@@ -657,8 +657,8 @@ jobs:
   # not at all.
   desktop_mac_arm64:
     name: Desktop macOS arm64
-    # Fork: hosted macOS minutes are the release's main cost, so macOS builds wait for the release
-    # tests instead of running beside them; a failing run then spends no macOS time.
+    # Fork: hosted macOS minutes are the release's main cost, so on every trigger (nightly, dispatch,
+    # tag) macOS builds wait for the release tests; a failing run then spends no macOS time.
     needs: [preflight, relay_public_config, build_bundle, quality, test, test_web, test_server]
     if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.build_bundle.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' }}
     uses: ./.github/workflows/release-desktop.yml
@@ -685,8 +685,8 @@ jobs:
 
   desktop_mac_x64:
     name: Desktop macOS x64
-    # Fork: hosted macOS minutes are the release's main cost, so macOS builds wait for the release
-    # tests instead of running beside them; a failing run then spends no macOS time.
+    # Fork: hosted macOS minutes are the release's main cost, so on every trigger (nightly, dispatch,
+    # tag) macOS builds wait for the release tests; a failing run then spends no macOS time.
     needs: [preflight, relay_public_config, build_bundle, quality, test, test_web, test_server]
     if: ${{ !cancelled() && needs.preflight.result == 'success' && needs.relay_public_config.result == 'success' && needs.build_bundle.result == 'success' && needs.quality.result == 'success' && needs.test.result == 'success' && needs.test_web.result == 'success' && needs.test_server.result == 'success' }}
     uses: ./.github/workflows/release-desktop.yml

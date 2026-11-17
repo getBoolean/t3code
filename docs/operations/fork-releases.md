@@ -86,7 +86,8 @@ roughly 40 to 60 minutes per release. Two settings keep that down:
 - `T3CODE_NIGHTLY_GAP_HOURS` sets the minimum hours between automatic nightlies. Upstream uses 6,
   which can mean four nightlies a day; this fork sets `24`.
 - The macOS and iOS builds start only after the release tests pass, so a failing run spends no
-  macOS time. This adds the test time (about 7 minutes) to every release.
+  macOS time. This applies to nightlies, dispatched releases, and tag pushes, and adds the test
+  time (about 7 minutes) to every release.
 
 `PAUSE_NIGHTLY` set to `true` stops automatic nightlies entirely; dispatched releases still run.
 
