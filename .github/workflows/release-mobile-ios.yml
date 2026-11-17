@@ -117,9 +117,9 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.ios-compilation-cache
-          key: ios-cas-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'patches/**') }}
+          key: ios-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'patches/**') }}
           restore-keys: |
-            ios-cas-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-
+            ios-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-
 
       # Restoring across lockfiles keeps stale objects; start over before the saved entry crowds
       # out the repository's other caches. An exact hit is never saved again, so it stays.
