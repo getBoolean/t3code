@@ -46,6 +46,7 @@ function IpadSidebarActionRows(props: {
   const [expanded, setExpanded] = useState(props.initiallyExpanded);
   const actions = [
     { tab: "pullRequests", label: "Pull requests", icon: PullRequestGlyph.pullRequest },
+    { tab: "issues", label: "Issues", icon: "git.issue" },
     { tab: "usage", label: "Usage", icon: "chart.bar.xaxis" },
   ] as const;
   const settingsSelected = props.selected === "settings";

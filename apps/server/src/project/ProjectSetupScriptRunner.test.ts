@@ -126,6 +126,13 @@ const setup = Effect.fn(function* (
 });
 
 describe("ProjectSetupScriptRunner", () => {
+  it.effect("keeps setup scripts independent of the interactive shell preference", () =>
+    Effect.gen(function* () {
+      const { opened } = yield* setup();
+      expect(opened[0]?.env?.T3CODE_TERMINAL_SHELL).toBe("");
+    }),
+  );
+
   it.effect("writes immediately when the spawned fallback is PowerShell", () =>
     Effect.gen(function* () {
       const { writes } = yield* setup({

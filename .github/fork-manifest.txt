@@ -4,6 +4,7 @@ apps/mobile/src/lib/pullRequestNavigation.ts	Fork:
 apps/mobile/src/lib/pullRequestNavigation.ts	payload: { ...payload, pop: true }
 apps/mobile/src/native/useOpenPullRequest.ts	Fork:
 apps/mobile/src/native/useOpenPullRequest.ts	iosPullRequestNavigationAction(params, isPad, replace)
+apps/mobile/src/native/useOpenPullRequest.ts	issue links that resolve to a pull request follow the same iPad detail reuse
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	Fork:
 apps/mobile/src/features/layout/workspace/workspace-detail-selection.test.ts	reuses the iPad PR screen without losing the originating thread
 
@@ -640,7 +641,7 @@ docs/operations/fork-releases.md	| `T3CODE_IOS_RUNNER`         | `macos-26-intel
 
 # Fork: Keep guidance for project git-account overrides and optional repository identity configuration.
 docs/user/project-settings.md	Fork:
-docs/user/project-settings.md	access. Source control contains automatic pull, the default pull request merge method, text
+docs/user/project-settings.md	commits and pushes use. The same rows edit environment defaults or project overrides depending on the
 
 # Fork: Keep account management, explicit thread bypass, SSH alias, and live-terminal identity guidance.
 docs/user/source-control.md	Fork:
@@ -1027,3 +1028,11 @@ apps/server/integration/transferBudgetV2.integration.test.ts	: yield* readHistor
 
 # Fork: The fork runs setup-script tests on macOS too, where a syntax error exits 1 rather than dash's 2.
 apps/server/src/project/ProjectSetupScriptRunner.test.ts	if (exitCode === null) assert.notEqual(result.exitCode, 0);
+
+# Fork: iPad sidebar navigation reaches upstream's mobile Issues tab through its own workspace list route, like pull requests.
+apps/mobile/src/Stack.tsx	screen: IssueListRouteScreen
+apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx	export function IssueListRouteScreen()
+apps/mobile/src/features/layout/workspace/IpadSidebarActions.tsx	{ tab: "issues", label: "Issues", icon: "git.issue" }
+apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts	if (destination === "Issues" || destination === "Issue") return "issues";
+apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts	tab === "issues" ? "Issues" : "SettingsUsage"
+apps/mobile/src/features/layout/workspace/workspace-tab-navigation.test.ts	["issues", "Issues"],

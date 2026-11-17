@@ -34,7 +34,7 @@ const { StackRouter } = NodeModule.createRequire(
 )("@react-navigation/routers") as {
   readonly StackRouter: typeof import("@react-navigation/native").StackRouter;
 };
-const available = { thread: () => true, pullRequest: () => true };
+const available = { thread: () => true, pullRequest: () => true, issue: () => true };
 const names = (state: { routes: readonly { name: string }[] }) =>
   state.routes.map((route) => route.name);
 
@@ -50,6 +50,9 @@ describe("workspace tab selections", () => {
     expect(workspaceSidebarDestination([home, pullRequest, thread])).toBeNull();
     expect(workspaceSidebarDestination([home, pullRequest, { name: "PullRequestFiles" }])).toBe(
       "pullRequests",
+    );
+    expect(workspaceSidebarDestination([home, { name: "Issues" }, { name: "Issue" }])).toBe(
+      "issues",
     );
     expect(workspaceSidebarDestination([home, usage, { name: "SettingsUsageAccount" }])).toBe(
       "usage",
@@ -156,6 +159,7 @@ describe("opening a workspace tab", () => {
     ).toEqual(["Home", "Settings"]);
     for (const [tab, page] of [
       ["pullRequests", "PullRequests"],
+      ["issues", "Issues"],
       ["usage", "SettingsUsage"],
     ] as const) {
       expect(
@@ -227,7 +231,7 @@ describe("opening a workspace tab", () => {
   });
 
   it("falls back to the list for a chat that no longer exists, or an unknown Settings page", () => {
-    const missing = { thread: () => false, pullRequest: () => true };
+    const missing = { thread: () => false, pullRequest: () => true, issue: () => true };
     expect(
       names(
         workspaceTabNavigationState(
