@@ -181,6 +181,8 @@ jobs:
         with:
           install-args: --filter=@t3tools/desktop... --filter=t3... --filter=@t3tools/scripts...
           save-pnpm-store: ${{ inputs.save_pnpm_store }}
+          # Fork: hosted macOS installs faster from the registry than from the cached store.
+          pnpm-store-cache: ${{ inputs.platform != 'mac' }}
         env:
           pnpm_config_cache_dir: ${{ runner.temp }}/pnpm-metadata
 

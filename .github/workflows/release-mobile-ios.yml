@@ -80,6 +80,8 @@ jobs:
         uses: ./.github/actions/setup-ci-deps
         with:
           install-args: --filter=@t3tools/mobile...
+          # Restoring the cached store took ~5 minutes on hosted macOS; installing takes under one.
+          pnpm-store-cache: "false"
 
       # iOS accepts only up to three dot-separated integers, so drop any prerelease suffix.
       - name: Resolve the app version
@@ -122,7 +124,8 @@ jobs:
             ios-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-
 
       # Restoring across lockfiles keeps stale objects; start over before the saved entry crowds
-      # out the repository's other caches. An exact hit is never saved again, so it stays.
+      # out the repository's other caches. An exact hit is never saved again, so it stays. A cold
+      # build unpacks to ~4.2 GB (1.6 GB compressed), so the limit sits well above that.
       - name: Bound the compilation cache
         if: steps.ios_cas.outputs.cache-hit != 'true'
         run: |
@@ -130,7 +133,7 @@ jobs:
           [ -d "$cas" ] || exit 0
           size_mb=$(du -sm "$cas" | cut -f1)
           echo "compilation cache: ${size_mb} MB"
-          if [ "$size_mb" -gt 3072 ]; then
+          if [ "$size_mb" -gt 8192 ]; then
             echo "::notice::compilation cache is ${size_mb} MB; starting a fresh one"
             rm -rf "$cas"
           fi

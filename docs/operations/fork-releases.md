@@ -50,7 +50,7 @@ but restore Xcode's content-addressed compilation cache for the same Xcode build
 architecture. Entries are saved once per dependency change, not per commit, and a dependency change
 restores the previous entry, so only the changed dependencies recompile. A per-commit key filled
 the repository's 10 GB cache and evicted itself, turning ~13-minute builds into ~80-minute cold
-ones. A restored cache over 3 GB is dropped so it cannot crowd out the other caches.
+ones. A restored cache over 8 GB on disk (a cold build makes about 4.2 GB) is dropped so it cannot crowd out the other caches. The macOS release jobs install packages from the registry instead of the cached pnpm store, which took 2.5 to 5 minutes to unpack on hosted macOS against about 30 seconds to install.
 The `mobile-ios-build-log` artifact includes compilation-cache diagnostics and Xcode task timings.
 
 ## Releases
