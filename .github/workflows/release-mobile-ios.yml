@@ -267,9 +267,9 @@ jobs:
           fail-on-cache-miss: true
 
       # Mirrors the app target's bundle phase (react-native-xcode.sh with expo export:embed and
-      # hermesc), its Info.plist version, and expo-constants' app.config phase, at Xcode's own
-      # paths so the result matches an xcodebuild app byte for byte. Updates are disabled, so
-      # expo-updates launches main.jsbundle without reading app.manifest.
+      # hermesc), its Info.plist version, and expo-constants' app.config phase, at Xcode's paths.
+      # Run on macOS this matched an xcodebuild app byte for byte; Linux hermesc lays out the same
+      # bytecode differently. Updates are disabled, so expo-updates never reads app.manifest.
       - name: Refresh the JavaScript in the native app
         env:
           NODE_ENV: production

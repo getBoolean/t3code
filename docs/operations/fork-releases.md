@@ -57,7 +57,8 @@ Most releases need no macOS runner. A Linux job computes Expo's native fingerpri
 version expo-updates embeds, and looks for the native app saved for that fingerprint and workflow.
 The macOS job runs xcodebuild only when none is saved. A Linux job then restores the app and
 regenerates `main.jsbundle` (Metro and hermesc), its assets, the Info.plist version, and the
-embedded Expo config: the same outputs Xcode's script phases write, byte for byte. A native change
+embedded Expo config, the outputs of Xcode's script phases. On macOS this matched an xcodebuild
+app byte for byte; Linux hermesc emits equivalent bytecode with a different layout. A native change
 or an edit to the workflow builds and saves a new native app; an Xcode update alone does not.
 
 ## Releases
