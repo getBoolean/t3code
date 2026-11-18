@@ -5,10 +5,12 @@ import {
   type GitAccountConfig,
   type GitAccountId,
 } from "@t3tools/contracts";
+import { msg, T, useGT, useMessages } from "gt-react";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import { useEnvironmentSettings, useUpdateEnvironmentSettings } from "../../hooks/useSettings";
+import type { MessageResolver } from "../../i18n/messages";
 import { useEnvironmentScope } from "../../state/session";
 import {
   AlertDialog,
@@ -22,12 +24,15 @@ import {
 import { Button } from "../ui/button";
 import { GitAccountDialog } from "./GitAccountDialog";
 import { projectsUsingGitAccount } from "@t3tools/client-runtime/git-accounts";
-import { searchableSetting } from "./settingsSearch";
+import { useSearchableSetting } from "./settingsSearch";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
 
 type Editing = { readonly id: GitAccountId; readonly account: GitAccountConfig } | null;
 
 export function GitAccountsSettings({ environmentId }: { readonly environmentId: EnvironmentId }) {
+  const gt = useGT();
+  const m = useMessages();
+  const searchableSetting = useSearchableSetting();
   const settings = useEnvironmentSettings(environmentId);
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
   const canManage = useEnvironmentScope(environmentId, AuthProvidersManageScope);
@@ -44,15 +49,17 @@ export function GitAccountsSettings({ environmentId }: { readonly environmentId:
           canManage ? (
             <Button size="xs" variant="outline" onClick={() => setDialog({ editing: null })}>
               <PlusIcon className="size-3" aria-hidden />
-              Add account
+              <T>Add account</T>
             </Button>
           ) : null
         }
       >
         {entries.length === 0 ? (
           <SettingsRow
-            title="No git accounts."
-            description="Add one to commit, push and open pull requests as a specific account per project."
+            title={gt("No git accounts.")}
+            description={gt(
+              "Add one to commit, push and open pull requests as a specific account per project.",
+            )}
           />
         ) : (
           entries.map(([id, account]) => (
@@ -63,9 +70,10 @@ export function GitAccountsSettings({ environmentId }: { readonly environmentId:
                 <span className="break-all">
                   {account.authorName} · {account.authorEmail} · {account.host} ·{" "}
                   {account.credentialKind === "cliLogin"
-                    ? `gh login "${account.cliLogin}"`
-                    : "saved token"}
-                  {account.sshKeyPath ? " · SSH key" : ""}
+                    ? // oxlint-disable-next-line t3code/no-untranslated-copy -- A CLI command and a user name stay English.
+                      `gh login "${account.cliLogin}"`
+                    : gt("saved token")}
+                  {account.sshKeyPath ? ` · ${gt("SSH key")}` : ""}
                 </span>
               }
               control={
@@ -76,10 +84,10 @@ export function GitAccountsSettings({ environmentId }: { readonly environmentId:
                       variant="outline"
                       onClick={() => setDialog({ editing: { id, account } })}
                     >
-                      Edit
+                      {gt("Edit", { $context: "verb, edit a git account" })}
                     </Button>
                     <Button size="xs" variant="outline" onClick={() => setRemoving(id)}>
-                      Remove
+                      {gt("Remove", { $context: "verb, remove a git account" })}
                     </Button>
                   </div>
                 ) : null
@@ -100,16 +108,21 @@ export function GitAccountsSettings({ environmentId }: { readonly environmentId:
         <AlertDialog open onOpenChange={(open) => (open ? undefined : setRemoving(null))}>
           <AlertDialogPopup>
             <AlertDialogHeader>
-              <AlertDialogTitle>Remove {removingAccount.label}?</AlertDialogTitle>
+              <AlertDialogTitle>
+                {gt("Remove {account}?", { account: removingAccount.label })}
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 {removalImpact(
                   projectsUsingGitAccount(settings, removing),
                   settings.gitAccountId === removing,
+                  m,
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+              <AlertDialogClose render={<Button variant="outline" />}>
+                <T>Cancel</T>
+              </AlertDialogClose>
               <Button
                 variant="destructive"
                 onClick={() => {
@@ -117,7 +130,7 @@ export function GitAccountsSettings({ environmentId }: { readonly environmentId:
                   setRemoving(null);
                 }}
               >
-                Remove
+                {gt("Remove", { $context: "verb, remove a git account" })}
               </Button>
             </AlertDialogFooter>
           </AlertDialogPopup>
@@ -127,12 +140,29 @@ export function GitAccountsSettings({ environmentId }: { readonly environmentId:
   );
 }
 
-function removalImpact(projectCount: number, isDefault: boolean): string {
-  const users = [
-    ...(projectCount > 0 ? [`${projectCount} project${projectCount === 1 ? "" : "s"}`] : []),
-    ...(isDefault ? ["every project that uses the default"] : []),
-  ];
-  return users.length === 0
-    ? "No project uses this account. Its saved token is deleted from this server."
-    : `It's used by ${users.join(" and ")}. Commits, pushes and pull requests there will be blocked until another account is picked.`;
+function removalImpact(projectCount: number, isDefault: boolean, resolve: MessageResolver): string {
+  if (projectCount > 0 && isDefault) {
+    return resolve(
+      msg(
+        "It's used by {count, plural, one {{count} project} other {{count} projects}} and every project that uses the default. Commits, pushes and pull requests there will be blocked until another account is picked.",
+        { count: projectCount },
+      ),
+    );
+  }
+  if (projectCount > 0) {
+    return resolve(
+      msg(
+        "It's used by {count, plural, one {{count} project} other {{count} projects}}. Commits, pushes and pull requests there will be blocked until another account is picked.",
+        { count: projectCount },
+      ),
+    );
+  }
+  if (isDefault) {
+    return resolve(
+      msg(
+        "It's used by every project that uses the default. Commits, pushes and pull requests there will be blocked until another account is picked.",
+      ),
+    );
+  }
+  return resolve(msg("No project uses this account. Its saved token is deleted from this server."));
 }

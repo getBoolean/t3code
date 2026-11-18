@@ -480,7 +480,15 @@ function ServerSettingsDetail(props: { readonly page: SettingsPage }) {
                       }
                     >
                       {[
-                        ...(projectSelected ? [] : [{ id: null, label: gt("None", { $context: "no git account selected" }), host: null }]),
+                        ...(projectSelected
+                          ? []
+                          : [
+                              {
+                                id: null,
+                                label: gt("None", { $context: "no git account selected" }),
+                                host: null,
+                              },
+                            ]),
                         ...Object.entries(reference.settings.gitAccounts).map(([id, account]) => ({
                           id: GitAccountId.make(id),
                           label: account.label,

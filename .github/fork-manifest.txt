@@ -931,7 +931,7 @@ apps/mobile/src/features/threads/thread-inspector-navigation.test.tsx	opens atta
 
 # Fork: Inspector file previews expand without replacing the parent thread or losing local file routes until upstream supports pane expansion.
 apps/mobile/src/features/files/file-preview-presentation.ts	FilePreviewExpandContext
-apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel: "Expand file preview"
+apps/mobile/src/features/files/AttachmentFileScreen.tsx	accessibilityLabel: gt("Expand file preview")
 apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx	Expand file preview
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	<FilePreviewCloseContext value={expanded
 apps/mobile/src/features/threads/thread-inspector-preview.tsx	previewState.state
@@ -1054,7 +1054,7 @@ apps/server/src/project/ProjectSetupScriptRunner.test.ts	if (exitCode === null) 
 # Fork: iPad sidebar navigation reaches upstream's mobile Issues tab through its own workspace list route, like pull requests.
 apps/mobile/src/Stack.tsx	screen: IssueListRouteScreen
 apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx	export function IssueListRouteScreen()
-apps/mobile/src/features/layout/workspace/IpadSidebarActions.tsx	{ tab: "issues", label: "Issues", icon: "git.issue" }
+apps/mobile/src/features/layout/workspace/IpadSidebarActions.tsx	tab: "issues",
 apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts	if (destination === "Issues" || destination === "Issue") return "issues";
 apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts	tab === "issues" ? "Issues" : "SettingsUsage"
 apps/mobile/src/features/layout/workspace/workspace-tab-navigation.test.ts	["issues", "Issues"],

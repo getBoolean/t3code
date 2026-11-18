@@ -217,6 +217,8 @@ const ROUTE_TITLES: Readonly<Record<string, string>> = {
   ConnectOnboarding: msg("Set up {product}", { product: "T3 Connect" }),
   Connections: msg("Environments"),
   ConnectionsNew: msg("Add Environment"),
+  PullRequests: msg("Pull requests"),
+  Issues: msg("Issues", { $context: "screen title, list of issues" }),
 };
 
 // Thread settings keep the Duo's vertical bar so cancel, search, filter and confirm sit in the
@@ -588,12 +590,12 @@ const RootStackConfig = createWorkspaceStackNavigator({
     PullRequests: createNativeStackScreen({
       screen: PullRequestListRouteScreen,
       linking: "pull-requests",
-      options: pageRoute({ title: "Pull requests" }),
+      options: pageRoute(),
     }),
     Issues: createNativeStackScreen({
       screen: IssueListRouteScreen,
       linking: "issues",
-      options: pageRoute({ title: "Issues" }),
+      options: pageRoute(),
     }),
     PullRequest: createNativeStackScreen({
       screen: PullRequestRouteScreen,

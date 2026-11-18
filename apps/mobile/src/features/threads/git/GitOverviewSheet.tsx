@@ -292,8 +292,16 @@ function GitOverviewSheetContent(props: GitOverviewSheetProps) {
         <ListSection>
           <ListRow
             icon="exclamationmark.triangle"
-            label="Using this machine's git login"
-            description={`The git account "${gitAccountStatus.accountLabel ?? "unknown"}" can't be used: ${gitAccountStatus.reason ?? "unknown reason"}. Tap to go back to the account.`}
+            label={gt("Using this machine's git login")}
+            description={gt(
+              'The git account "{account}" can\'t be used: {reason}. Tap to go back to the account.',
+              {
+                account:
+                  gitAccountStatus.accountLabel ??
+                  gt("unknown", { $context: "fallback for a missing git account name" }),
+                reason: gitAccountStatus.reason ?? gt("unknown reason"),
+              },
+            )}
             onPress={() => void gitAccountGuard.setThreadBypass(false)}
           />
         </ListSection>

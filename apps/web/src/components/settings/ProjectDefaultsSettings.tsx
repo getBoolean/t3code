@@ -570,15 +570,21 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             {...searchableSetting("git-account")}
             description={
               isProjectScope
-                ? "Agents and T3 Code commit, push and open pull requests in this project as this account."
-                : "The account projects use unless they pick their own. None keeps this machine's git login."
+                ? gt(
+                    "Agents and T3 Code commit, push and open pull requests in this project as this account.",
+                  )
+                : gt(
+                    "The account projects use unless they pick their own. None keeps this machine's git login.",
+                  )
             }
             resetAction={
               settings.gitAccountId !== null ? (
                 <SettingResetButton
-                  label="git account"
+                  ariaLabel={gt("Reset git account to default")}
                   tooltip={
-                    isProjectScope ? "Use the default account" : "Use this machine's git login"
+                    isProjectScope
+                      ? gt("Use the default account")
+                      : gt("Use this machine's git login")
                   }
                   onClick={() => updateSettings({ gitAccountId: null })}
                 />
@@ -593,20 +599,24 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                     updateSettings({ gitAccountId: GitAccountId.make(value) });
                 }}
               >
-                <SelectTrigger size="sm" aria-label="Git account">
+                <SelectTrigger size="sm" aria-label={gt("Git account")}>
                   <SelectValue>
                     {(value: string | null) =>
                       value === null
-                        ? "Mixed"
+                        ? gt("Mixed", { $context: "values differ across targets" })
                         : value === "none"
-                          ? "None"
+                          ? gt("None", { $context: "no git account, use this machine's git login" })
                           : (settings.gitAccounts[GitAccountId.make(value)]?.label ??
-                            "Missing account")
+                            gt("Missing account"))
                     }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectPopup align="end" alignItemWithTrigger={false}>
-                  {isProjectScope ? null : <SelectItem value="none">None</SelectItem>}
+                  {isProjectScope ? null : (
+                    <SelectItem value="none">
+                      {gt("None", { $context: "no git account, use this machine's git login" })}
+                    </SelectItem>
+                  )}
                   {gitAccountEntries.map(([id, account]) => (
                     <SelectItem key={id} value={id}>
                       {account.label} ({account.host})
@@ -621,19 +631,22 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             settingKeys={["gitAccountWritesRepoConfig"]}
             mixed={mixedRepoConfig}
             {...searchableSetting("git-account-repo-config")}
-            description="Also sets user.name and user.email in the repo, so your terminal and GitHub Desktop match. Turning it off restores the previous values."
+            description={gt(
+              "Also sets {name} and {email} in the repo, so your terminal and GitHub Desktop match. Turning it off restores the previous values.",
+              { name: "user.name", email: "user.email" },
+            )}
             resetAction={
               settings.gitAccountWritesRepoConfig ? (
                 <SettingResetButton
-                  label="repo git config"
-                  tooltip="Stop writing to repo git config"
+                  ariaLabel={gt("Reset repo git config to default")}
+                  tooltip={gt("Stop writing to repo git config")}
                   onClick={() => updateSettings({ gitAccountWritesRepoConfig: false })}
                 />
               ) : null
             }
             control={
               <Switch
-                aria-label="Write to repo git config"
+                aria-label={gt("Write to repo git config")}
                 mixed={mixedRepoConfig}
                 disabled={settings.gitAccountId === null}
                 checked={mixedRepoConfig ? false : settings.gitAccountWritesRepoConfig}

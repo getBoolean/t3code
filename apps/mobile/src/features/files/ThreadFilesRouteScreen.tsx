@@ -160,7 +160,7 @@ function FileHeader(props: {
         ...(closePreview
           ? [
               {
-                accessibilityLabel: "Close expanded file preview",
+                accessibilityLabel: gt("Close expanded file preview"),
                 icon: "xmark" as const,
                 onPress: closePreview,
               },
@@ -169,7 +169,7 @@ function FileHeader(props: {
         ...(expandPreview
           ? [
               {
-                accessibilityLabel: "Expand file preview",
+                accessibilityLabel: gt("Expand file preview"),
                 icon: "arrow.up.left.and.arrow.down.right" as const,
                 onPress: expandPreview,
               },
@@ -318,10 +318,10 @@ function FileContent(props: {
       <View className="flex-1 items-center justify-center bg-sheet px-6">
         <EmptyState
           title={basename(props.relativePath)}
-          detail="This file is available to download."
+          detail={gt("This file is available to download.")}
           action={
             <Button
-              label="Save or share"
+              label={gt("Save or share")}
               icon="square.and.arrow.up"
               loading={props.sharing}
               disabled={!props.mediaSource}

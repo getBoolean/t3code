@@ -268,7 +268,7 @@ export function AttachmentFileScreen(props: AttachmentFileScreenProps) {
           ...(closePreview
             ? [
                 {
-                  accessibilityLabel: "Close expanded file preview",
+                  accessibilityLabel: gt("Close expanded file preview"),
                   icon: "xmark" as const,
                   onPress: closePreview,
                 },
@@ -277,7 +277,7 @@ export function AttachmentFileScreen(props: AttachmentFileScreenProps) {
           ...(expandPreview
             ? [
                 {
-                  accessibilityLabel: "Expand file preview",
+                  accessibilityLabel: gt("Expand file preview"),
                   icon: "arrow.up.left.and.arrow.down.right" as const,
                   onPress: expandPreview,
                 },
