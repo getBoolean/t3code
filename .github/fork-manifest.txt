@@ -112,6 +112,8 @@ apps/mobile/src/features/threads/ThreadHeader.tsx	icon: filesVisible ? "folder.f
 .github/workflows/release-mobile-ios.yml	key: ios-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'patches/**') }}
 .github/workflows/release-mobile-ios.yml	name: Bound the compilation cache
 .github/workflows/release-mobile-ios.yml	pnpm-store-cache: "false"
+.github/workflows/release-mobile-ios.yml	name: Refresh the JavaScript in the native app
+.github/workflows/release-mobile-ios.yml	key: ios-native-app-v1-
 
 # Fork: Hosted macOS release jobs install from the registry instead of unpacking the slow cached pnpm store.
 .github/actions/setup-ci-deps/action.yml	Fork:

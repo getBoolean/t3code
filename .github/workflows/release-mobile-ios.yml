@@ -1,4 +1,4 @@
-# Fork: Keep unsigned Personal Team IPA packaging, fork OTA isolation, iOS 17 checks, concurrency, and hosted compilation/dependency caches.
+# Fork: Keep unsigned Personal Team IPA packaging, fork OTA isolation, iOS 17 checks, concurrency, hosted compilation/dependency caches, and native app reuse keyed by the Expo fingerprint.
 # Fork-only: builds the mobile app as an unsigned iOS IPA for sideloading. Users re-sign it with
 # their own Apple ID (AltStore, SideStore, Sideloadly), so it is the Personal Team build: no push,
 # widget or share extension, or native Sign in with Apple. release.yml calls this when the fork
@@ -99,7 +99,27 @@ jobs:
           [ -n "$build" ] || { echo "::error::Cannot identify the Xcode build"; exit 1; }
           echo "build=$build" >> "$GITHUB_OUTPUT"
 
+      # Most releases change only JavaScript. Expo's native fingerprint (the runtime version
+      # expo-updates embeds) keys the last native build; on a hit the job refreshes only the JS
+      # parts of that app instead of running xcodebuild (~13 min warm, ~80 cold).
+      - name: Compute the native fingerprint
+        id: native
+        run: |
+          hash=$(node -e "require('expo/fingerprint').createFingerprintAsync(process.cwd(), { platforms: ['ios'], silent: true }).then(f => console.log(f.hash))")
+          [ -n "$hash" ] || { echo "::error::Expo returned no native fingerprint"; exit 1; }
+          echo "native fingerprint: $hash"
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
+      # Restores to Xcode's own output path so either route packages the same APP_PATH.
+      - name: Restore the native app
+        id: native_app
+        uses: actions/cache/restore@v6
+        with:
+          path: apps/mobile/build/Build/Products/Release-iphoneos/*.app
+          key: ios-native-app-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ steps.native.outputs.hash }}-${{ hashFiles('.github/workflows/release-mobile-ios.yml') }}
+
       - name: Cache native dependency downloads
+        if: steps.native_app.outputs.cache-hit != 'true'
         uses: actions/cache@v6
         with:
           path: |
@@ -115,6 +135,7 @@ jobs:
       # content-addressed, so an older lockfile's entry is safe to restore and still covers
       # every unchanged dependency.
       - name: Cache native compilation
+        if: steps.native_app.outputs.cache-hit != 'true'
         id: ios_cas
         uses: actions/cache@v6
         with:
@@ -127,7 +148,7 @@ jobs:
       # out the repository's other caches. An exact hit is never saved again, so it stays. A cold
       # build unpacks to ~4.2 GB (1.6 GB compressed), so the limit sits well above that.
       - name: Bound the compilation cache
-        if: steps.ios_cas.outputs.cache-hit != 'true'
+        if: steps.native_app.outputs.cache-hit != 'true' && steps.ios_cas.outputs.cache-hit != 'true'
         run: |
           cas="$GITHUB_WORKSPACE/.ios-compilation-cache"
           [ -d "$cas" ] || exit 0
@@ -139,11 +160,13 @@ jobs:
           fi
 
       - name: Generate the iOS project
+        if: steps.native_app.outputs.cache-hit != 'true'
         run: |
           vp exec expo prebuild --clean --platform ios --no-install
           (cd ios && pod install)
 
       - name: Build the unsigned app
+        if: steps.native_app.outputs.cache-hit != 'true'
         run: |
           set -o pipefail
           workspace=$(ls -d ios/*.xcworkspace)
@@ -162,7 +185,7 @@ jobs:
           echo "APP_PATH=$PWD/$app" >> "$GITHUB_ENV"
 
       - name: Upload native build diagnostics
-        if: always()
+        if: always() && steps.native_app.outputs.cache-hit != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: mobile-ios-build-log
@@ -170,8 +193,39 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      # Mirrors the app target's bundle phase (react-native-xcode.sh with expo export:embed and
+      # hermesc), its Info.plist version, and expo-constants' app.config phase. Updates are
+      # disabled, so expo-updates launches main.jsbundle without reading app.manifest.
+      - name: Refresh the JavaScript in the native app
+        if: steps.native_app.outputs.cache-hit == 'true'
+        env:
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          products="$PWD/build/Build/Products/Release-iphoneos"
+          app=$(find "$products" -maxdepth 1 -name '*.app' | head -1)
+          [ -n "$app" ] || { echo "::error::the cached native app is missing"; exit 1; }
+          rm -rf "$app/assets" "$app/main.jsbundle"
+          vp exec expo export:embed --entry-file "$PWD/index.ts" --platform ios --dev false --reset-cache \
+            --bundle-output "$products/main.jsbundle" --assets-dest "$app" --minify false
+          hermes=$(dirname "$(node -p "require.resolve('hermes-compiler/package.json', { paths: [require('path').dirname(require.resolve('react-native/package.json'))] })")")
+          "$hermes/hermesc/osx-bin/hermesc" -emit-binary -max-diagnostic-width=80 -O \
+            -out "$app/main.jsbundle" "$products/main.jsbundle" 2> "$RUNNER_TEMP/hermesc.log" \
+            || { cat "$RUNNER_TEMP/hermesc.log"; exit 1; }
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $T3CODE_MOBILE_VERSION" "$app/Info.plist"
+          node node_modules/expo-constants/scripts/getAppConfig.js "$PWD" "$app/EXConstants.bundle" ios false production
+          echo "APP_PATH=$app" >> "$GITHUB_ENV"
+
       - name: Check the app runs on iOS 17
         run: ../../.github/scripts/check-ios17-libcxx-imports.sh "$APP_PATH"
+
+      # Saved only after the iOS 17 check, so a reused native app has passed it.
+      - name: Save the native app
+        if: steps.native_app.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: apps/mobile/build/Build/Products/Release-iphoneos/*.app
+          key: ${{ steps.native_app.outputs.cache-primary-key }}
 
       - name: Package the IPA
         run: |
