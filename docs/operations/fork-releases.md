@@ -53,11 +53,12 @@ the repository's 10 GB cache and evicted itself, turning ~13-minute builds into 
 ones. A restored cache over 8 GB on disk (a cold build makes about 4.2 GB) is dropped so it cannot crowd out the other caches. The macOS release jobs install packages from the registry instead of the cached pnpm store, which took 2.5 to 5 minutes to unpack on hosted macOS against about 30 seconds to install.
 The `mobile-ios-build-log` artifact includes compilation-cache diagnostics and Xcode task timings.
 
-Most releases skip xcodebuild entirely. The job computes Expo's native fingerprint, the runtime
-version expo-updates embeds, and restores the native app saved for that fingerprint, Xcode build,
-and workflow. It then regenerates only `main.jsbundle` (Metro and hermesc), its assets, the
-Info.plist version, and the embedded Expo config, the same outputs Xcode's script phases write.
-A native change, an Xcode update, or an edit to the workflow builds and saves a new native app.
+Most releases need no macOS runner. A Linux job computes Expo's native fingerprint, the runtime
+version expo-updates embeds, and looks for the native app saved for that fingerprint and workflow.
+The macOS job runs xcodebuild only when none is saved. A Linux job then restores the app and
+regenerates `main.jsbundle` (Metro and hermesc), its assets, the Info.plist version, and the
+embedded Expo config: the same outputs Xcode's script phases write, byte for byte. A native change
+or an edit to the workflow builds and saves a new native app; an Xcode update alone does not.
 
 ## Releases
 

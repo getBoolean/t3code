@@ -38,11 +38,87 @@ on:
         type: string
         default: 0.0.0-check
 
+env:
+  RELEASE_VERSION: ${{ inputs.version || '0.0.0-check' }}
+  APP_VARIANT: production
+  T3CODE_IOS_PERSONAL_TEAM: "1"
+  T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID: ${{ vars.T3CODE_IOS_SIDELOAD_BUNDLE_ID || format('io.github.{0}.t3code', github.repository_owner) }}
+  # Upstream's Expo update channel must never replace the fork's JavaScript.
+  T3CODE_MOBILE_UPDATES_ENABLED: "0"
+  EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ inputs.clerk_publishable_key || vars.CLERK_PUBLISHABLE_KEY }}
+  EXPO_PUBLIC_CLERK_JWT_TEMPLATE: ${{ inputs.clerk_jwt_template || vars.CLERK_JWT_TEMPLATE }}
+  T3CODE_RELAY_URL: ${{ inputs.relay_url || (vars.RELAY_DOMAIN && format('https://{0}', vars.RELAY_DOMAIN)) || '' }}
+  EXPO_NO_GIT_STATUS: "1"
+  CI: "1"
+  COCOAPODS_DISABLE_STATS: "1"
+  # The saved native app. Restore and save must name the same path for the cache to match.
+  NATIVE_APP_PATH: apps/mobile/build/Build/Products/Release-iphoneos/*.app
+
+defaults:
+  run:
+    working-directory: apps/mobile
+
+# Most releases change only JavaScript. Expo's native fingerprint (the runtime version
+# expo-updates embeds) keys the last native build: `native` runs xcodebuild on macOS only when no
+# app is saved for it, and `ipa` always refreshes that app's JavaScript and packages it on Linux.
 jobs:
-  ipa:
-    name: iOS unsigned IPA
+  fingerprint:
+    name: iOS native fingerprint
     # A PR check only runs while macOS CI is on (T3CODE_MACOS_CI); releases always build.
     if: vars.T3CODE_MOBILE_RELEASE == 'true' && (github.event_name != 'pull_request' || vars.T3CODE_MACOS_CI != 'false')
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 15
+    outputs:
+      app_version: ${{ steps.version.outputs.app_version }}
+      key: ${{ steps.native.outputs.key }}
+      saved: ${{ steps.lookup.outputs.cache-hit }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-ci-deps
+        with:
+          install-args: --filter=@t3tools/mobile...
+
+      # iOS accepts only up to three dot-separated integers, so drop any prerelease suffix.
+      - name: Resolve the app version
+        id: version
+        run: |
+          app_version="${RELEASE_VERSION%%-*}"
+          [[ "$app_version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]] \
+            || { echo "::error::cannot derive an iOS version from $RELEASE_VERSION"; exit 1; }
+          echo "T3CODE_MOBILE_VERSION=$app_version" >> "$GITHUB_ENV"
+          echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+      # The key also names this workflow, whose build settings shape the binary.
+      - name: Compute the native fingerprint
+        id: native
+        run: |
+          hash=$(node -e "require('expo/fingerprint').createFingerprintAsync(process.cwd(), { platforms: ['ios'], silent: true }).then(f => console.log(f.hash))")
+          [ -n "$hash" ] || { echo "::error::Expo returned no native fingerprint"; exit 1; }
+          echo "native fingerprint: $hash"
+          echo "key=ios-native-app-v2-$hash-${{ hashFiles('.github/workflows/release-mobile-ios.yml') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Look up the native app
+        id: lookup
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.NATIVE_APP_PATH }}
+          key: ${{ steps.native.outputs.key }}
+          lookup-only: true
+          enableCrossOsArchive: true
+
+  native:
+    name: iOS native app
+    needs: fingerprint
+    if: needs.fingerprint.outputs.saved != 'true'
     # One build per PR or branch. A new PR push cancels the stale build so it frees a scarce macOS
     # runner; a release build waits instead of being cancelled.
     concurrency:
@@ -51,21 +127,7 @@ jobs:
     runs-on: ${{ vars.T3CODE_IOS_RUNNER || vars.T3CODE_MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 120
     env:
-      RELEASE_VERSION: ${{ inputs.version || '0.0.0-check' }}
-      APP_VARIANT: production
-      T3CODE_IOS_PERSONAL_TEAM: "1"
-      T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID: ${{ vars.T3CODE_IOS_SIDELOAD_BUNDLE_ID || format('io.github.{0}.t3code', github.repository_owner) }}
-      # Upstream's Expo update channel must never replace the fork's JavaScript.
-      T3CODE_MOBILE_UPDATES_ENABLED: "0"
-      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ inputs.clerk_publishable_key || vars.CLERK_PUBLISHABLE_KEY }}
-      EXPO_PUBLIC_CLERK_JWT_TEMPLATE: ${{ inputs.clerk_jwt_template || vars.CLERK_JWT_TEMPLATE }}
-      T3CODE_RELAY_URL: ${{ inputs.relay_url || (vars.RELAY_DOMAIN && format('https://{0}', vars.RELAY_DOMAIN)) || '' }}
-      EXPO_NO_GIT_STATUS: "1"
-      CI: "1"
-      COCOAPODS_DISABLE_STATS: "1"
-    defaults:
-      run:
-        working-directory: apps/mobile
+      T3CODE_MOBILE_VERSION: ${{ needs.fingerprint.outputs.app_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -83,14 +145,6 @@ jobs:
           # Restoring the cached store took ~5 minutes on hosted macOS; installing takes under one.
           pnpm-store-cache: "false"
 
-      # iOS accepts only up to three dot-separated integers, so drop any prerelease suffix.
-      - name: Resolve the app version
-        run: |
-          app_version="${RELEASE_VERSION%%-*}"
-          [[ "$app_version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]] \
-            || { echo "::error::cannot derive an iOS version from $RELEASE_VERSION"; exit 1; }
-          echo "T3CODE_MOBILE_VERSION=$app_version" >> "$GITHUB_ENV"
-
       - name: Resolve Xcode cache identity
         id: xcode
         run: |
@@ -99,27 +153,7 @@ jobs:
           [ -n "$build" ] || { echo "::error::Cannot identify the Xcode build"; exit 1; }
           echo "build=$build" >> "$GITHUB_OUTPUT"
 
-      # Most releases change only JavaScript. Expo's native fingerprint (the runtime version
-      # expo-updates embeds) keys the last native build; on a hit the job refreshes only the JS
-      # parts of that app instead of running xcodebuild (~13 min warm, ~80 cold).
-      - name: Compute the native fingerprint
-        id: native
-        run: |
-          hash=$(node -e "require('expo/fingerprint').createFingerprintAsync(process.cwd(), { platforms: ['ios'], silent: true }).then(f => console.log(f.hash))")
-          [ -n "$hash" ] || { echo "::error::Expo returned no native fingerprint"; exit 1; }
-          echo "native fingerprint: $hash"
-          echo "hash=$hash" >> "$GITHUB_OUTPUT"
-
-      # Restores to Xcode's own output path so either route packages the same APP_PATH.
-      - name: Restore the native app
-        id: native_app
-        uses: actions/cache/restore@v6
-        with:
-          path: apps/mobile/build/Build/Products/Release-iphoneos/*.app
-          key: ios-native-app-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.build }}-${{ steps.native.outputs.hash }}-${{ hashFiles('.github/workflows/release-mobile-ios.yml') }}
-
       - name: Cache native dependency downloads
-        if: steps.native_app.outputs.cache-hit != 'true'
         uses: actions/cache@v6
         with:
           path: |
@@ -135,7 +169,6 @@ jobs:
       # content-addressed, so an older lockfile's entry is safe to restore and still covers
       # every unchanged dependency.
       - name: Cache native compilation
-        if: steps.native_app.outputs.cache-hit != 'true'
         id: ios_cas
         uses: actions/cache@v6
         with:
@@ -148,7 +181,7 @@ jobs:
       # out the repository's other caches. An exact hit is never saved again, so it stays. A cold
       # build unpacks to ~4.2 GB (1.6 GB compressed), so the limit sits well above that.
       - name: Bound the compilation cache
-        if: steps.native_app.outputs.cache-hit != 'true' && steps.ios_cas.outputs.cache-hit != 'true'
+        if: steps.ios_cas.outputs.cache-hit != 'true'
         run: |
           cas="$GITHUB_WORKSPACE/.ios-compilation-cache"
           [ -d "$cas" ] || exit 0
@@ -160,13 +193,11 @@ jobs:
           fi
 
       - name: Generate the iOS project
-        if: steps.native_app.outputs.cache-hit != 'true'
         run: |
           vp exec expo prebuild --clean --platform ios --no-install
           (cd ios && pod install)
 
       - name: Build the unsigned app
-        if: steps.native_app.outputs.cache-hit != 'true'
         run: |
           set -o pipefail
           workspace=$(ls -d ios/*.xcworkspace)
@@ -185,7 +216,7 @@ jobs:
           echo "APP_PATH=$PWD/$app" >> "$GITHUB_ENV"
 
       - name: Upload native build diagnostics
-        if: always() && steps.native_app.outputs.cache-hit != 'true'
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: mobile-ios-build-log
@@ -193,47 +224,91 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Check the app runs on iOS 17
+        run: ../../.github/scripts/check-ios17-libcxx-imports.sh "$APP_PATH"
+
+      # Saved only after the iOS 17 check, so a reused native app has passed it.
+      - name: Save the native app
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.NATIVE_APP_PATH }}
+          key: ${{ needs.fingerprint.outputs.key }}
+          enableCrossOsArchive: true
+
+  ipa:
+    name: iOS unsigned IPA
+    needs: [fingerprint, native]
+    if: ${{ !cancelled() && needs.fingerprint.result == 'success' && (needs.native.result == 'success' || needs.native.result == 'skipped') }}
+    runs-on: ${{ vars.T3CODE_LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 20
+    env:
+      T3CODE_MOBILE_VERSION: ${{ needs.fingerprint.outputs.app_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-ci-deps
+        with:
+          install-args: --filter=@t3tools/mobile...
+
+      - name: Restore the native app
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.NATIVE_APP_PATH }}
+          key: ${{ needs.fingerprint.outputs.key }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+
       # Mirrors the app target's bundle phase (react-native-xcode.sh with expo export:embed and
-      # hermesc), its Info.plist version, and expo-constants' app.config phase. Updates are
-      # disabled, so expo-updates launches main.jsbundle without reading app.manifest.
+      # hermesc), its Info.plist version, and expo-constants' app.config phase, at Xcode's own
+      # paths so the result matches an xcodebuild app byte for byte. Updates are disabled, so
+      # expo-updates launches main.jsbundle without reading app.manifest.
       - name: Refresh the JavaScript in the native app
-        if: steps.native_app.outputs.cache-hit == 'true'
         env:
           NODE_ENV: production
         run: |
           set -euo pipefail
           products="$PWD/build/Build/Products/Release-iphoneos"
           app=$(find "$products" -maxdepth 1 -name '*.app' | head -1)
-          [ -n "$app" ] || { echo "::error::the cached native app is missing"; exit 1; }
+          [ -n "$app" ] || { echo "::error::the saved native app is missing"; exit 1; }
           rm -rf "$app/assets" "$app/main.jsbundle"
           vp exec expo export:embed --entry-file "$PWD/index.ts" --platform ios --dev false --reset-cache \
             --bundle-output "$products/main.jsbundle" --assets-dest "$app" --minify false
           hermes=$(dirname "$(node -p "require.resolve('hermes-compiler/package.json', { paths: [require('path').dirname(require.resolve('react-native/package.json'))] })")")
-          "$hermes/hermesc/osx-bin/hermesc" -emit-binary -max-diagnostic-width=80 -O \
+          "$hermes/hermesc/linux64-bin/hermesc" -emit-binary -max-diagnostic-width=80 -O \
             -out "$app/main.jsbundle" "$products/main.jsbundle" 2> "$RUNNER_TEMP/hermesc.log" \
             || { cat "$RUNNER_TEMP/hermesc.log"; exit 1; }
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $T3CODE_MOBILE_VERSION" "$app/Info.plist"
+          python3 - "$app/Info.plist" <<'EOF'
+          import os, plistlib, sys
+          path = sys.argv[1]
+          with open(path, "rb") as f:
+              info = plistlib.load(f)
+          version = os.environ["T3CODE_MOBILE_VERSION"]
+          if info["CFBundleShortVersionString"] != version:
+              info["CFBundleShortVersionString"] = version
+              with open(path, "wb") as f:
+                  plistlib.dump(info, f)
+          EOF
           node node_modules/expo-constants/scripts/getAppConfig.js "$PWD" "$app/EXConstants.bundle" ios false production
           echo "APP_PATH=$app" >> "$GITHUB_ENV"
-
-      - name: Check the app runs on iOS 17
-        run: ../../.github/scripts/check-ios17-libcxx-imports.sh "$APP_PATH"
-
-      # Saved only after the iOS 17 check, so a reused native app has passed it.
-      - name: Save the native app
-        if: steps.native_app.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: apps/mobile/build/Build/Products/Release-iphoneos/*.app
-          key: ${{ steps.native_app.outputs.cache-primary-key }}
 
       - name: Package the IPA
         run: |
           set -euo pipefail
-          plist="$APP_PATH/Info.plist"
-          min_os=$(/usr/libexec/PlistBuddy -c 'Print MinimumOSVersion' "$plist")
-          short_version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$plist")
-          bundle_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$plist")
+          read -r min_os short_version bundle_id < <(python3 - "$APP_PATH/Info.plist" <<'EOF'
+          import plistlib, sys
+          with open(sys.argv[1], "rb") as f:
+              info = plistlib.load(f)
+          print(info["MinimumOSVersion"], info["CFBundleShortVersionString"], info["CFBundleIdentifier"])
+          EOF
+          )
           echo "bundle $bundle_id, version $short_version, minimum iOS $min_os"
           [ "$min_os" = "17.0" ] || { echo "::error::MinimumOSVersion is $min_os, expected 17.0"; exit 1; }
           [ "$short_version" = "$T3CODE_MOBILE_VERSION" ] \
