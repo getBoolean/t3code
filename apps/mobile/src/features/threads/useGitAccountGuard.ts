@@ -1,8 +1,10 @@
 // Fork: Ask before enabling machine-login bypass for an unusable project account, naming the reason and fallback identity.
 import type { EnvironmentId, ProjectId, ThreadId } from "@t3tools/contracts";
 import { gitAccountBypassPrompt } from "@t3tools/client-runtime/git-accounts";
+import { msg } from "gt-react-native";
 
 import * as Dialog from "../../components/ui/Dialog";
+import { m } from "../../i18n/messages";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -23,7 +25,7 @@ const confirmBypass = (title: string, message: string) =>
     Dialog.confirm({
       title,
       message,
-      confirmText: "Continue",
+      confirmText: m(msg("Continue")),
       destructive: true,
       onConfirm: () => resolve(true),
       onCancel: () => resolve(false),
@@ -65,7 +67,7 @@ export function useGitAccountGuard(target: GitAccountGuardTarget | null) {
     const result = await check({ environmentId: target.environmentId, input: inputFor(target) });
     // A failed check leaves the decision to the server, which still fails closed.
     if (result._tag !== "Success" || result.value.state !== "unavailable") return true;
-    const prompt = gitAccountBypassPrompt(result.value);
+    const prompt = gitAccountBypassPrompt(result.value, m);
     return (await confirmBypass(prompt.title, prompt.body)) && (await setThreadBypass(true));
   };
 

@@ -1,5 +1,6 @@
 // Fork: Keep the native scroll marker as a valid scroll-child view so iPad review and file lists mount without crashing.
 import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
+import { T, useGT, useMessages } from "gt-react-native";
 import { useSearchToolbarInset } from "../../components/ui/useBarInset";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
 import { LegendList } from "@legendapp/list/react-native";
@@ -48,15 +49,16 @@ function LicenseRow(props: {
 }
 
 export function SettingsOpenSourceLicensesRouteScreen() {
+  const gt = useGT();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const search = {
     value: query,
     onChangeText: setQuery,
-    placeholder: "Search packages",
-    accessibilityLabel: "Search open-source licenses",
-    clearAccessibilityLabel: "Clear package search",
+    placeholder: gt("Search packages"),
+    accessibilityLabel: gt("Search open-source licenses"),
+    clearAccessibilityLabel: gt("Clear package search"),
   };
   const searchInset = useSearchToolbarInset(search);
   const manifest = useMobileThirdPartyLicenses();
@@ -75,10 +77,10 @@ export function SettingsOpenSourceLicensesRouteScreen() {
 
   if (!manifest) {
     return (
-      <SettingsScreen title="Open source licenses">
+      <SettingsScreen title={gt("Open source licenses")}>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-base text-foreground-muted">
-            License notices are unavailable in this build.
+            <T>License notices are unavailable in this build.</T>
           </Text>
         </View>
       </SettingsScreen>
@@ -86,7 +88,7 @@ export function SettingsOpenSourceLicensesRouteScreen() {
   }
 
   return (
-    <SettingsScreen title="Open source licenses" search={search}>
+    <SettingsScreen title={gt("Open source licenses")} search={search}>
       <LegendList
         renderScrollComponent={renderNativeScrollView}
         className="flex-1"
@@ -103,7 +105,7 @@ export function SettingsOpenSourceLicensesRouteScreen() {
         ListEmptyComponent={
           <View className="items-center px-6 py-12">
             <Text className="text-center text-base text-foreground-muted">
-              No licenses match that search.
+              <T>No licenses match that search.</T>
             </Text>
           </View>
         }
@@ -117,6 +119,8 @@ export function SettingsOpenSourceLicensesRouteScreen() {
 type LicenseDetailProps = StaticScreenProps<{ readonly entryKey: string }>;
 
 export function SettingsOpenSourceLicenseRouteScreen({ route }: LicenseDetailProps) {
+  const gt = useGT();
+  const messages = useMessages();
   const insets = useSafeAreaInsets();
   const manifest = useMobileThirdPartyLicenses();
   const entry = manifest
@@ -126,10 +130,10 @@ export function SettingsOpenSourceLicenseRouteScreen({ route }: LicenseDetailPro
 
   if (!entry) {
     return (
-      <SettingsScreen title="License notice">
+      <SettingsScreen title={gt("License notice")}>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-base text-foreground-muted">
-            This license notice is unavailable.
+            <T>This license notice is unavailable.</T>
           </Text>
         </View>
       </SettingsScreen>
@@ -137,7 +141,7 @@ export function SettingsOpenSourceLicenseRouteScreen({ route }: LicenseDetailPro
   }
 
   return (
-    <SettingsScreen title="License notice">
+    <SettingsScreen title={gt("License notice")}>
       <ScrollView
         className="flex-1"
         contentInsetAdjustmentBehavior="automatic"
@@ -148,18 +152,20 @@ export function SettingsOpenSourceLicenseRouteScreen({ route }: LicenseDetailPro
         <View className="gap-2 px-1">
           <Text className="text-2xl font-t3-bold text-foreground">{entry.name}</Text>
           <Text className="text-base leading-normal text-foreground-muted">
-            {[entry.version, entry.license, formatLicenseBundles(entry.bundles)]
+            {[entry.version, entry.license, formatLicenseBundles(entry.bundles, messages)]
               .filter((value): value is string => Boolean(value))
               .join(" · ")}
           </Text>
           {sourceUrl ? (
             <Pressable
-              accessibilityHint="Opens the project website"
+              accessibilityHint={gt("Opens the project website")}
               accessibilityRole="link"
               onPress={() => void Linking.openURL(sourceUrl)}
               className="min-h-12 flex-row items-center gap-2 self-start py-2 active:opacity-60"
             >
-              <Text className="font-t3-medium text-primary-text">Project source</Text>
+              <Text className="font-t3-medium text-primary-text">
+                <T>Project source</T>
+              </Text>
               <SymbolView
                 name="arrow.up.right"
                 size={16}

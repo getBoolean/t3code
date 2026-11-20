@@ -11,6 +11,7 @@ import {
   type ServerSettingsPatch,
   SourceControlProviderKind,
 } from "@t3tools/contracts";
+import { T, useGT } from "gt-react-native";
 import { useState } from "react";
 import { View } from "react-native";
 
@@ -31,6 +32,7 @@ export function GitAccountsSection(props: {
   readonly disabled: boolean;
   readonly onChange: (patch: ServerSettingsPatch) => void;
 }) {
+  const gt = useGT();
   const [adding, setAdding] = useState(false);
   const entries = Object.entries(props.settings.gitAccounts) as Array<
     [GitAccountId, GitAccountConfig]
@@ -40,25 +42,27 @@ export function GitAccountsSection(props: {
     const projects = projectsUsingGitAccount(props.settings, id);
     const isDefault = props.settings.gitAccountId === id;
     confirm({
-      title: `Remove ${account.label}?`,
+      title: gt("Remove {label}?", { label: account.label }),
       message:
         projects === 0 && !isDefault
-          ? "No project uses this account. Its saved token is deleted from this server."
-          : "Projects that use it will have commits, pushes and pull requests blocked until another account is picked.",
-      confirmText: "Remove",
+          ? gt("No project uses this account. Its saved token is deleted from this server.")
+          : gt(
+              "Projects that use it will have commits, pushes and pull requests blocked until another account is picked.",
+            ),
+      confirmText: gt("Remove", { $context: "verb, removes a saved git account" }),
       destructive: true,
       onConfirm: () => props.onChange({ gitAccounts: { [id]: null } }),
     });
   };
 
   return (
-    <SettingsSection title="Git accounts">
+    <SettingsSection title={gt("Git accounts")}>
       {entries.map(([id, account]) => (
         <ListActionRow
           key={id}
           label={account.label}
           description={`${account.authorName} · ${account.authorEmail} · ${account.host}`}
-          detail="Remove"
+          detail={gt("Remove", { $context: "verb, removes a saved git account" })}
           tone="danger"
           disabled={props.disabled}
           onPress={() => remove(id, account)}
@@ -76,7 +80,7 @@ export function GitAccountsSection(props: {
       ) : (
         <ListActionRow
           icon="plus"
-          label="Add account"
+          label={gt("Add account")}
           disabled={props.disabled}
           onPress={() => setAdding(true)}
         />
@@ -90,6 +94,7 @@ function AddGitAccountForm(props: {
   readonly onCancel: () => void;
   readonly onSave: (patch: ServerSettingsPatch) => void;
 }) {
+  const gt = useGT();
   const [label, setLabel] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [authorEmail, setAuthorEmail] = useState("");
@@ -128,12 +133,18 @@ function AddGitAccountForm(props: {
   return (
     <View className="gap-2 px-4 py-3">
       <Text className="text-sm text-foreground-muted">
-        Projects that use this account commit, push and open pull requests as it. Credentials stay
-        on this server.
+        <T>
+          Projects that use this account commit, push and open pull requests as it. Credentials stay
+          on this server.
+        </T>
       </Text>
-      {field({ label: "Label", value: label, onChange: setLabel })}
-      {field({ label: "Author name", value: authorName, onChange: setAuthorName })}
-      {field({ label: "Author email", value: authorEmail, onChange: setAuthorEmail })}
+      {field({
+        label: gt("Label", { $context: "git account display name field" }),
+        value: label,
+        onChange: setLabel,
+      })}
+      {field({ label: gt("Author name"), value: authorName, onChange: setAuthorName })}
+      {field({ label: gt("Author email"), value: authorEmail, onChange: setAuthorEmail })}
       {GIT_ACCOUNT_FORGES.map((entry, index) => (
         <ListChoiceRow
           key={entry.kind}
@@ -146,12 +157,20 @@ function AddGitAccountForm(props: {
           }}
         />
       ))}
-      {field({ label: "Host", value: host, onChange: setHost })}
+      {field({
+        label: gt("Host", { $context: "source control host name field" }),
+        value: host,
+        onChange: setHost,
+      })}
       {loginAllowed ? (
         <>
-          <ListChoiceRow label="Token" selected={!useLogin} onPress={() => setUseLogin(false)} />
           <ListChoiceRow
-            label="gh login on this server"
+            label={gt("Token", { $context: "access token field" })}
+            selected={!useLogin}
+            onPress={() => setUseLogin(false)}
+          />
+          <ListChoiceRow
+            label={gt("{command} login on this server", { command: "gh" })}
             selected={useLogin}
             separated
             onPress={() => setUseLogin(true)}
@@ -159,10 +178,19 @@ function AddGitAccountForm(props: {
         </>
       ) : null}
       {kind === "token"
-        ? field({ label: "Token", value: token, onChange: setToken, secret: true })
-        : field({ label: "gh login", value: cliLogin, onChange: setCliLogin })}
+        ? field({
+            label: gt("Token", { $context: "access token field" }),
+            value: token,
+            onChange: setToken,
+            secret: true,
+          })
+        : field({
+            label: gt("{command} login", { command: "gh" }),
+            value: cliLogin,
+            onChange: setCliLogin,
+          })}
       <ListActionRow
-        label="Save account"
+        label={gt("Save account")}
         disabled={!ready}
         onPress={() => {
           const id = gitAccountIdFromLabel(label, props.accounts);
@@ -183,7 +211,7 @@ function AddGitAccountForm(props: {
           });
         }}
       />
-      <ListActionRow label="Cancel" onPress={props.onCancel} />
+      <ListActionRow label={gt("Cancel")} onPress={props.onCancel} />
     </View>
   );
 }

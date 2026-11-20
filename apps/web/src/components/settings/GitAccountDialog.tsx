@@ -6,6 +6,7 @@ import {
   SourceControlProviderKind,
   type UnifiedSettings,
 } from "@t3tools/contracts";
+import { T, useGT } from "gt-react";
 import { useState } from "react";
 
 import { useUpdateEnvironmentSettings } from "../../hooks/useSettings";
@@ -38,6 +39,7 @@ export function GitAccountDialog({
   readonly editing: { readonly id: GitAccountId; readonly account: GitAccountConfig } | null;
   readonly onClose: () => void;
 }) {
+  const gt = useGT();
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
   const initial = editing?.account;
   const [label, setLabel] = useState(initial?.label ?? "");
@@ -87,10 +89,16 @@ export function GitAccountDialog({
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
       <DialogPopup className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? `Edit ${editing.account.label}` : "Add git account"}</DialogTitle>
+          <DialogTitle>
+            {editing
+              ? gt("Edit {account}", { account: editing.account.label })
+              : gt("Add git account")}
+          </DialogTitle>
           <DialogDescription>
-            Projects that use this account commit, push and open pull requests as it. Credentials
-            stay on this server.
+            <T>
+              Projects that use this account commit, push and open pull requests as it. Credentials
+              stay on this server.
+            </T>
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -101,23 +109,26 @@ export function GitAccountDialog({
               save();
             }}
           >
-            <Field id="git-account-label" label="Label">
+            <Field
+              id="git-account-label"
+              label={gt("Label", { $context: "name of a git account" })}
+            >
               <Input
                 id="git-account-label"
-                placeholder="Work"
+                placeholder={gt("Work", { $context: "example git account name" })}
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
                 autoFocus
               />
             </Field>
-            <Field id="git-account-name" label="Author name">
+            <Field id="git-account-name" label={gt("Author name")}>
               <Input
                 id="git-account-name"
                 value={authorName}
                 onChange={(event) => setAuthorName(event.target.value)}
               />
             </Field>
-            <Field id="git-account-email" label="Author email">
+            <Field id="git-account-email" label={gt("Author email")}>
               <Input
                 id="git-account-email"
                 type="email"
@@ -126,7 +137,10 @@ export function GitAccountDialog({
               />
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field id="git-account-forge" label="Forge">
+              <Field
+                id="git-account-forge"
+                label={gt("Forge", { $context: "git hosting service" })}
+              >
                 <Select
                   value={forge}
                   onValueChange={(value) => {
@@ -136,7 +150,11 @@ export function GitAccountDialog({
                     if (preset?.host) setHost(preset.host);
                   }}
                 >
-                  <SelectTrigger id="git-account-forge" size="sm" aria-label="Forge">
+                  <SelectTrigger
+                    id="git-account-forge"
+                    size="sm"
+                    aria-label={gt("Forge", { $context: "git hosting service" })}
+                  >
                     <SelectValue>
                       {(value: string | null) =>
                         GIT_ACCOUNT_FORGES.find((entry) => entry.kind === value)?.label ?? value
@@ -152,7 +170,7 @@ export function GitAccountDialog({
                   </SelectPopup>
                 </Select>
               </Field>
-              <Field id="git-account-host" label="Host">
+              <Field id="git-account-host" label={gt("Host", { $context: "git server hostname" })}>
                 <Input
                   id="git-account-host"
                   value={host}
@@ -161,22 +179,28 @@ export function GitAccountDialog({
               </Field>
             </div>
             {cliLoginSupported ? (
-              <Field id="git-account-kind" label="Sign in with">
+              <Field id="git-account-kind" label={gt("Sign in with")}>
                 <ToggleGroup
-                  aria-label="Sign in with"
+                  aria-label={gt("Sign in with")}
                   value={[kind]}
                   onValueChange={(values) => {
                     const next = values[0];
                     if (next === "token" || next === "cliLogin") setCredentialKind(next);
                   }}
                 >
-                  <ToggleGroupItem value="token">Token</ToggleGroupItem>
+                  <ToggleGroupItem value="token">
+                    {gt("Token", { $context: "access token credential" })}
+                  </ToggleGroupItem>
+                  {/* oxlint-disable-next-line t3code/no-untranslated-copy -- A CLI command name stays English. */}
                   <ToggleGroupItem value="cliLogin">gh login</ToggleGroupItem>
                 </ToggleGroup>
               </Field>
             ) : null}
             {kind === "token" ? (
-              <Field id="git-account-token" label="Token">
+              <Field
+                id="git-account-token"
+                label={gt("Token", { $context: "access token credential" })}
+              >
                 <SecretInput
                   id="git-account-token"
                   value={token}
@@ -184,19 +208,22 @@ export function GitAccountDialog({
                 />
               </Field>
             ) : (
+              // oxlint-disable-next-line t3code/no-untranslated-copy -- A CLI command name stays English.
               <Field id="git-account-login" label="gh login">
                 <Input
                   id="git-account-login"
-                  placeholder="The user name shown by gh auth status"
+                  placeholder={gt("The user name shown by {command}", {
+                    command: "gh auth status",
+                  })}
                   value={cliLogin}
                   onChange={(event) => setCliLogin(event.target.value)}
                 />
               </Field>
             )}
-            <Field id="git-account-ssh" label="SSH key (optional)">
+            <Field id="git-account-ssh" label={gt("SSH key (optional)")}>
               <Input
                 id="git-account-ssh"
-                placeholder="~/.ssh/id_work on this server"
+                placeholder={gt("{path} on this server", { path: "~/.ssh/id_work" })}
                 value={sshKeyPath}
                 onChange={(event) => setSshKeyPath(event.target.value)}
               />
@@ -205,10 +232,10 @@ export function GitAccountDialog({
         </DialogPanel>
         <DialogFooter variant="bare">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            <T>Cancel</T>
           </Button>
           <Button onClick={save} disabled={!canSave}>
-            {editing ? "Save" : "Add account"}
+            {editing ? gt("Save") : gt("Add account")}
           </Button>
         </DialogFooter>
       </DialogPopup>

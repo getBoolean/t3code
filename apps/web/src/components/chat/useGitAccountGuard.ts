@@ -5,8 +5,10 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
+import { msg } from "gt-react";
 
 import { requestConfirmDialog } from "../../confirmDialog";
+import { m } from "../../i18n/messages";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -55,8 +57,8 @@ export function useGitAccountGuard(target: GitAccountGuardTarget | null) {
         stackedThreadToast({
           type: "error",
           title: bypass
-            ? "Could not continue without the git account"
-            : "Could not go back to the git account",
+            ? m(msg("Could not continue without the git account"))
+            : m(msg("Could not go back to the git account")),
           description: String(squashAtomCommandFailure(result)),
         }),
       );
@@ -72,7 +74,7 @@ export function useGitAccountGuard(target: GitAccountGuardTarget | null) {
     const result = await check({ environmentId: target.environmentId, input: inputFor(target) });
     // A failed check leaves the decision to the server, which still fails closed.
     if (result._tag !== "Success" || result.value.state !== "unavailable") return true;
-    const prompt = gitAccountBypassPrompt(result.value);
+    const prompt = gitAccountBypassPrompt(result.value, m);
     const message = `${prompt.title}\n${prompt.body}`;
     const confirmed =
       (await requestConfirmDialog(message, { variant: "destructive" })) ?? window.confirm(message);

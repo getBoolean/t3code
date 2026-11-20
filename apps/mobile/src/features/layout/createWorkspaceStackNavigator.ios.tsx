@@ -1,4 +1,5 @@
 // Fork: iPad Settings stays beside the thread sidebar in native split columns.
+import { useGT } from "gt-react-native";
 import {
   createNavigatorFactory,
   NavigationContext,
@@ -227,6 +228,7 @@ function EmptyDetailHeader(props: { readonly onCompose: (() => void) | undefined
 function WorkspaceColumns(
   props: ViewProps & { readonly primary: Route; readonly detail: Route[] },
 ) {
+  const gt = useGT();
   const {
     layout,
     setPrimarySidebarVisible,
@@ -523,7 +525,7 @@ function WorkspaceColumns(
                     pointerEvents="box-none"
                   >
                     <WorkspacePaneDivider
-                      accessibilityLabel="Resize inspector"
+                      accessibilityLabel={gt("Resize inspector")}
                       currentWidth={inspectorWidth}
                       resizeDirection={-1}
                       onResizeStart={() => {

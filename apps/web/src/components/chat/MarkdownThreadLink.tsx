@@ -1,11 +1,12 @@
 import type { EnvironmentId } from "@t3tools/contracts";
+import { useGT, useMessages } from "gt-react";
 import {
   formatHostedThreadLink,
   guessThreadLinkRef,
   threadLinkCandidates,
   type ThreadLink,
-  unknownThreadLinkLabel,
 } from "@t3tools/shared/threadLinks";
+import { unknownThreadLinkLabel } from "@t3tools/shared/threadLinksCopy";
 
 import { configuredHostedAppUrl } from "../../hostedPairing";
 import { useThreadRefs, useThreadShell } from "../../state/entities";
@@ -21,6 +22,8 @@ export function MarkdownThreadLink(props: {
   readonly link: ThreadLink;
   readonly label: string | null;
 }) {
+  const gt = useGT();
+  const messages = useMessages();
   const candidates = threadLinkCandidates(props.link, props.environmentId);
   const writtenRef = candidates[0]!;
   const written = useThreadShell(writtenRef);
@@ -58,14 +61,16 @@ export function MarkdownThreadLink(props: {
   // Fork: scoped links on a connected machine can name subagent children without a thread record;
   // let navigation load them (remove when upstream supports this).
   if (missing && resolved === null && props.link.environmentId !== null && reachable) {
-    return <ThreadContextChip record={{ ...writtenRef, title: props.label || "Open thread" }} />;
+    return (
+      <ThreadContextChip record={{ ...writtenRef, title: props.label || gt("Open thread") }} />
+    );
   }
   if (missing && resolved === null) {
-    const unknown = unknownThreadLinkLabel(props.link, props.environmentId);
+    const unknown = unknownThreadLinkLabel(props.link, props.environmentId, messages);
     return <UnresolvedChip label={props.label ?? unknown} tooltip={unknown} />;
   }
   const ref = resolved?.ref ?? writtenRef;
-  const title = resolved?.metadata.title.trim() || props.label || "Thread";
+  const title = resolved?.metadata.title.trim() || props.label || gt("Thread");
   return (
     <ThreadContextChip
       record={{ ...ref, title }}

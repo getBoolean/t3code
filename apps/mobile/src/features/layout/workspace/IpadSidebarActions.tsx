@@ -1,4 +1,5 @@
 // Fork: iPad utilities expand upward above pinned Settings, with orientation-specific defaults.
+import { T, useGT } from "gt-react-native";
 import { useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,11 +44,20 @@ function IpadSidebarActionRows(props: {
   readonly onSelect: (tab: WorkspaceTab | "settings") => void;
   readonly bottomInset: number;
 }) {
+  const gt = useGT();
   const [expanded, setExpanded] = useState(props.initiallyExpanded);
   const actions = [
-    { tab: "pullRequests", label: "Pull requests", icon: PullRequestGlyph.pullRequest },
-    { tab: "issues", label: "Issues", icon: "git.issue" },
-    { tab: "usage", label: "Usage", icon: "chart.bar.xaxis" },
+    { tab: "pullRequests", label: gt("Pull requests"), icon: PullRequestGlyph.pullRequest },
+    {
+      tab: "issues",
+      label: gt("Issues", { $context: "navigation tab, issues from an issue tracker" }),
+      icon: "git.issue",
+    },
+    {
+      tab: "usage",
+      label: gt("Usage", { $context: "navigation tab, provider usage limits" }),
+      icon: "chart.bar.xaxis",
+    },
   ] as const;
   const settingsSelected = props.selected === "settings";
   const outerSpacing = Math.max(12, props.bottomInset);
@@ -92,7 +102,7 @@ function IpadSidebarActionRows(props: {
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Settings"
+            accessibilityLabel={gt("Settings")}
             accessibilityState={{ selected: settingsSelected }}
             onPress={() => props.onSelect("settings")}
             style={{ minHeight: 44 }}
@@ -110,12 +120,14 @@ function IpadSidebarActionRows(props: {
             <AppText
               className={`font-t3-medium text-base ${settingsSelected ? "text-thread-selected-foreground" : "text-drawer-foreground"}`}
             >
-              Settings
+              <T>Settings</T>
             </AppText>
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={expanded ? "Collapse sidebar items" : "Expand sidebar items"}
+            accessibilityLabel={
+              expanded ? gt("Collapse sidebar items") : gt("Expand sidebar items")
+            }
             accessibilityState={{ expanded }}
             onPress={() => setExpanded(!expanded)}
             style={{ minWidth: 44, minHeight: 44 }}
