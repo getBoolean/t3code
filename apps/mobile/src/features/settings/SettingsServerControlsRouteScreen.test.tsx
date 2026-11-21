@@ -43,7 +43,7 @@ vi.mock("@effect/atom-react", () => ({
 }));
 vi.mock("../../state/preferences", () => ({
   mobilePreferencesAtom: {},
-  updateMobilePreferencesAtom: {},
+  saveMobilePreferences: {},
 }));
 vi.mock("./components/AutoSettleDaysField", () => ({ AutoSettleDaysField: () => null }));
 vi.mock("./components/IssueTrackerSection", () => ({ IssueTrackerSection: () => null }));

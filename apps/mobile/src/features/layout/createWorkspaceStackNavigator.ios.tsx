@@ -41,13 +41,11 @@ import { Split, type SplitHostCommands } from "react-native-screens";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { NATIVE_INSPECTOR_MIN_MAIN_WIDTH } from "../../lib/layout";
+import { NATIVE_INSPECTOR_MIN_MAIN_WIDTH, nativeSidebarColumnWidth } from "../../lib/layout";
 import { scopedThreadKey } from "../../lib/scopedEntities";
 import { WorkspaceTabsProvider, useWorkspaceTabs } from "./workspace/WorkspaceTabsContext";
-import {
-  WorkspaceNativeTabs,
-  WorkspaceSidebarTabsFooter,
-} from "./workspace/WorkspaceNativeTabs.ios";
+import { WorkspaceNativeTabs } from "./workspace/WorkspaceNativeTabs.ios";
+import { IpadSidebarActions } from "./workspace/IpadSidebarActions";
 import { workspaceUsesColumns } from "./workspace/workspace-tabs-state";
 import { workspaceSidebarDestination } from "./workspace/workspace-tab-navigation";
 import { useWorkspaceCompose } from "./workspace/useWorkspaceCompose";
@@ -384,7 +382,7 @@ function WorkspaceColumns(
 
   const primary = props.descriptors[props.primary.key];
   if (!primary) return null;
-  const primaryColumnWidth = (layout.listPaneWidth ?? 320) + (layout.listPaneGap ?? 0) / 2;
+  const primaryColumnWidth = nativeSidebarColumnWidth(layout);
   return (
     <Split.Host
       ref={hostRef}
@@ -457,7 +455,8 @@ function WorkspaceColumns(
             primary
             footer={
               deviceType === "pad" && layout.usesSplitView ? (
-                <WorkspaceSidebarTabsFooter />
+                // Fork: expanded iPads put sidebar utilities at the column's foot instead of tabs.
+                <IpadSidebarActions />
               ) : undefined
             }
             selectedThreadKey={selectedThreadKey}
