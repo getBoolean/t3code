@@ -1,5 +1,4 @@
 // Fork: iPad uses sidebar utilities in split layouts and bottom tabs when compact until upstream makes navigation width-aware.
-import { IpadSidebarActions } from "./IpadSidebarActions";
 import { useGT, useMessages } from "gt-react-native";
 import {
   WORKSPACE_TAB_LABELS,
@@ -16,7 +15,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { View, useWindowDimensions, type NativeSyntheticEvent } from "react-native";
+import { View, type NativeSyntheticEvent } from "react-native";
 import { Tabs, type TabSelectedEvent, type TabSelectionRejectedEvent } from "react-native-screens";
 
 import { WorkspaceTabsContext, useWorkspaceTabs } from "./WorkspaceTabsContext";
@@ -33,18 +32,13 @@ import {
   WorkspaceSlotOptionsContext,
 } from "../../../native/v5-workspace-context";
 import type { NativeLayoutMetrics } from "../../../lib/reserved-regions";
-import {
-  useCompactWorkspaceTabs,
-  useFloatingWorkspaceTabs,
-  useSystemWorkspaceTabBar,
-} from "./useSystemWorkspaceTabBar";
+import { useCompactWorkspaceTabs, useSystemWorkspaceTabBar } from "./useSystemWorkspaceTabBar";
 import { useControlTheme } from "../../../components/ui/useControlTheme";
 import { useDeviceType } from "../../../native/native-layout-metrics";
-import { WorkspaceSidebarTabs } from "./WorkspaceSidebarTabs";
+import { WorkspaceTabDock } from "./WorkspaceTabDock";
 import { useAdaptiveWorkspaceLayout, useWorkspacePaneState } from "../AdaptiveWorkspaceLayout";
 import { WorkspaceSidebarFooterContext } from "../workspace-sidebar-footer";
 import { useSelectWorkspaceTab } from "./useSelectWorkspaceTab";
-import { useWorkspaceCompose } from "./useWorkspaceCompose";
 
 const PULL_REQUEST_ICON = require("../../../../assets/icons/pull-request.png");
 const ISSUE_ICON = require("../../../../assets/icons/issue.png");
@@ -173,7 +167,6 @@ export function WorkspaceNativeTabs(props: {
     layout.usesSplitView &&
     workspaceUsesColumns(workspace.state.selectedTab, workspace.settingsOpen) &&
     !panes.primarySidebarVisible;
-  const { width } = useWindowDimensions();
   const { colors } = useControlTheme();
   const selectedTab = workspace.state.selectedTab;
   const selectedSlot = workspace.settingsOpen ? -1 : primaryTabs.indexOf(selectedTab);
@@ -219,21 +212,9 @@ export function WorkspaceNativeTabs(props: {
     !props.hidden &&
     !props.tabsInSidebarColumn &&
     !hiddenWithSidebar;
+  // In the sidebar slot the bar spans the column instead of the window-placed overlay.
   const sidebarTabs = showSidebarTabs ? (
-    <View
-      pointerEvents="box-none"
-      style={{
-        position: "absolute",
-        left: 0,
-        bottom: 0,
-        // UIKit can shrink the sidebar to 280pt independently of its preferred width.
-        // In the sidebar slot the bar spans the column instead of that capped overlay.
-        width: layout.listPaneWidth ?? width,
-        height: 128,
-      }}
-    >
-      <WorkspaceSidebarTabsFooter />
-    </View>
+    <WorkspaceTabDock placement={sidebarFooter ? "column" : "window"} />
   ) : null;
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- projects the tab bar into the sidebar column's slot, which renders outside this tree
   useEffect(() => {
@@ -319,22 +300,5 @@ export function WorkspaceNativeTabs(props: {
       </WorkspaceColumnMetricsContext>
       {sidebarFooter ? null : sidebarTabs}
     </View>
-  );
-}
-
-/** The workspace tabs at the foot of the sidebar. */
-export function WorkspaceSidebarTabsFooter() {
-  const compose = useWorkspaceCompose();
-  const { layout } = useAdaptiveWorkspaceLayout();
-  const compact = useFloatingWorkspaceTabs();
-  const deviceType = useDeviceType();
-  if (workspaceUsesSidebarNavigation(deviceType, layout.usesSplitView))
-    return <IpadSidebarActions />;
-  return (
-    <WorkspaceSidebarTabs
-      compact={compact}
-      reserveComposeSpace={compact}
-      onNewTask={compact ? compose?.onPress : undefined}
-    />
   );
 }

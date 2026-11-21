@@ -981,8 +981,12 @@ apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec	s.pl
 apps/mobile/modules/t3-web-socket/ios/T3WebSocket.podspec	Fork:
 apps/mobile/modules/t3-web-socket/ios/T3WebSocket.podspec	s.platform = :ios, '17.0'
 
+# Fork: The iOS 17 app cannot link a pod raised to 18.0; the preview tunnel's ProxyConfiguration and WKWebsiteDataStore.proxyConfigurations are iOS 17.0.
+apps/mobile/modules/t3-preview-tunnel/ios/T3PreviewTunnel.podspec	Fork:
+apps/mobile/modules/t3-preview-tunnel/ios/T3PreviewTunnel.podspec	s.platform = :ios, '17.0'
+
 # Fork: preserve uncached scoped thread links on mobile, web, and desktop until navigation loads them; remove when upstream supports this.
-packages/shared/src/threadLinks.ts	if (written.environmentId !== null) return formatThreadLink(written, label || "Open thread");
+packages/shared/src/threadLinksCopy.ts	if (written.environmentId !== null) return formatThreadLink(written, label || "Open thread");
 packages/shared/src/threadLinks.test.ts	keeps uncached scoped links navigable
 apps/web/src/components/chat/MarkdownThreadLink.tsx	resolved === null && props.link.environmentId !== null
 apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	Fork:
@@ -992,7 +996,7 @@ apps/web/src/components/chat/MarkdownThreadLink.browser.test.tsx	name: "Thread, 
 apps/web/test/fakeEnvironment.ts	Fork:
 apps/web/test/fakeEnvironment.ts	[WS_METHODS.gitAccountsThreadStatus]: () =>
 apps/web/src/components/ThreadContextChip.tsx	Fork:
-apps/web/src/components/ThreadContextChip.tsx	: gt("Open thread")}
+apps/web/src/components/ThreadContextChip.tsx	to="/$environmentId/$threadId"
 
 # Fork: Bound initial paginated snapshots at SQL and transport layers, retain older-page budgets, and invalidate persisted larger opening windows; remove when upstream provides equivalent first-page limits.
 apps/server/src/orchestration-v2/threadHistoryPaging.ts	Fork:
