@@ -405,7 +405,7 @@ export function NewTaskRepositoriesPickerRouteScreen() {
           </View>
         ) : (
           <LegendList
-            renderScrollComponent={NativeScrollView}
+            renderScrollComponent={renderNativeScrollView}
             alwaysBounceVertical={false}
             automaticallyAdjustsScrollIndicatorInsets
             className="flex-1 bg-sheet android:bg-sheet-solid"
