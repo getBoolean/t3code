@@ -11,6 +11,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
 import { ChildProcessSpawner } from "effect/process";
 
 import {
@@ -75,6 +76,19 @@ export interface ExecuteGitResult {
   readonly stderr: string;
   readonly stdoutTruncated: boolean;
   readonly stderrTruncated: boolean;
+}
+
+export class GitNothingToCommitError extends Schema.TaggedError<GitNothingToCommitError>()(
+  "GitNothingToCommitError",
+  {
+    operation: Schema.String,
+    cwd: Schema.String,
+    detail: Schema.String,
+  },
+) {
+  override get message(): string {
+    return `Nothing to commit in ${this.operation} (${this.cwd}): ${this.detail}`;
+  }
 }
 
 export interface GitStatusDetails {
@@ -174,7 +188,11 @@ export interface GitCommitProgress {
 export interface GitCommitOptions {
   readonly timeoutMs?: number;
   readonly progress?: GitCommitProgress;
-  readonly stage?: { readonly filePaths?: readonly string[] };
+  readonly stage?: {
+    readonly filePaths?: readonly string[];
+    /** The caller has not run `prepareCommitContext`, so an empty result must keep the index. */
+    readonly unverified?: boolean;
+  };
   readonly env?: NodeJS.ProcessEnv;
 }
 
@@ -321,6 +339,8 @@ export interface GitSetBranchUpstreamInput {
 
 export interface GitRemoteStatusOptions {
   readonly refreshUpstream?: boolean;
+  /** False skips the base-branch lookup and reports `aheadOfDefaultCount` as 0. */
+  readonly includeAheadOfDefault?: boolean;
 }
 
 /**
@@ -351,8 +371,10 @@ export class GitVcsDriver extends Context.Service<
       cwd: string,
       options?: GitRemoteStatusOptions,
     ) => Effect.Effect<GitRemoteStatusDetails, GitCommandError>;
-    /** Refs, HEAD and shallow boundaries. Null when the snapshot cannot be read. */
-    readonly readRefSnapshot: (cwd: string) => Effect.Effect<string | null>;
+    /** Refs, HEAD and shallow boundaries. Null on read failure. */
+    readonly readLocalStatusRefSnapshot: (cwd: string) => Effect.Effect<string | null>;
+    /** Includes worktree paths. Accepts an existing local status ref snapshot to avoid re-reading refs. */
+    readonly readRefSnapshot: (cwd: string, refs?: string) => Effect.Effect<string | null>;
     readonly prepareCommitContext: (
       cwd: string,
       filePaths?: readonly string[],
@@ -363,7 +385,7 @@ export class GitVcsDriver extends Context.Service<
       subject: string,
       body: string,
       options?: GitCommitOptions,
-    ) => Effect.Effect<{ commitSha: string }, GitCommandError>;
+    ) => Effect.Effect<{ commitSha: string }, GitCommandError | GitNothingToCommitError>;
     readonly pushCurrentBranch: (
       cwd: string,
       fallbackBranch: string | null,
